@@ -1,35 +1,88 @@
 #include "../include/Log.h"
+#include "../include/Model.h"
 #include "../include/Shader.h"
+#include "../include/Texture.h"
 #include "../libs/glad/glad.h"
 #include "../libs/glm/glm.hpp"
 #include <GLFW/glfw3.h>
 
-constexpr bool FULLSCREEN = false;
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {}
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {}
+GLFWwindow* createWindow(bool fullscreen);
+
+static constexpr int BLOCK_COUNT = 10;
 
 int main() {
     Log::init();
+    GLFWwindow* window = createWindow(false);
+    if (!window) {
+        LOG_ERROR("Window creation error");
+        return -1;
+    }
 
-    if (!glfwInit()) return -1;
+    const Model blockModel("../resources/untitled.obj");
+    const Texture grasTexture("../resources/atlas.png");
+    const Shader shader("../shader/BasicVert.glsl", "../shader/BasicFrag.glsl");
+    shader.bind();
+    shader.setUniform1i("u_Texture", 0);
+
+    // instance rendering
+    glm::vec2 translations[BLOCK_COUNT];
+    for(int i = 0; i < BLOCK_COUNT; i++)
+    {
+        translations[i] = {10.0f * i, 10.0f * i};
+    }
+
+    blockModel.vao().bind();
+
+    GLuint instanceBuffer = 0;
+    glGenBuffers(1, &instanceBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * BLOCK_COUNT, translations, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), nullptr);
+    glVertexAttribDivisor(2, 1);
+
+    // main loop
+    LOG_INFO("Starting Game");
+    while (!glfwWindowShouldClose(window)) {
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+        glClearColor(0.07f, 0.14f, 0.17f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        shader.bind();
+        blockModel.vao().bind();
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, BLOCK_COUNT);
+    }
+
+    return 0;
+}
+
+GLFWwindow* createWindow(bool fullscreen) {
+    if (!glfwInit()) return nullptr;
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window;
-    if (FULLSCREEN) {
+    if (fullscreen) {
         const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-        window = glfwCreateWindow(mode->width, mode->height, "A Simulation", glfwGetPrimaryMonitor(), NULL);
+        window = glfwCreateWindow(mode->width, mode->height, "A Simulation", glfwGetPrimaryMonitor(), nullptr);
     }
     else {
-        window = glfwCreateWindow(1800, 1000, "A cube game", nullptr, NULL);
+        window = glfwCreateWindow(1800, 1000, "A cube game", nullptr, nullptr);
     }
 
-    if (!window) return -1;
+    if (!window) return nullptr;
 
     glfwMakeContextCurrent(window);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
     gladLoadGL();
 
-    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) return -1;
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) return nullptr;
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -39,72 +92,5 @@ int main() {
 
     glfwSwapInterval(0); // disable vsync
 
-    const float mesh[] = {
-        // positions     // colors
-        -0.05f,  0.05f,  1.0f, 0.0f, 0.0f,
-         0.05f,  0.05f,  0.0f, 1.0f, 0.0f,
-        -0.05f, -0.05f,  0.0f, 0.0f, 1.0f,
-
-         0.05f,  -0.05f,  1.0f, 0.0f, 0.0f,
-         0.05f,  0.05f,  0.0f, 1.0f, 0.0f,
-        -0.05f, -0.05f,  0.0f, 0.0f, 1.0f,
-    };
-
-    glm::vec2 translations[100];
-    int index = 0;
-    float offset = 0.1f;
-    for(int y = -10; y < 10; y += 2)
-    {
-        for(int x = -10; x < 10; x += 2)
-        {
-            glm::vec2 translation;
-            translation.x = (float)x / 10.0f + offset;
-            translation.y = (float)y / 10.0f + offset;
-            translations[index++] = translation;
-        }
-    }
-
-    const Shader shader("../shader/BasicVert.glsl", "../shader/BasicFrag.glsl");
-
-    GLuint vertArray = 0;
-    GLuint vertBuffer = 0;
-    GLuint instanceBuffer = 0;
-
-    glGenVertexArrays(1, &vertArray);
-    glGenBuffers(1, &vertBuffer);
-    glGenBuffers(1, &instanceBuffer);
-
-    glBindVertexArray(vertArray);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*5*6, mesh, GL_STATIC_DRAW);
-
-    // position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*5, nullptr);
-    // color attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float)*5, reinterpret_cast<void*>(sizeof(glm::vec2)));
-    // translation attribute
-    glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*100, translations, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), nullptr);
-    glVertexAttribDivisor(2, 1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    while (!glfwWindowShouldClose(window)) {
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        glClearColor(0.07f, 0.14f, 0.17f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        shader.bind();
-        glBindVertexArray(vertArray);
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100);
-    }
-
-    return 0;
+    return window;
 }

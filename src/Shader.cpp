@@ -4,7 +4,9 @@
 #include <sstream>
 #include <GLFW/glfw3.h>
 
-Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource) : m_ShaderProgram(glCreateProgram()) {
+Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource)
+    : m_ShaderProgram(glCreateProgram())
+{
     const std::string lVertexString = parse(pVertexShaderSource);
     const char* lVertexCString = lVertexString.c_str();
     const GLuint lVertShader = compile(lVertexCString, GL_VERTEX_SHADER);
@@ -24,23 +26,35 @@ Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSourc
     unbind();
 }
 
-Shader::~Shader() {
+Shader::~Shader()
+{
     glDeleteProgram(m_ShaderProgram);
 }
 
-void Shader::bind() const {
+void Shader::setUniform1f(const std::string &name, float value) const {
+    glUniform1f(getUniformLocation(name), value);
+}
+
+void Shader::setUniform1i(const std::string &name, int value) const {
+    glUniform1i(getUniformLocation(name), value);
+}
+
+int Shader::getUniformLocation(const std::string &name) const {
+    const int location = glGetUniformLocation(m_ShaderProgram, name.c_str());
+    if (location == -1)
+        LOG_WARN("Uniform not found: " + name);
+    return location;
+}
+
+void Shader::bind() const
+{
     glUseProgram(m_ShaderProgram);
 }
 
-void Shader::unbind() {
-    glUseProgram(0);
-}
+void Shader::unbind() { glUseProgram(0); }
 
-GLuint Shader::getShaderId() const {
-    return m_ShaderProgram;
-}
-
-GLuint Shader::compile(const char* pShaderSource, const GLenum pShaderType) {
+GLuint Shader::compile(const char* pShaderSource, const GLenum pShaderType)
+{
     const GLuint lShaderID = glCreateShader(pShaderType);
 
     int lCompRes;
