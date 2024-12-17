@@ -1,6 +1,5 @@
 #include "../include/Window.h"
 #include "../include/Log.h"
-#include "../libs/glad/glad.h"
 
 bool Window::s_glfwInitialized = false;
 
@@ -63,7 +62,7 @@ void Window::clear(const glm::vec4 color) const
 
 bool Window::isRunning() const
 {
-    return glfwWindowShouldClose(m_Window);
+    return !glfwWindowShouldClose(m_Window);
 }
 
 void Window::stop()
@@ -116,33 +115,41 @@ void Window::windowFocusCallback(GLFWwindow* window, const int focused)
     else
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-    win->m_Settings.onFocusCallback(win, focused);
+    if (win->m_Settings.onFocusCallback)
+        win->m_Settings.onFocusCallback(win, focused);
 }
 
 void Window::mouseMoveCallback(GLFWwindow* window, const double x, const double y)
 {
     // TODO: camera stuff
-
     Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    win->m_Settings.onCursorMoveCallback(win, glm::dvec2{x,y});
+
+    if (win->m_Settings.onCursorMoveCallback)
+        win->m_Settings.onCursorMoveCallback(win, glm::dvec2{x,y});
 }
 
 void Window::closeCallback(GLFWwindow* window)
 {
     Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    win->m_Settings.onCloseCallback(win);
+
+    if (win->m_Settings.onCloseCallback)
+        win->m_Settings.onCloseCallback(win);
 }
 
 void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    win->m_Settings.onMouseButtonCallback(win, button, action, mods);
+
+    if (win->m_Settings.onFocusCallback)
+        win->m_Settings.onMouseButtonCallback(win, button, action, mods);
 }
 
 void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    win->m_Settings.onKeyCallback(win, key, scancode, action, mods);
+
+    if (win->m_Settings.onKeyCallback)
+        win->m_Settings.onKeyCallback(win, key, scancode, action, mods);
 }
 
 void Window::initGlfw()
