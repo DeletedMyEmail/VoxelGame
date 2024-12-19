@@ -17,6 +17,6 @@ private:
     int getUniformLocation(const std::string& name) const;
 private:
     static GLuint compile(const char* pShaderSource, GLenum pShaderType);
-    static std::string parse(const char* pShaderSource);
+    static std::string parse(const char* shaderSource);
     GLuint m_ShaderProgram;
 };

@@ -1,5 +1,6 @@
 #include "../include/Shader.h"
 #include "../include/Log.h"
+#include "../include/Renderer.h"
 #include <fstream>
 #include <sstream>
 #include <GLFW/glfw3.h>
@@ -15,28 +16,28 @@ Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSourc
     const char* lFragCString = lFragString.c_str();
     const GLuint lFragShader = compile(lFragCString, GL_FRAGMENT_SHADER);
 
-    glAttachShader(m_ShaderProgram, lVertShader);
-    glAttachShader(m_ShaderProgram, lFragShader);
+    GLCall(glAttachShader(m_ShaderProgram, lVertShader))
+    GLCall(glAttachShader(m_ShaderProgram, lFragShader))
 
-    glLinkProgram(m_ShaderProgram);
+    GLCall(glLinkProgram(m_ShaderProgram))
 
-    glDeleteShader(lVertShader);
-    glDeleteShader(lFragShader);
+    GLCall(glDeleteShader(lVertShader))
+    GLCall(glDeleteShader(lFragShader))
 
     unbind();
 }
 
 Shader::~Shader()
 {
-    glDeleteProgram(m_ShaderProgram);
+    GLCall(glDeleteProgram(m_ShaderProgram))
 }
 
 void Shader::setUniform1f(const std::string &name, float value) const {
-    glUniform1f(getUniformLocation(name), value);
+    GLCall(glUniform1f(getUniformLocation(name), value))
 }
 
 void Shader::setUniform1i(const std::string &name, int value) const {
-    glUniform1i(getUniformLocation(name), value);
+    GLCall(glUniform1i(getUniformLocation(name), value))
 }
 
 int Shader::getUniformLocation(const std::string &name) const {
@@ -48,43 +49,44 @@ int Shader::getUniformLocation(const std::string &name) const {
 
 void Shader::bind() const
 {
-    glUseProgram(m_ShaderProgram);
+    GLCall(glUseProgram(m_ShaderProgram))
 }
 
 void Shader::unbind() { glUseProgram(0); }
 
 GLuint Shader::compile(const char* pShaderSource, const GLenum pShaderType)
 {
-    const GLuint lShaderID = glCreateShader(pShaderType);
+    const GLuint shaderID = glCreateShader(pShaderType);
 
-    int lCompRes;
-    glShaderSource(lShaderID, 1, &pShaderSource, nullptr);
-    glCompileShader(lShaderID);
-    glGetShaderiv(lShaderID, GL_COMPILE_STATUS, &lCompRes);
+    int compRes;
+    GLCall(glShaderSource(shaderID, 1, &pShaderSource, nullptr))
+    GLCall(glCompileShader(shaderID))
+    GLCall(glGetShaderiv(shaderID, GL_COMPILE_STATUS, &compRes))
 
-    if(lCompRes != GL_TRUE) {
+    if(compRes != GL_TRUE)
+    {
         int length = 0;
-        glGetShaderiv(lShaderID, GL_INFO_LOG_LENGTH, &length);
-
+        GLCall(glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &length))
         char message[length];
-        glGetShaderInfoLog(lShaderID, length, &length, message);
+        GLCall(glGetShaderInfoLog(shaderID, length, &length, message))
 
         LOG_ERROR(std::string("Shader compilation error: ")+message);
         return 0;
     }
 
-    return lShaderID;
+    return shaderID;
 }
 
-std::string Shader::parse(const char* pShaderSource) {
-    std::ifstream lShaderFile(pShaderSource);
+std::string Shader::parse(const char* shaderSource) {
+    std::ifstream lShaderFile(shaderSource);
 
     if (!lShaderFile.is_open()) {
-        LOG_ERROR(std::string("Shader file not found: ") + pShaderSource);
+        LOG_ERROR(std::string("Shader file not found: ") + shaderSource);
         return "";
     }
-    std::stringstream lShaderBuffer;
-    lShaderBuffer << lShaderFile.rdbuf();
 
-    return lShaderBuffer.str();
+    std::stringstream shaderBuffer;
+    shaderBuffer << lShaderFile.rdbuf();
+
+    return shaderBuffer.str();
 }

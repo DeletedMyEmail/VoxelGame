@@ -2,11 +2,11 @@
 
 #include <spdlog/spdlog.h>
 
-//#ifndef NDEBUG
+#ifndef RELEASE
     #define LOG_WARN(x) Log::getLogger()->warn(x)
     #define LOG_INFO(x) Log::getLogger()->info(x)
     #define LOG_ERROR(x) Log::getLogger()->error(x)
-//#endif
+#endif
 
 class Log{
 public:

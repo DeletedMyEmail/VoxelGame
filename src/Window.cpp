@@ -1,5 +1,6 @@
 #include "../include/Window.h"
 #include "../include/Log.h"
+#include "../include/Renderer.h"
 
 bool Window::s_glfwInitialized = false;
 
@@ -19,13 +20,15 @@ Window::Window(const WindowSettings &settings)
         LOG_ERROR("Could not load glad");
     }
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GLCall(glEnable(GL_DEPTH_TEST))
+    GLCall(glEnable(GL_BLEND))
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
 
     glfwSetInputMode(m_Window, GLFW_CURSOR, settings.disableCursor ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     if (settings.culling)
-        glEnable(GL_CULL_FACE);
+    {
+        GLCall(glEnable(GL_CULL_FACE))
+    }
     if (!settings.vysnc)
         glfwSwapInterval(0);
 
@@ -56,8 +59,8 @@ void Window::clear(const glm::vec4 color) const
 {
     glfwSwapBuffers(m_Window);
     glfwPollEvents();
-    glClearColor(color.r, color.g, color.b, color.a);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    GLCall(glClearColor(color.r, color.g, color.b, color.a))
+    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 }
 
 bool Window::isRunning() const
@@ -160,10 +163,11 @@ void Window::initGlfw()
     }
     else
     {
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        GLCall(glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3))
+        GLCall(glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3))
+        GLCall(glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE))
     }
+
     s_glfwInitialized = true;
 }
 
