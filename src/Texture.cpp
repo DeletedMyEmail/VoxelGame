@@ -1,7 +1,8 @@
-#include "../include/Texture.h"
-#include "../libs/glad/glad.h"
-#include "../include/Log.h"
-#include "../include/Renderer.h"
+#include "Texture.h"
+#include "glad/glad.h"
+#include "Log.h"
+#include "Renderer.h"
+#include "stb/stb_image.h"
 
 Texture::Texture(const char* path)
     : m_ID(0), m_FilePath(path), m_Width(0), m_Height(0), m_BPP(0)

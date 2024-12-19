@@ -1,5 +1,5 @@
-#include "../include/Model.h"
-#include "../libs/glm/gtc/matrix_transform.hpp"
+#include "Model.h"
+#include "glm/gtc/matrix_transform.hpp"
 
 Model::Model(const std::shared_ptr<Texture>& texture, const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer)
     : m_Texture(texture), m_IndexBuffer(indexBuffer), m_VertArray(vertexArray), m_Matrix(), m_ViewProjection()

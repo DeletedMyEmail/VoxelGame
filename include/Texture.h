@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include "../libs/stb/stb_image.h"
-
 class Texture
 {
     public:

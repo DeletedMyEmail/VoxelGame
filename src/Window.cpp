@@ -1,6 +1,6 @@
-#include "../include/Window.h"
-#include "../include/Log.h"
-#include "../include/Renderer.h"
+#include "Window.h"
+#include "Log.h"
+#include "Renderer.h"
 
 bool Window::s_glfwInitialized = false;
 

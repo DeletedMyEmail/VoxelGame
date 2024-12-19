@@ -1,5 +1,5 @@
-#include "../include/VertexArray.h"
-#include "../include/Renderer.h"
+#include "VertexArray.h"
+#include "Renderer.h"
 
 unsigned int sizeOfGLType(const GLenum type)
 {

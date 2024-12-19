@@ -1,9 +1,9 @@
-#include "../include/Log.h"
-#include "../include/Window.h"
-#include "../include/Model.h"
-#include "../include/Shader.h"
-#include "../include/Texture.h"
-#include "../include/Renderer.h"
+#include "Log.h"
+#include "Window.h"
+#include "Model.h"
+#include "Shader.h"
+#include "Texture.h"
+#include "Renderer.h"
 
 //static constexpr int BLOCK_COUNT = 10;
 

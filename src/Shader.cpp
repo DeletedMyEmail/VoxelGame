@@ -1,6 +1,6 @@
-#include "../include/Shader.h"
-#include "../include/Log.h"
-#include "../include/Renderer.h"
+#include "Shader.h"
+#include "Log.h"
+#include "Renderer.h"
 #include <fstream>
 #include <sstream>
 #include <GLFW/glfw3.h>

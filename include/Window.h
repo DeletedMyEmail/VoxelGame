@@ -1,10 +1,10 @@
 #pragma once
 
 #include <functional>
-#include "../libs/glad/glad.h"
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
-#include "../libs/glm/vec4.hpp"
-#include "../libs/glm/vec2.hpp"
+#include "glm/vec4.hpp"
+#include "glm/vec2.hpp"
 #include "Camera.h"
 
 class Window;

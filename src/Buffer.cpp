@@ -1,5 +1,5 @@
-#include "../include/Buffer.h"
-#include "../include/Renderer.h"
+#include "Buffer.h"
+#include "Renderer.h"
 
 VertexBuffer::VertexBuffer(const GLsizei size, const GLvoid* data, const GLenum usage)
     : m_BufferID(0)
