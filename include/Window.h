@@ -1,11 +1,12 @@
 #pragma once
 
 #include <functional>
+#include <memory>
+
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include "glm/vec4.hpp"
 #include "glm/vec2.hpp"
-#include "Camera.h"
 
 class Window;
 
@@ -29,23 +30,23 @@ typedef struct WindowSetting
 class Window
 {
 public:
-  explicit Window(const WindowSettings& settings);
+  Window(const WindowSettings& settings);
+  Window(Window&& other) noexcept;
   ~Window();
-  void clear(glm::vec4 color = {0.07f, 0.14f, 0.17f, 1.0f}) const;
 
   bool isRunning() const;
-  void stop();
+  void stop() const;
 
   glm::dvec2 getMousePosition() const;
   double getMouseX() const;
   double getMouseY() const;
-  bool isKeyPressed(int pKey) const;
+  bool isKeyDown(int pKey) const;
   bool isMouseButtonPressed(int pButton) const;
+  void bind() const;
 
   const WindowSetting& getSettings() const { return m_Settings; }
   GLFWwindow* getGLFWWindow() const { return m_Window; }
-  Camera& getCamera() { return m_Camera; }
-
+  void setTitle(const std::string& title) const;
 private:
   void setCallbacks() const;
   void createGLFWWindow();
@@ -59,7 +60,6 @@ private:
 private:
   GLFWwindow* m_Window;
   WindowSetting m_Settings;
-  Camera m_Camera;
 
   static bool s_glfwInitialized;
 };
@@ -82,7 +82,7 @@ public:
   WindowBuilder& onMouseButton(const std::function<void(Window* window, int button, int action, int mods)>& callback);
   WindowBuilder& onClose(const std::function<void(Window* window)>& callback);
 
-  Window build() const;
+  std::shared_ptr<Window> build() const;
 
   const WindowSetting& getSettings() const { return m_settings; }
 private:

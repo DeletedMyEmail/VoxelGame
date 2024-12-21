@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <GLFW/glfw3.h>
+#include <glm/gtc/type_ptr.hpp>
 
 Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource)
     : m_ShaderProgram(glCreateProgram())
@@ -32,15 +33,26 @@ Shader::~Shader()
     GLCall(glDeleteProgram(m_ShaderProgram))
 }
 
-void Shader::setUniform1f(const std::string &name, float value) const {
+void Shader::setUniform1f(const std::string &name, const float value) const
+{
+    bind();
     GLCall(glUniform1f(getUniformLocation(name), value))
 }
 
-void Shader::setUniform1i(const std::string &name, int value) const {
+void Shader::setUniform4f(const std::string& name, const glm::mat4& mat) const
+{
+    bind();
+    GLCall(glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)));
+}
+
+void Shader::setUniform1i(const std::string &name, const int value) const
+{
+    bind();
     GLCall(glUniform1i(getUniformLocation(name), value))
 }
 
-int Shader::getUniformLocation(const std::string &name) const {
+int Shader::getUniformLocation(const std::string &name) const
+{
     const int location = glGetUniformLocation(m_ShaderProgram, name.c_str());
     if (location == -1)
         LOG_WARN("Uniform not found: " + name);
@@ -54,16 +66,16 @@ void Shader::bind() const
 
 void Shader::unbind() { glUseProgram(0); }
 
-GLuint Shader::compile(const char* pShaderSource, const GLenum pShaderType)
+GLuint Shader::compile(const char* shaderSource, const GLenum shaderType)
 {
-    const GLuint shaderID = glCreateShader(pShaderType);
+    const GLuint shaderID = glCreateShader(shaderType);
 
-    int compRes;
-    GLCall(glShaderSource(shaderID, 1, &pShaderSource, nullptr))
+    int res = -1;
+    GLCall(glShaderSource(shaderID, 1, &shaderSource, nullptr))
     GLCall(glCompileShader(shaderID))
-    GLCall(glGetShaderiv(shaderID, GL_COMPILE_STATUS, &compRes))
+    GLCall(glGetShaderiv(shaderID, GL_COMPILE_STATUS, &res))
 
-    if(compRes != GL_TRUE)
+    if(res != GL_TRUE)
     {
         int length = 0;
         GLCall(glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &length))
@@ -77,10 +89,12 @@ GLuint Shader::compile(const char* pShaderSource, const GLenum pShaderType)
     return shaderID;
 }
 
-std::string Shader::parse(const char* shaderSource) {
+std::string Shader::parse(const char* shaderSource)
+{
     std::ifstream lShaderFile(shaderSource);
 
-    if (!lShaderFile.is_open()) {
+    if (!lShaderFile.is_open())
+    {
         LOG_ERROR(std::string("Shader file not found: ") + shaderSource);
         return "";
     }

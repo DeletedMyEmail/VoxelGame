@@ -5,7 +5,7 @@
 bool Window::s_glfwInitialized = false;
 
 Window::Window(const WindowSettings &settings)
-    : m_Window(nullptr), m_Settings(settings), m_Camera()
+    : m_Window(nullptr), m_Settings(settings)
 {
     if (!s_glfwInitialized)
         glfwInit();
@@ -24,25 +24,37 @@ Window::Window(const WindowSettings &settings)
     GLCall(glEnable(GL_BLEND))
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
 
-    glfwSetInputMode(m_Window, GLFW_CURSOR, settings.disableCursor ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    //GLCall(glfwSetCursorPos(m_Window, settings.height / 2, settings.width / 2))
+    GLCall(glfwSetInputMode(m_Window, GLFW_CURSOR, settings.disableCursor ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL))
+
     if (settings.culling)
     {
         GLCall(glEnable(GL_CULL_FACE))
     }
     if (!settings.vysnc)
-        glfwSwapInterval(0);
+    {
+        GLCall(glfwSwapInterval(0))
+    }
 
     setCallbacks();
 }
 
+Window::Window(Window&& other) noexcept
+{
+    m_Window = other.m_Window;
+    m_Settings = other.m_Settings;
+    other.m_Window = nullptr;
+}
+
 Window::~Window() {
-    glfwDestroyWindow(m_Window);
+    GLCall(glfwDestroyWindow(m_Window))
 }
 
 void Window::createGLFWWindow()
 {
+    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
     if (m_Settings.fullscreen) {
-        const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         m_Window = glfwCreateWindow(mode->width, mode->height, m_Settings.title, glfwGetPrimaryMonitor(), nullptr);
     }
     else {
@@ -55,28 +67,20 @@ void Window::createGLFWWindow()
     }
 }
 
-void Window::clear(const glm::vec4 color) const
-{
-    glfwSwapBuffers(m_Window);
-    glfwPollEvents();
-    GLCall(glClearColor(color.r, color.g, color.b, color.a))
-    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
-}
-
 bool Window::isRunning() const
 {
     return !glfwWindowShouldClose(m_Window);
 }
 
-void Window::stop()
+void Window::stop() const
 {
-    glfwSetWindowShouldClose(m_Window, GL_TRUE);
+    GLCall(glfwSetWindowShouldClose(m_Window, GL_TRUE))
 }
 
 glm::dvec2 Window::getMousePosition() const
 {
     double x, y;
-    glfwGetCursorPos(m_Window, &x, &y);
+    GLCall(glfwGetCursorPos(m_Window, &x, &y))
     return {x, y};
 }
 
@@ -88,7 +92,7 @@ double Window::getMouseY() const {
     return getMousePosition().y;
 }
 
-bool Window::isKeyPressed(const int pKey) const
+bool Window::isKeyDown(const int pKey) const
 {
     const int state = glfwGetKey(m_Window, pKey);
     return state == GLFW_PRESS || state == GLFW_REPEAT;
@@ -100,23 +104,32 @@ bool Window::isMouseButtonPressed(const int pButton) const
     return state == GLFW_PRESS || state == GLFW_REPEAT;
 }
 
+void Window::setTitle(const std::string& title) const
+{
+    GLCall(glfwSetWindowTitle(m_Window, title.c_str()))
+}
+
 void Window::setCallbacks() const
 {
-    glfwSetWindowFocusCallback(m_Window, windowFocusCallback);
-    glfwSetWindowCloseCallback(m_Window, closeCallback);
-    glfwSetMouseButtonCallback(m_Window, mouseButtonCallback);
-    glfwSetKeyCallback(m_Window, keyCallback);
-    glfwSetCursorPosCallback(m_Window, mouseMoveCallback);
+    GLCall(glfwSetWindowFocusCallback(m_Window, windowFocusCallback))
+    GLCall(glfwSetWindowCloseCallback(m_Window, closeCallback))
+    GLCall(glfwSetMouseButtonCallback(m_Window, mouseButtonCallback))
+    GLCall(glfwSetKeyCallback(m_Window, keyCallback))
+    GLCall(glfwSetCursorPosCallback(m_Window, mouseMoveCallback))
 }
 
 void Window::windowFocusCallback(GLFWwindow* window, const int focused)
 {
-    Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
     if (focused && win->m_Settings.disableCursor)
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    {
+        GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED))
+    }
     else
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    {
+        GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL))
+    }
 
     if (win->m_Settings.onFocusCallback)
         win->m_Settings.onFocusCallback(win, focused);
@@ -124,8 +137,7 @@ void Window::windowFocusCallback(GLFWwindow* window, const int focused)
 
 void Window::mouseMoveCallback(GLFWwindow* window, const double x, const double y)
 {
-    // TODO: camera stuff
-    Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
     if (win->m_Settings.onCursorMoveCallback)
         win->m_Settings.onCursorMoveCallback(win, glm::dvec2{x,y});
@@ -133,7 +145,7 @@ void Window::mouseMoveCallback(GLFWwindow* window, const double x, const double 
 
 void Window::closeCallback(GLFWwindow* window)
 {
-    Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
     if (win->m_Settings.onCloseCallback)
         win->m_Settings.onCloseCallback(win);
@@ -141,7 +153,7 @@ void Window::closeCallback(GLFWwindow* window)
 
 void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-    Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
     if (win->m_Settings.onFocusCallback)
         win->m_Settings.onMouseButtonCallback(win, button, action, mods);
@@ -149,10 +161,15 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
 
 void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    Window* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
     if (win->m_Settings.onKeyCallback)
         win->m_Settings.onKeyCallback(win, key, scancode, action, mods);
+}
+
+void Window::bind() const
+{
+    GLCall(glfwMakeContextCurrent(m_Window))
 }
 
 void Window::initGlfw()
@@ -242,7 +259,7 @@ WindowBuilder& WindowBuilder::onClose(const std::function<void(Window* window)>&
     return *this;
 }
 
-Window WindowBuilder::build() const
+std::shared_ptr<Window> WindowBuilder::build() const
 {
-    return Window(m_settings);
+    return std::make_unique<Window>(m_settings);
 }
