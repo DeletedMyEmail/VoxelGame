@@ -1,11 +1,13 @@
 #include "Renderer.h"
 
-Renderer::Renderer(const std::shared_ptr<Window>& window, std::shared_ptr<Camera> cam)
-    : m_Window(window), m_Cam(cam)
+#include <utility>
+
+Renderer::Renderer(std::shared_ptr<Window> window, std::shared_ptr<Camera> cam)
+    : m_Window(std::move(window)), m_Cam(std::move(cam))
 {
 }
 
-void Renderer::draw(const Mesh& mesh, const Texture& texture, const Shader& shader) const
+void Renderer::draw(const Mesh& mesh, const Texture& texture, const Shader& shader, unsigned instanceCount) const
 {
     shader.bind();
     texture.bind(0);
@@ -14,7 +16,7 @@ void Renderer::draw(const Mesh& mesh, const Texture& texture, const Shader& shad
     shader.setUniform4f("u_Projection", m_Cam->getProjection());
     mesh.bind();
 
-    GLCall(glDrawElements(GL_TRIANGLES, mesh.getIndexBuffer()->getCount(), GL_UNSIGNED_INT, nullptr))
+    GLCall(glDrawElementsInstanced(GL_TRIANGLES, mesh.getIndexBuffer()->getCount(), GL_UNSIGNED_INT, nullptr, instanceCount))
 }
 
 void Renderer::clear(const glm::vec4 color) const
@@ -29,19 +31,3 @@ void Renderer::update() const
     GLCall(glfwSwapBuffers(m_Window->getGLFWWindow()))
     GLCall(glfwPollEvents())
 }
-
-
-/*GLuint instanceBuffer = 0;
-// instance rendering
-glm::vec2 translations[BLOCK_COUNT];
-for(int i = 0; i < BLOCK_COUNT; i++)
-{
-    translations[i] = {10.0f * i, 10.0f * i};
-}
-glGenBuffers(1, &instanceBuffer);
-glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
-glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * BLOCK_COUNT, translations, GL_STATIC_DRAW);
-
-glEnableVertexAttribArray(2);
-glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), nullptr);
-glVertexAttribDivisor(2, 1);*/

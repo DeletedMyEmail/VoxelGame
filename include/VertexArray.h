@@ -39,7 +39,8 @@ public:
     void bind() const;
     void unbind() const;
 private:
-    GLuint m_ArrayID;
+    GLuint m_ArrayID = 0;
+    GLuint m_AttribCounter = 0;
     std::vector<std::shared_ptr<VertexBuffer>> m_Buffers;
 };
 

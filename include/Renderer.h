@@ -25,10 +25,10 @@ inline void checkOpenGLErrors() {
 class Renderer
 {
 public:
-    Renderer(const std::shared_ptr<Window>& window, std::shared_ptr<Camera> cam);
+    Renderer(std::shared_ptr<Window> window, std::shared_ptr<Camera> cam);
 
     void clear(glm::vec4 color = {0.07f, 0.14f, 0.17f, 1.0f}) const;
-    void draw(const Mesh& mesh, const Texture& texture, const Shader& shader) const;
+    void draw(const Mesh& mesh, const Texture& texture, const Shader& shader, unsigned instanceCount) const;
     void update() const;
 
     std::shared_ptr<Window> getWindow() { return m_Window; }

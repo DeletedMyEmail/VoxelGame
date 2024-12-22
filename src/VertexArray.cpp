@@ -43,13 +43,14 @@ void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const V
     {
         auto [count, type, normalized, instanceDivisor] = attributes.at(i);
 
-        GLCall(glEnableVertexAttribArray(i))
-        GLCall(glVertexAttribPointer(i, count, type, normalized, layout.getStride(), (void*) offset))
+        GLCall(glEnableVertexAttribArray(m_AttribCounter))
+        GLCall(glVertexAttribPointer(m_AttribCounter, count, type, normalized, layout.getStride(), (void*) offset))
         if (instanceDivisor != 0)
         {
-            GLCall(glVertexAttribDivisor(i, instanceDivisor))
+            GLCall(glVertexAttribDivisor(m_AttribCounter, instanceDivisor))
         }
 
+        m_AttribCounter++;
         offset += sizeOfGLType(type) * count;
     }
 }

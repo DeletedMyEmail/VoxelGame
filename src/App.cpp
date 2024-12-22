@@ -1,5 +1,7 @@
 #include "App.h"
 
+const unsigned INSTANCE_COUNT = 100;
+
 Mesh loadBlockMesh();
 
 App::App()
@@ -20,8 +22,8 @@ void App::run()
     const Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
     const Mesh mesh = loadBlockMesh();
     const Texture texture("../resources/cube.png");
-    auto prevMousePos = window->getMousePosition();
 
+    auto prevMousePos = window->getMousePosition();
     float lastTime = glfwGetTime();
     float deltaSum = 0;
     unsigned frameCount = 0;
@@ -69,7 +71,7 @@ void App::run()
 
         cam->update();
 
-        m_Renderer.draw(mesh, texture, shader);
+        m_Renderer.draw(mesh, texture, shader, INSTANCE_COUNT);
     }
 }
 
@@ -125,12 +127,28 @@ Mesh loadBlockMesh()
     const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(float) * 5 * vertices.size(), vertices.data());
     const std::shared_ptr<IndexBuffer> iBuffer = std::make_unique<IndexBuffer>(indices.data(), indices.size());
 
-    VertexBufferLayout layout;
-    layout.push<float>(3);
-    layout.push<float>(2);
+    VertexBufferLayout vertLayout;
+    vertLayout.push<float>(3);
+    vertLayout.push<float>(2);
+
+    const unsigned cols = glm::sqrt(INSTANCE_COUNT);
+    glm::vec3 translations[INSTANCE_COUNT];
+
+    for (int i = 0; i < cols; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            translations[i * cols + j] = glm::vec3(i, 0, j);
+        }
+    }
+
+    const std::shared_ptr<VertexBuffer> instanceBuffer = std::make_unique<VertexBuffer>(sizeof(float) * 3 * INSTANCE_COUNT, translations);
+    VertexBufferLayout instanceLayout;
+    instanceLayout.push<float>(3, false, 1);
 
     const std::shared_ptr<VertexArray> vArray = std::make_unique<VertexArray>();
-    vArray->addBuffer(vBuffer, layout);
+    vArray->addBuffer(vBuffer, vertLayout);
+    vArray->addBuffer(instanceBuffer, instanceLayout);
 
     return Mesh(vArray, iBuffer);
 }
