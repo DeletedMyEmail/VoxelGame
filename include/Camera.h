@@ -15,6 +15,7 @@ public:
     operator std::string() const;
 
     void setSensitive(const float sensitivity) { m_Sensitivity = sensitivity; }
+    void increaseSpeed(const float speed) { m_Speed = glm::max(m_Speed + speed, 0.0f); }
     float getSensitive() const { return m_Sensitivity; }
     float getSpeed() const { return m_Speed; }
     const glm::mat4& getView() const { return m_View; }

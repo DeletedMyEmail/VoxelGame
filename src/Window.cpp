@@ -116,6 +116,7 @@ void Window::setCallbacks() const
     GLCall(glfwSetMouseButtonCallback(m_Window, mouseButtonCallback))
     GLCall(glfwSetKeyCallback(m_Window, keyCallback))
     GLCall(glfwSetCursorPosCallback(m_Window, mouseMoveCallback))
+    GLCall(glfwSetScrollCallback(m_Window, scrollCallback))
 }
 
 void Window::windowFocusCallback(GLFWwindow* window, const int focused)
@@ -165,6 +166,14 @@ void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
     if (win->m_Settings.onKeyCallback)
         win->m_Settings.onKeyCallback(win, key, scancode, action, mods);
+}
+
+void Window::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
+
+    if (win->m_Settings.onScrollCallback)
+        win->m_Settings.onScrollCallback(win, xoffset, yoffset);
 }
 
 void Window::bind() const
@@ -256,6 +265,13 @@ WindowBuilder& WindowBuilder::onMouseButton(
 WindowBuilder& WindowBuilder::onClose(const std::function<void(Window* window)>& callback)
 {
     m_settings.onCloseCallback = callback;
+    return *this;
+}
+
+WindowBuilder& WindowBuilder::onScroll(
+    const std::function<void(Window* window, double xoffset, double yoffset)>& callback)
+{
+    m_settings.onScrollCallback = callback;
     return *this;
 }
 

@@ -25,6 +25,7 @@ typedef struct WindowSetting
   std::function<void(Window* window, int button, int action, int mods)> onMouseButtonCallback = nullptr;
   std::function<void(Window* window, int key, int scancode, int action, int mods)> onKeyCallback = nullptr;
   std::function<void(Window* window, bool focused)> onFocusCallback = nullptr;
+  std::function<void(Window* window, double xoffset, double yoffset)> onScrollCallback = nullptr;
 } WindowSettings;
 
 class Window
@@ -56,6 +57,7 @@ private:
   static void closeCallback(GLFWwindow* window);
   static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+  static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
   static void initGlfw();
 private:
   GLFWwindow* m_Window;
@@ -81,6 +83,7 @@ public:
   WindowBuilder& onFocus(const std::function<void(Window* window, bool focused)>& callback);
   WindowBuilder& onMouseButton(const std::function<void(Window* window, int button, int action, int mods)>& callback);
   WindowBuilder& onClose(const std::function<void(Window* window)>& callback);
+  WindowBuilder& onScroll(const std::function<void(Window* window, double xoffset, double yoffset)>& callback);
 
   std::shared_ptr<Window> build() const;
 

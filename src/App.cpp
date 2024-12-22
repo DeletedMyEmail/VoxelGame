@@ -9,7 +9,14 @@ App::App()
                 size(1200, 1900).
                 title("Minecraft Clone").
                 disableCursor().
-                onClose([](Window*) {exit(0);}).
+                onScroll([this](Window* win, double x, double y)
+                {
+                    this->m_Renderer.getCamera()->increaseSpeed(y);
+                }).
+                onClose([](Window*)
+                {
+                    exit(0);
+                }).
                 build(),
                 std::make_unique<Camera>(glm::vec3{0,0,-5}, 90.0f, 1200, 1900, 0.1f, 1000.0f))
 {
