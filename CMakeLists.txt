@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(MinecraftClone)
+project(VoxelGame)
 cmake_policy(SET CMP0072 NEW)
 
 #add_compile_definitions(RELEASE) <-- uncomment to remove logging at compile time

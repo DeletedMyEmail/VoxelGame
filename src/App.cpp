@@ -19,7 +19,7 @@ void App::run()
     const std::shared_ptr<Camera> cam = m_Renderer.getCamera();
     const Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
     const Mesh mesh = loadBlockMesh();
-    const Texture texture("../resources/block.png");
+    const Texture texture("../resources/cube.png");
     auto prevMousePos = window->getMousePosition();
 
     float lastTime = glfwGetTime();
@@ -76,30 +76,50 @@ void App::run()
 Mesh loadBlockMesh()
 {
     std::vector<float> vertices = {
-        // Vertex positions followed by texture coordinates
-        1.0f,  1.0f, -1.0f, 0.625f, 0.500f, // Vertex 1
-        1.0f, -1.0f, -1.0f, 0.375f, 0.500f, // Vertex 2
-        1.0f,  1.0f,  1.0f, 0.625f, 0.750f, // Vertex 3
-        1.0f, -1.0f,  1.0f, 0.375f, 0.750f, // Vertex 4
-       -1.0f,  1.0f, -1.0f, 0.875f, 0.500f, // Vertex 5
-       -1.0f, -1.0f, -1.0f, 0.625f, 0.250f, // Vertex 6
-       -1.0f,  1.0f,  1.0f, 0.125f, 0.500f, // Vertex 7
-       -1.0f, -1.0f,  1.0f, 0.375f, 0.250f  // Vertex 8
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  // Bottom-left
+         0.5f, -0.5f,  0.5f,  1.0f/3.0f, 0.0f,  // Bottom-right
+         0.5f,  0.5f,  0.5f,  1.0f/3.0f, 0.5f,  // Top-right
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.5f,  // Top-left
+
+        // Back face
+        -0.5f, -0.5f, -0.5f,  1.0f/3.0f, 0.0f,  // Bottom-left
+         0.5f, -0.5f, -0.5f,  2.0f/3.0f, 0.0f,  // Bottom-right
+         0.5f,  0.5f, -0.5f,  2.0f/3.0f, 0.5f,  // Top-right
+        -0.5f,  0.5f, -0.5f,  1.0f/3.0f, 0.5f,  // Top-left
+
+        // Left face
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.5f,  // Bottom-left
+        -0.5f, -0.5f,  0.5f,  1.0f/3.0f, 0.5f,  // Bottom-right
+        -0.5f,  0.5f,  0.5f,  1.0f/3.0f, 1.0f,  // Top-right
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  // Top-left
+
+        // Right face
+         0.5f, -0.5f, -0.5f,  1.0f/3.0f, 0.5f,  // Bottom-left
+         0.5f, -0.5f,  0.5f,  2.0f/3.0f, 0.5f,  // Bottom-right
+         0.5f,  0.5f,  0.5f,  2.0f/3.0f, 1.0f,  // Top-right
+         0.5f,  0.5f, -0.5f,  1.0f/3.0f, 1.0f,  // Top-left
+
+        // Top face
+        -0.5f,  0.5f, -0.5f,  2.0f/3.0f, 0.0f,  // Bottom-left
+         0.5f,  0.5f, -0.5f,  1.0f, 0.0f,  // Bottom-right
+         0.5f,  0.5f,  0.5f,  1.0f, 0.5f,  // Top-right
+        -0.5f,  0.5f,  0.5f,  2.0f/3.0f, 0.5f,  // Top-left
+
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,  2.0f/3.0f, 0.5f,  // Bottom-left
+         0.5f, -0.5f, -0.5f,  1.0f, 0.5f,  // Bottom-right
+         0.5f, -0.5f,  0.5f,  1.0f, 1.0f,  // Top-right
+        -0.5f, -0.5f,  0.5f,  2.0f/3.0f, 1.0f   // Top-left
     };
 
     std::vector<GLsizei> indices = {
-        4, 2, 0,  // Face 1
-        2, 7, 3,  // Face 2
-        6, 5, 7,  // Face 3
-        1, 7, 5,  // Face 4
-        0, 3, 1,  // Face 5
-        4, 1, 5,  // Face 6
-        4, 6, 2,  // Face 7
-        2, 6, 7,  // Face 8
-        6, 4, 5,  // Face 9
-        1, 3, 7,  // Face 10
-        0, 2, 3,  // Face 11
-        4, 0, 1   // Face 12
+        0, 1, 2, 2, 3, 0,       // Front face
+        4, 5, 6, 6, 7, 4,       // Back face
+        8, 9, 10, 10, 11, 8,    // Left face
+        12, 13, 14, 14, 15, 12, // Right face
+        16, 17, 18, 18, 19, 16, // Top face
+        20, 21, 22, 22, 23, 20  // Bottom face
     };
 
     const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(float) * 5 * vertices.size(), vertices.data());
