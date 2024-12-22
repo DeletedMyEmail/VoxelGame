@@ -50,7 +50,7 @@ void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const V
             GLCall(glVertexAttribDivisor(i, instanceDivisor))
         }
 
-        offset += sizeOfGLType(type);
+        offset += sizeOfGLType(type) * count;
     }
 }
 

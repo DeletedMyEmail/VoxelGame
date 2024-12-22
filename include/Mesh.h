@@ -4,11 +4,11 @@
 #include "Texture.h"
 #include "VertexArray.h"
 
-class Model
+class Mesh
 {
 public:
-    explicit Model(const std::shared_ptr<Texture>& texture, const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer);
-    ~Model();
+    explicit Mesh(const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer);
+    ~Mesh();
 
     void rotate(float degrees, const glm::vec3& axis);
     void scale(const glm::vec3& scale);
@@ -21,7 +21,6 @@ public:
     const glm::mat4& getMatrix() const { return m_Matrix; }
     const glm::mat4& getViewProj() const { return m_ViewProjection; }
 private:
-    std::shared_ptr<Texture> m_Texture;
     std::shared_ptr<IndexBuffer> m_IndexBuffer;
     std::shared_ptr<VertexArray> m_VertArray;
     glm::mat4 m_Matrix;
