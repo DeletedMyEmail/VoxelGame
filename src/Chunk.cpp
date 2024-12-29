@@ -1,15 +1,9 @@
 #include "Chunk.h"
 
-Chunk::Chunk()
-    : m_Heights(), m_Blocks()
+Chunk::Chunk(const glm::uvec2 chunkPosition)
+    : m_ChunkPosition(chunkPosition)
 {
-    for (int x = 0; x < CHUNK_SIZE; x++)
-    {
-        for (int z = 0; z < CHUNK_SIZE; z++)
-        {
-            m_Heights[x][z] = x * z;
-        }
-    }
+    m_Blocks.reserve(MAX_HEIGHT * CHUNK_SIZE * CHUNK_SIZE);
 
     for (unsigned int x = 0; x < CHUNK_SIZE; x++)
     {
@@ -17,11 +11,7 @@ Chunk::Chunk()
         {
             for (unsigned int z = 0; z < CHUNK_SIZE; z++)
             {
-                BlockType type = SOLID;
-                if (y > m_Heights[x][z])
-                    type = AIR;
-
-                m_Blocks[x][y][z] = {type, {x, y, z}};
+                m_Blocks.emplace_back(Blockdata{SOLID, GRASS_TEXTURE_OFFSET, {x, y, z}});
             }
         }
     }

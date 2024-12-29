@@ -9,43 +9,10 @@ void checkOpenGLErrors()
     }
 }
 
-static Mesh createBlockMesh();
-
 BlockRenderer::BlockRenderer(const char* textureAtlasPath)
-    : m_BlockMesh(createBlockMesh()), m_TextureAtlas(textureAtlasPath)
+    : m_TextureAtlas(textureAtlasPath)
 {
-}
-
-void BlockRenderer::draw(const Chunk& chunk, const Shader& shader, const Window& window, const Camera& cam) const
-{
-    window.bind();
-    m_TextureAtlas.bind(0);
-    shader.bind();
-
-    shader.setUniform1i("u_TextureSlot", 0);
-    shader.setUniform2u("u_AtlasCoords", 1, 11);
-    shader.setUniform4f("u_View", cam.getView());
-    shader.setUniform4f("u_Projection", cam.getProjection());
-
-    m_BlockMesh.bind();
-
-    GLCall(glDrawElements(GL_TRIANGLES, m_BlockMesh.getIndexBuffer()->getCount(), GL_UNSIGNED_INT, nullptr))
-}
-
-void BlockRenderer::clear(const Window& window, const glm::vec4 color) const
-{
-    window.bind();
-
-    GLCall(glfwSwapBuffers(window.getGLFWWindow()))
-    GLCall(glfwPollEvents())
-
-    GLCall(glClearColor(color.r, color.g, color.b, color.a))
-    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
-}
-
-static Mesh createBlockMesh()
-{
-    const std::vector<GLuint> vertices = {
+        const std::vector<GLuint> vertices = {
         // 32 bits - 0: pos-x, 1: pos-y, 2: pos-z, 3-6: texture-x, 6: texture-y
 
         // Front face
@@ -80,23 +47,63 @@ static Mesh createBlockMesh()
         0b0101110u, // Top-left
     };
 
-    const std::vector<GLsizei> indices = {
-        0, 1, 2, 2, 3, 0,       // Front face
-        4, 5, 6, 6, 7, 4,       // Back face
-        8, 9, 10, 10, 11, 8,    // Left face
-        12, 13, 14, 14, 15, 12, // Right face
-        16, 17, 18, 18, 19, 16, // Top face
-        20, 21, 22, 22, 23, 20  // Bottom face
-    };
-
     const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(GLuint) * vertices.size(), vertices.data());
-    const std::shared_ptr<IndexBuffer> iBuffer = std::make_unique<IndexBuffer>(indices.data(), indices.size());
 
     VertexBufferLayout vertLayout;
     vertLayout.push<GLuint>(1);
 
-    const std::shared_ptr<VertexArray> vArray = std::make_unique<VertexArray>();
-    vArray->addBuffer(vBuffer, vertLayout);
+    m_BlockVertArray.addBuffer(vBuffer, vertLayout);
 
-    return {vArray, iBuffer};
+}
+
+void BlockRenderer::setInstanceData(Chunk& chunk)
+{
+    GLuint translations[chunk.getBlocks().size() * 5];
+    for (size_t i = 0; i < chunk.getBlocks().size(); i ++)
+    {
+        translations[i * 5] = chunk.getBlocks()[i].pos.x;
+        translations[i * 5 + 1] = chunk.getBlocks()[i].pos.y;
+        translations[i * 5 + 2] = chunk.getBlocks()[i].pos.z;
+        translations[i * 5 + 3] = chunk.getBlocks()[i].atlasOffset.x;
+        translations[i * 5 + 4] = chunk.getBlocks()[i].atlasOffset.y;
+    }
+
+    const std::shared_ptr<VertexBuffer> instanceBuffer = std::make_unique<VertexBuffer>(sizeof(GLuint) * 5 * chunk.getBlocks().size(), (void*) translations);
+
+    VertexBufferLayout instanceLayout;
+    instanceLayout.push<GLuint>(3, false, 1);
+    instanceLayout.push<GLuint>(2, false, 1);
+
+    if (m_BlockVertArray.getBufferCount() < 2)
+        m_BlockVertArray.addBuffer(instanceBuffer, instanceLayout);
+    else
+        m_BlockVertArray.updateBuffer(1, instanceBuffer, instanceLayout);
+}
+
+void BlockRenderer::draw(Chunk& chunk, const Shader& shader, const Window& window, const Camera& cam)
+{
+    window.bind();
+    m_BlockIndexBuffer.bind();
+    m_TextureAtlas.bind(0);
+    shader.bind();
+
+    setInstanceData(chunk);
+
+    shader.setUniform1i("u_TextureSlot", 0);
+    shader.setUniform4f("u_View", cam.getView());
+    shader.setUniform4f("u_Projection", cam.getProjection());
+    shader.setUniform2u("u_ChunkPos", chunk.getPosition().x, chunk.getPosition().y);
+
+    GLCall(glDrawElementsInstanced(GL_TRIANGLES, m_BlockIndexBuffer.getCount(), GL_UNSIGNED_INT, nullptr, chunk.getBlocks().size()))
+}
+
+void BlockRenderer::clear(const Window& window, const glm::vec4 color) const
+{
+    window.bind();
+
+    GLCall(glfwSwapBuffers(window.getGLFWWindow()))
+    GLCall(glfwPollEvents())
+
+    GLCall(glClearColor(color.r, color.g, color.b, color.a))
+    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 }

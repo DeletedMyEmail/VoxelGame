@@ -35,9 +35,15 @@ public:
     VertexArray();
     ~VertexArray();
 
+    void updateBuffer(GLuint index, const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout);
     void addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout);
     void bind() const;
     void unbind() const;
+
+    GLuint getAttribCount() const { return m_AttribCounter; }
+    GLuint getBufferCount() const { return m_Buffers.size(); }
+private:
+    void setAttributes(GLuint& counter, const VertexBufferLayout& layout, bool enable) const;
 private:
     GLuint m_ArrayID = 0;
     GLuint m_AttribCounter = 0;

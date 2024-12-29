@@ -1,17 +1,20 @@
 #pragma once
 
+#include <vector>
 #include "Blockdata.h"
 
 class Chunk {
 
 public:
-    Chunk();
+    Chunk(glm::uvec2 chunkPosition);
     ~Chunk();
 
-public:
-    static const unsigned int CHUNK_SIZE = 16;
-    static const unsigned int MAX_HEIGHT = 255;
+    const std::vector<Blockdata>& getBlocks() { return m_Blocks; }
+    const glm::uvec2& getPosition() const { return m_ChunkPosition; }
+private:
+    static constexpr unsigned int CHUNK_SIZE = 16;
+    static constexpr unsigned int MAX_HEIGHT = 4;
 
-    unsigned int m_Heights[CHUNK_SIZE][CHUNK_SIZE];
-    Blockdata m_Blocks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+    glm::uvec2 m_ChunkPosition;
+    std::vector<Blockdata> m_Blocks;
 };

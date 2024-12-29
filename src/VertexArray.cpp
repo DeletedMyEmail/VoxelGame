@@ -37,37 +37,51 @@ VertexArray::VertexArray()
     GLCall(glGenVertexArrays(1, &m_ArrayID))
 }
 
-void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
+void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layout, const bool enable) const
 {
     bind();
-    buffer->bind();
-    m_Buffers.emplace_back(buffer);
 
     const auto& attributes = layout.getAttributes();
     unsigned int offset = 0;
 
-    for (unsigned int i = 0; i < attributes.size(); i++)
+    for (auto [count, type, normalized, instanceDivisor] : attributes)
     {
-        auto [count, type, normalized, instanceDivisor] = attributes.at(i);
+        if (enable)
+        {
+            GLCall(glEnableVertexAttribArray(counter))
+        }
 
-        GLCall(glEnableVertexAttribArray(m_AttribCounter))
         if (type == GL_UNSIGNED_INT || GL_INT)
         {
-            GLCall(glVertexAttribIPointer(m_AttribCounter, count, type, layout.getStride(), (void*) offset))
+            GLCall(glVertexAttribIPointer(counter, count, type, layout.getStride(), (void*) offset))
         }
         else
         {
-            GLCall(glVertexAttribPointer(m_AttribCounter, count, type, normalized, layout.getStride(), (void*) offset))
+            GLCall(glVertexAttribPointer(counter, count, type, normalized, layout.getStride(), (void*) offset))
         }
 
         if (instanceDivisor != 0)
         {
-            GLCall(glVertexAttribDivisor(m_AttribCounter, instanceDivisor))
+            GLCall(glVertexAttribDivisor(counter, instanceDivisor))
         }
 
-        m_AttribCounter++;
+        counter++;
         offset += sizeOfGLType(type) * count;
     }
+}
+
+void VertexArray::updateBuffer(GLuint index, const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
+{
+    m_Buffers[index] = buffer;
+    buffer->bind();
+    setAttributes(index, layout, false);
+}
+
+void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
+{
+    m_Buffers.emplace_back(buffer);
+    buffer->bind();
+    setAttributes(m_AttribCounter, layout, true);
 }
 
 VertexArray::~VertexArray()

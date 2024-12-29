@@ -1,5 +1,10 @@
 #pragma once
+
+#include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
+
+#define GRASS_TEXTURE_OFFSET glm::uvec2{1,0}
+#define STONE_TEXTURE_OFFSET glm::uvec2{1,1}
 
 enum BlockType {
     SOLID,
@@ -8,10 +13,9 @@ enum BlockType {
     AIR
 };
 
-constexpr unsigned char ALL_FACES_FREE = 0b111111;
-
 struct Blockdata
 {
     BlockType type;
-    glm::uvec3 pos; // relative to chunk
+    glm::uvec2 atlasOffset;
+    glm::uvec3 pos;
 };

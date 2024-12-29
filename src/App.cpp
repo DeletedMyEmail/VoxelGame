@@ -8,7 +8,7 @@ void App::run()
             //fullscreen().
             size(1200, 1900).
             title("Minecraft Clone").
-            disableCursor().
+            //disableCursor().
             onScroll([&cam](Window* win, const double x, const double y)
             {
                 cam.increaseSpeed(y);
@@ -23,7 +23,7 @@ void App::run()
     Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
     BlockRenderer renderer("../resources/textureAtlas.png");
 
-    Chunk chunk;
+    Chunk chunk(glm::vec2(0));
 
     auto prevMousePos = window.getMousePosition();
     float lastTime = glfwGetTime();
