@@ -7,7 +7,7 @@
 class Mesh
 {
 public:
-    explicit Mesh(const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer);
+    Mesh(const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer);
     ~Mesh();
 
     void rotate(float degrees, const glm::vec3& axis);
@@ -19,10 +19,8 @@ public:
     VertexArray* getVertexArray() const { return m_VertArray.get(); }
     IndexBuffer* getIndexBuffer() const { return m_IndexBuffer.get(); }
     const glm::mat4& getMatrix() const { return m_Matrix; }
-    const glm::mat4& getViewProj() const { return m_ViewProjection; }
 private:
     std::shared_ptr<IndexBuffer> m_IndexBuffer;
     std::shared_ptr<VertexArray> m_VertArray;
     glm::mat4 m_Matrix;
-    glm::mat4 m_ViewProjection;
 };

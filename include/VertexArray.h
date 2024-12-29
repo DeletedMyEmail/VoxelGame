@@ -44,6 +44,7 @@ private:
     std::vector<std::shared_ptr<VertexBuffer>> m_Buffers;
 };
 
-
 template<>
-void VertexBufferLayout::push<float>(GLint count, GLboolean normalized, GLsizei instanceDivisor);
+void VertexBufferLayout::push<GLfloat>(GLint count, GLboolean normalized, GLsizei instanceDivisor);
+template<>
+void VertexBufferLayout::push<GLuint>(GLint count, GLboolean normalized, GLsizei instanceDivisor);

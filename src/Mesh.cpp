@@ -2,7 +2,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 Mesh::Mesh(const std::shared_ptr<VertexArray>& vertexArray, const std::shared_ptr<IndexBuffer>& indexBuffer)
-    : m_IndexBuffer(indexBuffer), m_VertArray(vertexArray), m_Matrix(), m_ViewProjection()
+    : m_IndexBuffer(indexBuffer), m_VertArray(vertexArray), m_Matrix()
 {
 }
 

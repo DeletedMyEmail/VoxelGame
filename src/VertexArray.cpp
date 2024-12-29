@@ -18,10 +18,17 @@ unsigned int sizeOfGLType(const GLenum type)
 }
 
 template <>
-void VertexBufferLayout::push<float>(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
+void VertexBufferLayout::push<GLfloat>(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
 {
     m_LayoutElements.emplace_back(LayoutElement{count, GL_FLOAT, normalized, instanceDivisor});
     m_Stride += count * sizeof(GLfloat);
+}
+
+template <>
+void VertexBufferLayout::push<GLuint>(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
+{
+    m_LayoutElements.emplace_back(LayoutElement{count, GL_UNSIGNED_INT, normalized, instanceDivisor});
+    m_Stride += count * sizeof(GLuint);
 }
 
 VertexArray::VertexArray()
@@ -44,7 +51,15 @@ void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const V
         auto [count, type, normalized, instanceDivisor] = attributes.at(i);
 
         GLCall(glEnableVertexAttribArray(m_AttribCounter))
-        GLCall(glVertexAttribPointer(m_AttribCounter, count, type, normalized, layout.getStride(), (void*) offset))
+        if (type == GL_UNSIGNED_INT || GL_INT)
+        {
+            GLCall(glVertexAttribIPointer(m_AttribCounter, count, type, layout.getStride(), (void*) offset))
+        }
+        else
+        {
+            GLCall(glVertexAttribPointer(m_AttribCounter, count, type, normalized, layout.getStride(), (void*) offset))
+        }
+
         if (instanceDivisor != 0)
         {
             GLCall(glVertexAttribDivisor(m_AttribCounter, instanceDivisor))

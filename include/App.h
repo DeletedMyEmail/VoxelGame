@@ -4,10 +4,8 @@
 
 class App {
 public:
-    App();
+    App() = default;
     ~App() = default;
 
     void run();
-private:
-  Renderer m_Renderer;
 };

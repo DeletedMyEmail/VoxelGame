@@ -275,7 +275,7 @@ WindowBuilder& WindowBuilder::onScroll(
     return *this;
 }
 
-std::shared_ptr<Window> WindowBuilder::build() const
+Window WindowBuilder::build() const
 {
-    return std::make_unique<Window>(m_settings);
+    return {m_settings};
 }

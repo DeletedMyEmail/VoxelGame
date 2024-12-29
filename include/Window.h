@@ -85,7 +85,7 @@ public:
   WindowBuilder& onClose(const std::function<void(Window* window)>& callback);
   WindowBuilder& onScroll(const std::function<void(Window* window, double xoffset, double yoffset)>& callback);
 
-  std::shared_ptr<Window> build() const;
+  Window build() const;
 
   const WindowSetting& getSettings() const { return m_settings; }
 private:
