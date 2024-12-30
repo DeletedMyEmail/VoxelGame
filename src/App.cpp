@@ -4,7 +4,6 @@
 #include "Renderer.h"
 #include "stb/stb_image_write.h"
 
-
 void App::run()
 {
     Camera cam(glm::vec3{0,0,-2}, 90.0f, 1200, 1900, 0.1f, 1000.0f);
@@ -26,7 +25,23 @@ void App::run()
     Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
     BlockRenderer renderer("../resources/textureAtlas.png");
 
-    Chunk chunk(glm::vec2(0));
+
+    const unsigned int chunksPerSide = 8;
+
+    unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
+    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, 42);
+
+    std::vector<Chunk> chunks;
+    chunks.reserve(chunksPerSide * chunksPerSide);
+    for (unsigned int x = 0; x < chunksPerSide; x++)
+    {
+        for (unsigned int z = 0; z < chunksPerSide; z++)
+        {
+            chunks.emplace_back(glm::uvec2{x, z}, heightMap);
+        }
+    }
+
+    freeMap(heightMap, size);
 
     auto prevMousePos = window.getMousePosition();
     float lastTime = glfwGetTime();
@@ -74,6 +89,8 @@ void App::run()
         }
 
         cam.update();
-        renderer.draw(chunk, shader, window, cam);
+
+        for (auto& chunk : chunks)
+            renderer.draw(chunk, shader, window, cam);
     }
 }

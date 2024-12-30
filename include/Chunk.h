@@ -6,7 +6,8 @@
 class Chunk {
 
 public:
-    Chunk(glm::uvec2 chunkPosition);
+    Chunk();
+    Chunk(glm::uvec2 chunkPosition, unsigned char** heightMap);
     ~Chunk();
 
     const std::vector<Blockdata>& getBlocks() { return m_Blocks; }

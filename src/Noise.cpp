@@ -57,7 +57,7 @@ float perlin(const glm::vec2 pos, const unsigned int seed)
     return cubicInterpolation(ci1, ci2, weights.y);
 }
 
-unsigned char** genPerlinMap(const unsigned int width, const unsigned int height, unsigned char min, unsigned char max, const unsigned int seed)
+unsigned char** genPerlinMap(const unsigned int width, const unsigned int height, unsigned char min, unsigned char max, const unsigned int seed,  unsigned int octaves, unsigned int lacunarity, float persistance)
 {
     auto** image = new unsigned char*[height];
     for (unsigned int y = 0; y < height; y++)
@@ -77,7 +77,7 @@ unsigned char** genPerlinMap(const unsigned int width, const unsigned int height
     return image;
 }
 
-void freePerlinMap(unsigned char** image, const unsigned int height) {
+void freeMap(unsigned char** image, const unsigned int height) {
     for (unsigned int y = 0; y < height; y++)
         delete[] image[y];
 
