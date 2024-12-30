@@ -12,39 +12,39 @@ void checkOpenGLErrors()
 BlockRenderer::BlockRenderer(const char* textureAtlasPath)
     : m_TextureAtlas(textureAtlasPath)
 {
-        const std::vector<GLuint> vertices = {
-        // 32 bits - 0: pos-x, 1: pos-y, 2: pos-z, 3-6: texture-x, 6: texture-y
+    const std::vector<GLuint> vertices = {
 
+        // 32 bits - 0: pos-z, 1: pos-y, 2: pos-x, 3-5: texture-x, 6: texture-y, 7-9: normal
         // Front face
-        0b1001111u, // Bottom-left
-        0b1000011u, // Bottom-right
-        0b0000001u, // Top-right
-        0b0001101u, // Top-left
+        0b1001001111u, // Bottom-left
+        0b1001000011u, // Bottom-right
+        0b1000000001u, // Top-right
+        0b1000001101u, // Top-left
         // Back face
-        0b1001110u, // Bottom-left
-        0b1010010u, // Bottom-right
-        0b0010000u, // Top-right
-        0b0001100u, // Top-left
+        0b1011001110u, // Bottom-left
+        0b1011010010u, // Bottom-right
+        0b1010010000u, // Top-right
+        0b1010001100u, // Top-left
         // Left face
-        0b1010111u, // Bottom-left
-        0b1011110u, // Bottom-right
-        0b0011100u, // Top-right
-        0b0010101u, // Top-left
+        0b0101010111u, // Bottom-left
+        0b0101011110u, // Bottom-right
+        0b0100011100u, // Top-right
+        0b0100010101u, // Top-left
         // Right face
-        0b1100011u, // Bottom-left
-        0b1011010u, // Bottom-right
-        0b0011000u, // Top-right
-        0b0100001u, // Top-left
+        0b0111100011u, // Bottom-left
+        0b0111011010u, // Bottom-right
+        0b0110011000u, // Top-right
+        0b0110100001u, // Top-left
         // Top face
-        0b1101101u, // Bottom-left
-        0b1100001u, // Bottom-right
-        0b0100000u, // Top-right
-        0b0101100u, // Top-left
-        // bottom face
-        0b1101111u, // Bottom-left
-        0b1110011u, // Bottom-right
-        0b0110010u, // Top-right
-        0b0101110u, // Top-left
+        0b0001101101u, // Bottom-left
+        0b0001100001u, // Bottom-right
+        0b0000100000u, // Top-right
+        0b0000101100u, // Top-left
+        // Bottom face
+        0b0011101111u, // Bottom-left
+        0b0011110011u, // Bottom-right
+        0b0010110010u, // Top-right
+        0b0010101110u, // Top-left
     };
 
     const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(GLuint) * vertices.size(), vertices.data());

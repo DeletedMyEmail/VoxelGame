@@ -95,8 +95,7 @@ GLuint Shader::compile(const char* shaderSource, const GLenum shaderType)
         GLCall(glGetShaderInfoLog(shaderID, length, &length, message))
 
         LOG_ERROR(std::string("Shader compilation error: ")+message);
-
-        return 0;
+        exit(-1);
     }
 
     return shaderID;
@@ -109,7 +108,7 @@ std::string Shader::parse(const char* shaderSource)
     if (!lShaderFile.is_open())
     {
         LOG_ERROR(std::string("Shader file not found: ") + shaderSource);
-        return "";
+        exit(-1);
     }
 
     std::stringstream shaderBuffer;
