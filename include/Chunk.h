@@ -11,9 +11,10 @@ public:
 
     const std::vector<Blockdata>& getBlocks() { return m_Blocks; }
     const glm::uvec2& getPosition() const { return m_ChunkPosition; }
+public:
+    static constexpr unsigned char CHUNK_SIZE = 16;
+    static constexpr unsigned char MAX_HEIGHT = 16;
 private:
-    static constexpr unsigned int CHUNK_SIZE = 16;
-    static constexpr unsigned int MAX_HEIGHT = 4;
 
     glm::uvec2 m_ChunkPosition;
     std::vector<Blockdata> m_Blocks;

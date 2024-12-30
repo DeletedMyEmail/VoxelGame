@@ -1,14 +1,17 @@
 #include "App.h"
- #include "Chunk.h"
+#include "Chunk.h"
+#include "Noise.h"
+#include "Renderer.h"
+#include "stb/stb_image_write.h"
+
 
 void App::run()
 {
     Camera cam(glm::vec3{0,0,-2}, 90.0f, 1200, 1900, 0.1f, 1000.0f);
     Window window = WindowBuilder().
-            //fullscreen().
             size(1200, 1900).
             title("Minecraft Clone").
-            //disableCursor().
+            disableCursor().
             onScroll([&cam](Window* win, const double x, const double y)
             {
                 cam.increaseSpeed(y);
