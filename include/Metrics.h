@@ -16,7 +16,7 @@ public:
         lastTime = currentTime;
         frameCount++;
     }
-    operator std::string() const { return "FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(deltaSum / frameCount); }
+    operator std::string() const { return "FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(deltaSum / frameCount * 1000) + "ms"; }
     void reset() { frameCount = 0; deltaSum = 0; }
 
     float getDeltaSum() const { return deltaSum; }

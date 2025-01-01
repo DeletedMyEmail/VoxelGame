@@ -23,8 +23,15 @@ void App::run()
             {
                 exit(0);
             }).
-            onKey([](Window* win, int key, int scancode, int action, int mods) {
-                if (key == GLFW_KEY_ESCAPE) exit(0);
+            onKey([](Window* win, const int key, const int scancode, const int action, int mods) {
+                if (key == GLFW_KEY_ESCAPE)
+                    exit(0);
+                if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+                {
+                    GLint mode;
+                    GLCall(glGetIntegerv(GL_POLYGON_MODE, &mode))
+                    GLCall(glPolygonMode( GL_FRONT_AND_BACK, mode == GL_FILL ? GL_LINE : GL_FILL );)
+                }
             }).
             build();
     Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
