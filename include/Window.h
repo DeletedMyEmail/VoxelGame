@@ -10,7 +10,7 @@
 
 class Window;
 
-typedef struct WindowSetting
+struct WindowSettings
 {
   int width = 0;
   int height = 0;
@@ -26,7 +26,7 @@ typedef struct WindowSetting
   std::function<void(Window* window, int key, int scancode, int action, int mods)> onKeyCallback = nullptr;
   std::function<void(Window* window, bool focused)> onFocusCallback = nullptr;
   std::function<void(Window* window, double xoffset, double yoffset)> onScrollCallback = nullptr;
-} WindowSettings;
+};
 
 class Window
 {
@@ -45,7 +45,7 @@ public:
   bool isMouseButtonPressed(int pButton) const;
   void bind() const;
 
-  const WindowSetting& getSettings() const { return m_Settings; }
+  const WindowSettings& getSettings() const { return m_Settings; }
   GLFWwindow* getGLFWWindow() const { return m_Window; }
   void setTitle(const std::string& title) const;
 private:
@@ -61,7 +61,7 @@ private:
   static void initGlfw();
 private:
   GLFWwindow* m_Window;
-  WindowSetting m_Settings;
+  WindowSettings m_Settings;
 
   static bool s_glfwInitialized;
 };
@@ -87,7 +87,7 @@ public:
 
   Window build() const;
 
-  const WindowSetting& getSettings() const { return m_settings; }
+  const WindowSettings& getSettings() const { return m_settings; }
 private:
-  WindowSetting m_settings;
+  WindowSettings m_settings;
 };

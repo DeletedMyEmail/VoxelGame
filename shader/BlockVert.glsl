@@ -12,6 +12,21 @@ out vec2 v_TexCoords;
 out vec2 v_AtlasCoords;
 out vec3 v_Normal;
 
+vec2 unpackTextureCoords(uint data);
+vec3 unpackNormal(uint data);
+vec3 unpackPos(uint data);
+
+void main()
+{
+  const uint chunkSize = 16u;
+  vec3 pos = vec3(instancePos + chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y));
+  gl_Position = u_Projection * u_View * vec4(unpackPos(packedVertex) + pos, 1.0);
+
+  v_TexCoords = unpackTextureCoords(packedVertex);
+  v_AtlasCoords = instanceAtlasCoords;
+  v_Normal = unpackNormal(packedVertex);
+}
+
 vec2 unpackTextureCoords(uint data) {
   vec2 coords = vec2(0);
 
@@ -26,19 +41,19 @@ vec3 unpackNormal(uint data) {
 
   switch (x) {
     case 0u:
-      return vec3(0.0f, 1.0f, 0.0f);
+          return vec3(0.0f, 1.0f, 0.0f);
     case 1u:
-      return vec3(0.0f, 0.0f, 1.0f);
+          return vec3(0.0f, 0.0f, 1.0f);
     case 2u:
-      return vec3(-1.0f, 0.0f, 0.0f);
+          return vec3(-1.0f, 0.0f, 0.0f);
     case 3u:
-      return vec3(0.0f, -1.0f, 0.0f);
+          return vec3(0.0f, -1.0f, 0.0f);
     case 4u:
-      return vec3(1.0f, 0.0f, 0.0f);
+          return vec3(1.0f, 0.0f, 0.0f);
     case 5u:
-      return vec3(0.0f, 0.0f, -1.0f);
+          return vec3(0.0f, 0.0f, -1.0f);
     default:
-      return vec3(0);
+          return vec3(0);
   }
 }
 
@@ -63,15 +78,4 @@ vec3 unpackPos(uint data)
   }
 
   return pos;
-}
-
-void main()
-{
-  const uint chunkSize = 16u;
-  vec3 pos = vec3(instancePos + chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y));
-  gl_Position = u_Projection * u_View * vec4(unpackPos(packedVertex) + pos, 1.0);
-
-  v_TexCoords = unpackTextureCoords(packedVertex);
-  v_AtlasCoords = instanceAtlasCoords;
-    v_Normal = unpackNormal(packedVertex);
 }

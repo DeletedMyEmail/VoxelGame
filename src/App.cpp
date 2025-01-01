@@ -2,7 +2,11 @@
 #include "Chunk.h"
 #include "Noise.h"
 #include "Renderer.h"
-#include "stb/stb_image_write.h"
+#include "Metrics.h"
+
+void createChunks(unsigned int chunksPerSide, std::vector<Chunk>& chunks);
+glm::vec3 getCamMovement(const Window& window);
+void processCamInputs(Window& window, Camera& cam, glm::dvec2& prevMousePos, float deltaTime);
 
 void App::run()
 {
@@ -19,19 +23,74 @@ void App::run()
             {
                 exit(0);
             }).
+            onKey([](Window* win, int key, int scancode, int action, int mods) {
+                if (key == GLFW_KEY_ESCAPE) exit(0);
+            }).
             build();
-    window.bind();
-
     Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
     BlockRenderer renderer("../resources/textureAtlas.png");
 
-
-    const unsigned int chunksPerSide = 8;
-
-    unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
-    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, 42);
-
     std::vector<Chunk> chunks;
+    createChunks(4, chunks);
+
+    auto prevMousePos = window.getMousePosition();
+    FrameMetrics metrics;
+    while (window.isRunning())
+    {
+        metrics.update();
+        if (metrics.getDeltaSum() >= 1.0f)
+        {
+            window.setTitle(metrics);
+            metrics.reset();
+        }
+
+        renderer.clear(window);
+
+        processCamInputs(window, cam, prevMousePos, metrics.getDeltaTime());
+        cam.update();
+
+        for (auto& chunk : chunks)
+            renderer.draw(chunk, shader, window, cam);
+    }
+}
+
+void processCamInputs(Window& window, Camera& cam, glm::dvec2& prevMousePos, float deltaTime)
+{
+    const auto mousePos = window.getMousePosition();
+    if (mousePos != prevMousePos)
+    {
+        const auto relMouseMovement = mousePos - prevMousePos;
+
+        cam.rotate(relMouseMovement.x, relMouseMovement.y);
+        prevMousePos = mousePos;
+    }
+
+    auto movement = getCamMovement(window);
+    if (movement != glm::vec3(0))
+    {
+        movement = glm::normalize(movement) * cam.getSpeed() * deltaTime;
+        cam.move(movement);
+    }
+}
+
+glm::vec3 getCamMovement(const Window& window)
+{
+    glm::vec3 movement(0.0f);
+    if (window.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
+    if (window.isKeyDown(GLFW_KEY_A)) movement.x -= 1.0f;
+    if (window.isKeyDown(GLFW_KEY_D)) movement.x += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
+
+    return movement;
+}
+
+void createChunks(const unsigned int chunksPerSide, std::vector<Chunk>& chunks)
+{
+    const unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
+    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, std::time(nullptr));
+
     chunks.reserve(chunksPerSide * chunksPerSide);
     for (unsigned int x = 0; x < chunksPerSide; x++)
     {
@@ -42,55 +101,4 @@ void App::run()
     }
 
     freeMap(heightMap, size);
-
-    auto prevMousePos = window.getMousePosition();
-    float lastTime = glfwGetTime();
-    float deltaSum = 0;
-    unsigned frameCount = 0;
-
-    while (window.isRunning()) {
-        const float currentTime = glfwGetTime();
-        const float deltaTime = currentTime - lastTime;
-        deltaSum += deltaTime;
-        lastTime = currentTime;
-        frameCount++;
-
-        if (deltaSum >= 1.0)
-        {
-            window.setTitle("Minecraft Clone  |  FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(deltaSum / frameCount));
-            deltaSum = 0;
-            frameCount = 0;
-        }
-
-        renderer.clear(window);
-
-        if (window.isKeyDown(GLFW_KEY_ESCAPE)) exit(0);
-
-        const auto mousePos = window.getMousePosition();
-        if (mousePos != prevMousePos)
-        {
-            const auto relMouseMovement = mousePos - prevMousePos;
-
-            cam.rotate(relMouseMovement.x, relMouseMovement.y);
-            prevMousePos = mousePos;
-        }
-
-        glm::vec3 movement(0.0f);
-        if (window.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
-        if (window.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
-        if (window.isKeyDown(GLFW_KEY_A)) movement.x -= 1.0f;
-        if (window.isKeyDown(GLFW_KEY_D)) movement.x += 1.0f;
-        if (window.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
-        if (window.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
-        if (glm::length(movement) > 0.0f)
-        {
-            movement = glm::normalize(movement) * cam.getSpeed() * deltaTime;
-            cam.move(movement);
-        }
-
-        cam.update();
-
-        for (auto& chunk : chunks)
-            renderer.draw(chunk, shader, window, cam);
-    }
 }

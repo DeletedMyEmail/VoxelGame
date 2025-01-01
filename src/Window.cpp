@@ -4,7 +4,7 @@
 
 bool Window::s_glfwInitialized = false;
 
-Window::Window(const WindowSettings &settings)
+Window::Window(const WindowSettings&settings)
     : m_Window(nullptr), m_Settings(settings)
 {
     if (!s_glfwInitialized)

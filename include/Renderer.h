@@ -1,8 +1,8 @@
 #pragma once
 
+#include "glad/glad.h"
 #include "Camera.h"
 #include "Chunk.h"
-#include "glad/glad.h"
 #include "Log.h"
 #include "Shader.h"
 #include "Texture.h"
