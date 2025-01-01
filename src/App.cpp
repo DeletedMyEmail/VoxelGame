@@ -1,136 +1,111 @@
 #include "App.h"
+#include "Chunk.h"
+#include "Noise.h"
+#include "Renderer.h"
+#include "Metrics.h"
 
-Mesh loadBlockMesh();
-
-App::App()
-    : m_Renderer(WindowBuilder().
-                size(1200, 1900).
-                title("Minecraft Clone").
-                disableCursor().
-                onClose([](Window*) {exit(0);}).
-                build(),
-                std::make_unique<Camera>(glm::vec3{0,0,-5}, 90.0f, 1200, 1900, 0.1f, 1000.0f))
-{
-}
+void createChunks(unsigned int chunksPerSide, std::vector<Chunk>& chunks);
+glm::vec3 getCamMovement(const Window& window);
+void processCamInputs(Window& window, Camera& cam, glm::dvec2& prevMousePos, float deltaTime);
 
 void App::run()
 {
-    const std::shared_ptr<Window> window = m_Renderer.getWindow();
-    const std::shared_ptr<Camera> cam = m_Renderer.getCamera();
-    const Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
-    const Mesh mesh = loadBlockMesh();
-    const Texture texture("../resources/cube.png");
-    auto prevMousePos = window->getMousePosition();
+    Camera cam(glm::vec3{0,0,-2}, 90.0f, 1200, 1900, 0.1f, 1000.0f);
+    Window window = WindowBuilder().
+            size(1200, 1900).
+            title("Minecraft Clone").
+            disableCursor().
+            onScroll([&cam](Window* win, const double x, const double y)
+            {
+                cam.increaseSpeed(y);
+            }).
+            onClose([](Window*)
+            {
+                exit(0);
+            }).
+            onKey([](Window* win, const int key, const int scancode, const int action, int mods) {
+                if (key == GLFW_KEY_ESCAPE)
+                    exit(0);
+                if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+                {
+                    GLint mode;
+                    GLCall(glGetIntegerv(GL_POLYGON_MODE, &mode))
+                    GLCall(glPolygonMode( GL_FRONT_AND_BACK, mode == GL_FILL ? GL_LINE : GL_FILL );)
+                }
+            }).
+            build();
+    Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
+    BlockRenderer renderer("../resources/textureAtlas.png");
 
-    float lastTime = glfwGetTime();
-    float deltaSum = 0;
-    unsigned frameCount = 0;
+    std::vector<Chunk> chunks;
+    createChunks(4, chunks);
 
-    while (window->isRunning()) {
-        const float currentTime = glfwGetTime();
-        const float deltaTime = currentTime - lastTime;
-        deltaSum += deltaTime;
-        lastTime = currentTime;
-        frameCount++;
-
-        if (deltaSum >= 1.0)
+    auto prevMousePos = window.getMousePosition();
+    FrameMetrics metrics;
+    while (window.isRunning())
+    {
+        metrics.update();
+        if (metrics.getDeltaSum() >= 1.0f)
         {
-            window->setTitle("Minecraft Clone  |  FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(deltaSum / frameCount));
-            deltaSum = 0;
-            frameCount = 0;
+            window.setTitle(metrics);
+            metrics.reset();
         }
 
-        m_Renderer.update();
-        m_Renderer.clear();
+        renderer.clear(window);
 
-        if (window->isKeyDown(GLFW_KEY_ESCAPE)) exit(0);
+        processCamInputs(window, cam, prevMousePos, metrics.getDeltaTime());
+        cam.update();
 
-        const auto mousePos = window->getMousePosition();
-        if (mousePos != prevMousePos)
-        {
-            const auto relMouseMovement = mousePos - prevMousePos;
-
-            cam->rotate(relMouseMovement.x, relMouseMovement.y);
-            prevMousePos = mousePos;
-        }
-
-        glm::vec3 movement(0.0f);
-        if (window->isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
-        if (window->isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
-        if (window->isKeyDown(GLFW_KEY_A)) movement.x -= 1.0f;
-        if (window->isKeyDown(GLFW_KEY_D)) movement.x += 1.0f;
-        if (window->isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
-        if (window->isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
-        if (glm::length(movement) > 0.0f)
-        {
-            movement = glm::normalize(movement) * cam->getSpeed() * deltaTime;
-            cam->move(movement);
-        }
-
-        cam->update();
-
-        m_Renderer.draw(mesh, texture, shader);
+        for (auto& chunk : chunks)
+            renderer.draw(chunk, shader, window, cam);
     }
 }
 
-Mesh loadBlockMesh()
+void processCamInputs(Window& window, Camera& cam, glm::dvec2& prevMousePos, float deltaTime)
 {
-    std::vector<float> vertices = {
-        // Front face
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  // Bottom-left
-         0.5f, -0.5f,  0.5f,  1.0f/3.0f, 0.0f,  // Bottom-right
-         0.5f,  0.5f,  0.5f,  1.0f/3.0f, 0.5f,  // Top-right
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.5f,  // Top-left
+    const auto mousePos = window.getMousePosition();
+    if (mousePos != prevMousePos)
+    {
+        const auto relMouseMovement = mousePos - prevMousePos;
 
-        // Back face
-        -0.5f, -0.5f, -0.5f,  1.0f/3.0f, 0.0f,  // Bottom-left
-         0.5f, -0.5f, -0.5f,  2.0f/3.0f, 0.0f,  // Bottom-right
-         0.5f,  0.5f, -0.5f,  2.0f/3.0f, 0.5f,  // Top-right
-        -0.5f,  0.5f, -0.5f,  1.0f/3.0f, 0.5f,  // Top-left
+        cam.rotate(relMouseMovement.x, relMouseMovement.y);
+        prevMousePos = mousePos;
+    }
 
-        // Left face
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.5f,  // Bottom-left
-        -0.5f, -0.5f,  0.5f,  1.0f/3.0f, 0.5f,  // Bottom-right
-        -0.5f,  0.5f,  0.5f,  1.0f/3.0f, 1.0f,  // Top-right
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  // Top-left
+    auto movement = getCamMovement(window);
+    if (movement != glm::vec3(0))
+    {
+        movement = glm::normalize(movement) * cam.getSpeed() * deltaTime;
+        cam.move(movement);
+    }
+}
 
-        // Right face
-         0.5f, -0.5f, -0.5f,  1.0f/3.0f, 0.5f,  // Bottom-left
-         0.5f, -0.5f,  0.5f,  2.0f/3.0f, 0.5f,  // Bottom-right
-         0.5f,  0.5f,  0.5f,  2.0f/3.0f, 1.0f,  // Top-right
-         0.5f,  0.5f, -0.5f,  1.0f/3.0f, 1.0f,  // Top-left
+glm::vec3 getCamMovement(const Window& window)
+{
+    glm::vec3 movement(0.0f);
+    if (window.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
+    if (window.isKeyDown(GLFW_KEY_A)) movement.x -= 1.0f;
+    if (window.isKeyDown(GLFW_KEY_D)) movement.x += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
+    if (window.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
 
-        // Top face
-        -0.5f,  0.5f, -0.5f,  2.0f/3.0f, 0.0f,  // Bottom-left
-         0.5f,  0.5f, -0.5f,  1.0f, 0.0f,  // Bottom-right
-         0.5f,  0.5f,  0.5f,  1.0f, 0.5f,  // Top-right
-        -0.5f,  0.5f,  0.5f,  2.0f/3.0f, 0.5f,  // Top-left
+    return movement;
+}
 
-        // Bottom face
-        -0.5f, -0.5f, -0.5f,  2.0f/3.0f, 0.5f,  // Bottom-left
-         0.5f, -0.5f, -0.5f,  1.0f, 0.5f,  // Bottom-right
-         0.5f, -0.5f,  0.5f,  1.0f, 1.0f,  // Top-right
-        -0.5f, -0.5f,  0.5f,  2.0f/3.0f, 1.0f   // Top-left
-    };
+void createChunks(const unsigned int chunksPerSide, std::vector<Chunk>& chunks)
+{
+    const unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
+    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, std::time(nullptr));
 
-    std::vector<GLsizei> indices = {
-        0, 1, 2, 2, 3, 0,       // Front face
-        4, 5, 6, 6, 7, 4,       // Back face
-        8, 9, 10, 10, 11, 8,    // Left face
-        12, 13, 14, 14, 15, 12, // Right face
-        16, 17, 18, 18, 19, 16, // Top face
-        20, 21, 22, 22, 23, 20  // Bottom face
-    };
+    chunks.reserve(chunksPerSide * chunksPerSide);
+    for (unsigned int x = 0; x < chunksPerSide; x++)
+    {
+        for (unsigned int z = 0; z < chunksPerSide; z++)
+        {
+            chunks.emplace_back(glm::uvec2{x, z}, heightMap);
+        }
+    }
 
-    const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(float) * 5 * vertices.size(), vertices.data());
-    const std::shared_ptr<IndexBuffer> iBuffer = std::make_unique<IndexBuffer>(indices.data(), indices.size());
-
-    VertexBufferLayout layout;
-    layout.push<float>(3);
-    layout.push<float>(2);
-
-    const std::shared_ptr<VertexArray> vArray = std::make_unique<VertexArray>();
-    vArray->addBuffer(vBuffer, layout);
-
-    return Mesh(vArray, iBuffer);
+    freeMap(heightMap, size);
 }

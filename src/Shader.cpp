@@ -51,6 +51,18 @@ void Shader::setUniform1i(const std::string &name, const int value) const
     GLCall(glUniform1i(getUniformLocation(name), value))
 }
 
+void Shader::setUniform1u(const std::string &name, const unsigned int value) const
+{
+    bind();
+    GLCall(glUniform1ui(getUniformLocation(name), value))
+}
+
+void Shader::setUniform2u(const std::string &name, const unsigned int x,const unsigned int y) const
+{
+    bind();
+    GLCall(glUniform2ui(getUniformLocation(name), x, y))
+}
+
 int Shader::getUniformLocation(const std::string &name) const
 {
     const int location = glGetUniformLocation(m_ShaderProgram, name.c_str());
@@ -83,7 +95,7 @@ GLuint Shader::compile(const char* shaderSource, const GLenum shaderType)
         GLCall(glGetShaderInfoLog(shaderID, length, &length, message))
 
         LOG_ERROR(std::string("Shader compilation error: ")+message);
-        return 0;
+        exit(-1);
     }
 
     return shaderID;
@@ -96,7 +108,7 @@ std::string Shader::parse(const char* shaderSource)
     if (!lShaderFile.is_open())
     {
         LOG_ERROR(std::string("Shader file not found: ") + shaderSource);
-        return "";
+        exit(-1);
     }
 
     std::stringstream shaderBuffer;

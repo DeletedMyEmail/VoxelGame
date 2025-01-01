@@ -10,7 +10,7 @@
 
 class Window;
 
-typedef struct WindowSetting
+struct WindowSettings
 {
   int width = 0;
   int height = 0;
@@ -25,7 +25,8 @@ typedef struct WindowSetting
   std::function<void(Window* window, int button, int action, int mods)> onMouseButtonCallback = nullptr;
   std::function<void(Window* window, int key, int scancode, int action, int mods)> onKeyCallback = nullptr;
   std::function<void(Window* window, bool focused)> onFocusCallback = nullptr;
-} WindowSettings;
+  std::function<void(Window* window, double xoffset, double yoffset)> onScrollCallback = nullptr;
+};
 
 class Window
 {
@@ -44,7 +45,7 @@ public:
   bool isMouseButtonPressed(int pButton) const;
   void bind() const;
 
-  const WindowSetting& getSettings() const { return m_Settings; }
+  const WindowSettings& getSettings() const { return m_Settings; }
   GLFWwindow* getGLFWWindow() const { return m_Window; }
   void setTitle(const std::string& title) const;
 private:
@@ -56,10 +57,11 @@ private:
   static void closeCallback(GLFWwindow* window);
   static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+  static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
   static void initGlfw();
 private:
   GLFWwindow* m_Window;
-  WindowSetting m_Settings;
+  WindowSettings m_Settings;
 
   static bool s_glfwInitialized;
 };
@@ -81,10 +83,11 @@ public:
   WindowBuilder& onFocus(const std::function<void(Window* window, bool focused)>& callback);
   WindowBuilder& onMouseButton(const std::function<void(Window* window, int button, int action, int mods)>& callback);
   WindowBuilder& onClose(const std::function<void(Window* window)>& callback);
+  WindowBuilder& onScroll(const std::function<void(Window* window, double xoffset, double yoffset)>& callback);
 
-  std::shared_ptr<Window> build() const;
+  Window build() const;
 
-  const WindowSetting& getSettings() const { return m_settings; }
+  const WindowSettings& getSettings() const { return m_settings; }
 private:
-  WindowSetting m_settings;
+  WindowSettings m_settings;
 };

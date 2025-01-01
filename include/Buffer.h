@@ -10,6 +10,8 @@ public:
 
     void bind() const;
     void unbind();
+
+    GLuint getID() const { return m_BufferID; }
 private:
     GLuint m_BufferID = 0;
 };
@@ -22,7 +24,8 @@ public:
     void bind() const;
     void unbind() const;
 
-    GLsizei getCount() const { return m_Count; };
+    GLsizei getCount() const { return m_Count; }
+    GLuint getID() const { return m_BufferID; }
 private:
     GLsizei m_Count;
     GLuint m_BufferID = 0;
