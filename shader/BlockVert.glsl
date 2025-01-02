@@ -1,16 +1,18 @@
 #version 330 core
 
-// 32 bits - 0: pos-z, 1: pos-y, 2: pos-x, 3-5: texture-x, 6: texture-y, 7-9: normal
+// 32 bits - 0: pos-z, 1: pos-y, 2: pos-x, 3-5: texture-x, 6: texture-y, 7-9: normal, 10: disable
 layout (location = 0) in uint packedVertex;
 layout (location = 1) in uvec3 instancePos;
 layout (location = 2) in uvec2 instanceAtlasCoords;
 
-uniform mat4 u_Projection, u_View;
 uniform uvec2 u_ChunkPos;
 
-out vec2 v_TexCoords;
-out vec2 v_AtlasCoords;
-out vec3 v_Normal;
+out DATA {
+  vec2 texCoords;
+  vec2 atlasCoords;
+  vec3 normal;
+  vec3 pos;
+} data_out;
 
 vec2 unpackTextureCoords(uint data);
 vec3 unpackNormal(uint data);
@@ -19,12 +21,11 @@ vec3 unpackPos(uint data);
 void main()
 {
   const uint chunkSize = 16u;
-  vec3 pos = vec3(instancePos + chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y));
-  gl_Position = u_Projection * u_View * vec4(unpackPos(packedVertex) + pos, 1.0);
 
-  v_TexCoords = unpackTextureCoords(packedVertex);
-  v_AtlasCoords = instanceAtlasCoords;
-  v_Normal = unpackNormal(packedVertex);
+  data_out.pos = vec3(instancePos + chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y)) + unpackPos(packedVertex);
+  data_out.texCoords = unpackTextureCoords(packedVertex);
+  data_out.atlasCoords = instanceAtlasCoords;
+  data_out.normal = unpackNormal(packedVertex);
 }
 
 vec2 unpackTextureCoords(uint data) {

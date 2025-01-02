@@ -34,7 +34,7 @@ void App::run()
                 }
             }).
             build();
-    Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl");
+    Shader shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl", "../shader/BlockGeo.glsl");
     BlockRenderer renderer("../resources/textureAtlas.png");
 
     std::vector<Chunk> chunks;

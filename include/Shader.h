@@ -6,7 +6,7 @@
 
 class Shader {
 public :
-    Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource);
+    Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource, const char* pGeometryShaderSource = nullptr);
     ~Shader();
 
     void setUniform1f(const std::string& name, float value) const;
@@ -18,11 +18,11 @@ public :
     void bind() const;
     static void unbind();
 
-    GLuint getShaderID() const { return m_ShaderProgram; }
+    GLuint getShaderID() const { return m_ProgrammID; }
 private:
     int getUniformLocation(const std::string& name) const;
 private:
     static GLuint compile(const char* shaderSource, GLenum shaderType);
     static std::string parse(const char* shaderSource);
-    GLuint m_ShaderProgram;
+    GLuint m_ProgrammID;
 };

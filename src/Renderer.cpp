@@ -16,35 +16,35 @@ BlockRenderer::BlockRenderer(const char* textureAtlasPath)
 
         // 32 bits - 0: pos-z, 1: pos-y, 2: pos-x, 3-5: texture-x, 6: texture-y, 7-9: normal
         // Front face
-        0b1001001111u, // Bottom-left
-        0b1001000011u, // Bottom-right
-        0b1000000001u, // Top-right
-        0b1000001101u, // Top-left
+        0b01001001111u, // Bottom-left
+        0b01001000011u, // Bottom-right
+        0b01000000001u, // Top-right
+        0b01000001101u, // Top-left
         // Back face
-        0b1011001110u, // Bottom-left
-        0b1011010010u, // Bottom-right
-        0b1010010000u, // Top-right
-        0b1010001100u, // Top-left
+        0b01011001110u, // Bottom-left
+        0b01011010010u, // Bottom-right
+        0b01010010000u, // Top-right
+        0b01010001100u, // Top-left
         // Left face
-        0b0101010111u, // Bottom-left
-        0b0101011110u, // Bottom-right
-        0b0100011100u, // Top-right
-        0b0100010101u, // Top-left
+        0b00101010111u, // Bottom-left
+        0b00101011110u, // Bottom-right
+        0b00100011100u, // Top-right
+        0b00100010101u, // Top-left
         // Right face
-        0b0111100011u, // Bottom-left
-        0b0111011010u, // Bottom-right
-        0b0110011000u, // Top-right
-        0b0110100001u, // Top-left
+        0b00111100011u, // Bottom-left
+        0b00111011010u, // Bottom-right
+        0b00110011000u, // Top-right
+        0b00110100001u, // Top-left
         // Top face
-        0b0001101101u, // Bottom-left
-        0b0001100001u, // Bottom-right
-        0b0000100000u, // Top-right
-        0b0000101100u, // Top-left
+        0b00001101101u, // Bottom-left
+        0b00001100001u, // Bottom-right
+        0b00000100000u, // Top-right
+        0b00000101100u, // Top-left
         // Bottom face
-        0b0011101111u, // Bottom-left
-        0b0011110011u, // Bottom-right
-        0b0010110010u, // Top-right
-        0b0010101110u, // Top-left
+        0b00011101111u, // Bottom-left
+        0b00011110011u, // Bottom-right
+        0b00010110010u, // Top-right
+        0b00010101110u, // Top-left
     };
 
     const std::shared_ptr<VertexBuffer> vBuffer = std::make_unique<VertexBuffer>(sizeof(GLuint) * vertices.size(), vertices.data());
@@ -90,8 +90,7 @@ void BlockRenderer::draw(Chunk& chunk, const Shader& shader, const Window& windo
     setInstanceData(chunk);
 
     shader.setUniform1i("u_TextureSlot", 0);
-    shader.setUniform4f("u_View", cam.getView());
-    shader.setUniform4f("u_Projection", cam.getProjection());
+    shader.setUniform4f("u_MVP", cam.getProjection() * cam.getView());
     shader.setUniform2u("u_ChunkPos", chunk.getPosition().x, chunk.getPosition().y);
 
     GLCall(glDrawElementsInstanced(GL_TRIANGLES, m_BlockIndexBuffer.getCount(), GL_UNSIGNED_INT, nullptr, chunk.getBlocks().size()))
