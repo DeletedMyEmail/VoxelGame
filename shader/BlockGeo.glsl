@@ -12,9 +12,8 @@ in DATA {
   vec2 atlasCoords;
   vec3 normal;
   vec3 pos;
+  bool en;
 } data_in[];
-
-uniform mat4 u_MVP;
 
 void main()
 {

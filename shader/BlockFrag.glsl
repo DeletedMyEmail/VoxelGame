@@ -8,16 +8,7 @@ uniform sampler2D u_TextureSlot;
 
 layout(location = 0) out vec4 color;
 
-vec4 getModelColor(vec2 atlasCoords, vec2 texCoords, sampler2D textureSlot) {
-    const float cellSize = 1.0f / 12.0f;
-
-    vec2 coords = vec2(
-        (texCoords.x + atlasCoords.x * 6.0f) * cellSize,
-        (texCoords.y + atlasCoords.y) * cellSize
-    );
-
-    return texture(textureSlot, coords);
-}
+vec4 getModelColor(vec2 atlasCoords, vec2 texCoords, sampler2D textureSlot);
 
 void main()
 {
@@ -31,4 +22,15 @@ void main()
     lighting += diffuseStrength * lightColor * 0.7; // add diffuse
 
     color = vec4(modelColor * lighting, 1.0f);
+}
+
+vec4 getModelColor(vec2 atlasCoords, vec2 texCoords, sampler2D textureSlot) {
+    const float cellSize = 1.0f / 12.0f;
+
+    vec2 coords = vec2(
+    (texCoords.x + atlasCoords.x * 6.0f) * cellSize,
+    (texCoords.y + atlasCoords.y) * cellSize
+    );
+
+    return texture(textureSlot, coords);
 }

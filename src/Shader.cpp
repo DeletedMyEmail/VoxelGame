@@ -15,19 +15,28 @@ Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSourc
     const std::string fragStr = parse(pFragmentShaderSource);
     const GLuint fragShaderID = compile(fragStr.c_str(), GL_FRAGMENT_SHADER);
 
-    const std::string geoStr = parse(pGeometryShaderSource);
-    const GLuint geoShaderID = compile(geoStr.c_str(), GL_GEOMETRY_SHADER);
+    GLuint geoShaderID = 0;
+    if (pGeometryShaderSource != nullptr)
+    {
+        const std::string geoStr = parse(pGeometryShaderSource);
+        geoShaderID = compile(geoStr.c_str(), GL_GEOMETRY_SHADER);
+    }
 
     GLCall(glAttachShader(m_ProgrammID, vertShaderID))
-    GLCall(glAttachShader(m_ProgrammID, geoShaderID))
     GLCall(glAttachShader(m_ProgrammID, fragShaderID))
+    if (pGeometryShaderSource != nullptr)
+    {
+        GLCall(glAttachShader(m_ProgrammID, geoShaderID))
+    }
+
     GLCall(glLinkProgram(m_ProgrammID))
 
-    GLCall(glValidateProgram(m_ProgrammID))
-
     GLCall(glDeleteShader(vertShaderID))
-    GLCall(glDeleteShader(geoShaderID))
     GLCall(glDeleteShader(fragShaderID))
+    if (pGeometryShaderSource != nullptr)
+    {
+        GLCall(glDeleteShader(geoShaderID))
+    }
 
     unbind();
 }

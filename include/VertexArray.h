@@ -39,6 +39,7 @@ public:
     void addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout);
     void bind() const;
     void unbind() const;
+    void clear();
 
     GLuint getAttribCount() const { return m_AttribCounter; }
     GLuint getBufferCount() const { return m_Buffers.size(); }

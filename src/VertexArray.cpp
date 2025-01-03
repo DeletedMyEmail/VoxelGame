@@ -101,3 +101,15 @@ void VertexArray::unbind() const
 {
     GLCall(glBindVertexArray(0))
 }
+
+void VertexArray::clear()
+{
+    if (m_ArrayID != 0)
+    {
+        GLCall(glDeleteVertexArrays(1, &m_ArrayID))
+    }
+
+    m_Buffers.clear();
+    m_AttribCounter = 0;
+    m_ArrayID = 0;
+}

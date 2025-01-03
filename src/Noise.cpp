@@ -1,6 +1,5 @@
 #include "Noise.h"
 #include <cmath>
-
 #include "Log.h"
 #include "glm/ext/quaternion_geometric.hpp"
 
@@ -16,8 +15,8 @@ glm::vec2 randomGradient(const glm::ivec2 gridPos, const unsigned int seed)
     constexpr unsigned int bits = 8 * sizeof(unsigned int);
     constexpr unsigned int bitsHalf = bits / 2;
 
-    unsigned int a = gridPos.x + seed;
-    unsigned int b = gridPos.y + seed;
+    unsigned int a = gridPos.x;
+    unsigned int b = gridPos.y;
     a *= 3284157443;
 
     b ^= a << bitsHalf | a >> bits - bitsHalf;
@@ -25,6 +24,7 @@ glm::vec2 randomGradient(const glm::ivec2 gridPos, const unsigned int seed)
 
     a ^= b << bitsHalf | b >> bits - bitsHalf;
     a *= 2048419325;
+
 
     const float random = a * (M_PI / ~(~0u >> 1)); // in [0, 2*Pi]
 
