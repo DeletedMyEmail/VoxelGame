@@ -6,31 +6,44 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
-Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource)
-    : m_ShaderProgram(glCreateProgram())
+Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource, const char* pGeometryShaderSource)
+    : m_ProgrammID(glCreateProgram())
 {
-    const std::string lVertexString = parse(pVertexShaderSource);
-    const char* lVertexCString = lVertexString.c_str();
-    const GLuint lVertShader = compile(lVertexCString, GL_VERTEX_SHADER);
+    const std::string vertStr = parse(pVertexShaderSource);
+    const GLuint vertShaderID = compile(vertStr.c_str(), GL_VERTEX_SHADER);
 
-    const std::string lFragString = parse(pFragmentShaderSource);
-    const char* lFragCString = lFragString.c_str();
-    const GLuint lFragShader = compile(lFragCString, GL_FRAGMENT_SHADER);
+    const std::string fragStr = parse(pFragmentShaderSource);
+    const GLuint fragShaderID = compile(fragStr.c_str(), GL_FRAGMENT_SHADER);
 
-    GLCall(glAttachShader(m_ShaderProgram, lVertShader))
-    GLCall(glAttachShader(m_ShaderProgram, lFragShader))
+    GLuint geoShaderID = 0;
+    if (pGeometryShaderSource != nullptr)
+    {
+        const std::string geoStr = parse(pGeometryShaderSource);
+        geoShaderID = compile(geoStr.c_str(), GL_GEOMETRY_SHADER);
+    }
 
-    GLCall(glLinkProgram(m_ShaderProgram))
+    GLCall(glAttachShader(m_ProgrammID, vertShaderID))
+    GLCall(glAttachShader(m_ProgrammID, fragShaderID))
+    if (pGeometryShaderSource != nullptr)
+    {
+        GLCall(glAttachShader(m_ProgrammID, geoShaderID))
+    }
 
-    GLCall(glDeleteShader(lVertShader))
-    GLCall(glDeleteShader(lFragShader))
+    GLCall(glLinkProgram(m_ProgrammID))
+
+    GLCall(glDeleteShader(vertShaderID))
+    GLCall(glDeleteShader(fragShaderID))
+    if (pGeometryShaderSource != nullptr)
+    {
+        GLCall(glDeleteShader(geoShaderID))
+    }
 
     unbind();
 }
 
 Shader::~Shader()
 {
-    GLCall(glDeleteProgram(m_ShaderProgram))
+    GLCall(glDeleteProgram(m_ProgrammID))
 }
 
 void Shader::setUniform1f(const std::string &name, const float value) const
@@ -65,7 +78,7 @@ void Shader::setUniform2u(const std::string &name, const unsigned int x,const un
 
 int Shader::getUniformLocation(const std::string &name) const
 {
-    const int location = glGetUniformLocation(m_ShaderProgram, name.c_str());
+    const int location = glGetUniformLocation(m_ProgrammID, name.c_str());
     if (location == -1)
         LOG_WARN("Uniform not found: " + name);
     return location;
@@ -73,7 +86,7 @@ int Shader::getUniformLocation(const std::string &name) const
 
 void Shader::bind() const
 {
-    GLCall(glUseProgram(m_ShaderProgram))
+    GLCall(glUseProgram(m_ProgrammID))
 }
 
 void Shader::unbind() { glUseProgram(0); }

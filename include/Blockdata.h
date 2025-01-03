@@ -17,5 +17,4 @@ struct Blockdata
 {
     BlockType type;
     glm::uvec2 atlasOffset;
-    glm::uvec3 pos;
 };
