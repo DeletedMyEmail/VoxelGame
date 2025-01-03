@@ -29,7 +29,7 @@ private:
     static unsigned int getBlockIndex(const glm::uvec3 pos) { return pos.x + CHUNK_SIZE * (pos.y + MAX_HEIGHT * pos.z);}
 public:
     static constexpr unsigned char CHUNK_SIZE = 16;
-    static constexpr unsigned char MAX_HEIGHT = 255;
+    static constexpr unsigned char MAX_HEIGHT = 22;
     static constexpr unsigned int BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
 private:
     VertexArray m_VAO;

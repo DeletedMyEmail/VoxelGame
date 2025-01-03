@@ -9,7 +9,8 @@ App::App()
     :   m_Window(WindowBuilder().
                  size(1200, 1900).
                  title("Minecraft Clone").
-                 disableCursor(false).
+                 disableCursor().
+                 culling().
                  onScroll([this](Window* win, const double x, const double y)
                  {
                      this->m_Camera.increaseSpeed(y);
@@ -95,7 +96,7 @@ void App::processCamInputs(glm::dvec2& prevMousePos, const float deltaTime)
 void App::initChunks(const unsigned int chunksPerSide)
 {
     const unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
-    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, 73);
+    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, 42);
 
     m_Chunks.reserve(chunksPerSide * chunksPerSide);
     for (unsigned int x = 0; x < chunksPerSide; x++)

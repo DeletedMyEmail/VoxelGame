@@ -15,18 +15,19 @@ glm::vec2 randomGradient(const glm::ivec2 gridPos, const unsigned int seed)
     constexpr unsigned int bits = 8 * sizeof(unsigned int);
     constexpr unsigned int bitsHalf = bits / 2;
 
-    unsigned int a = gridPos.x;
-    unsigned int b = gridPos.y;
-    a *= 3284157443;
+    // Mix in the seed right at the start with some offsets
+    unsigned int a = static_cast<unsigned int>(gridPos.x) ^ (seed + 374761393u);
+    unsigned int b = static_cast<unsigned int>(gridPos.y) ^ (seed + 668265263u);
 
-    b ^= a << bitsHalf | a >> bits - bitsHalf;
-    b *= 1911520717;
+    // The original hashing operations
+    a *= 3284157443u;
+    b ^= (a << bitsHalf | a >> (bits - bitsHalf));
+    b *= 1911520717u;
 
-    a ^= b << bitsHalf | b >> bits - bitsHalf;
-    a *= 2048419325;
+    a ^= (b << bitsHalf | b >> (bits - bitsHalf));
+    a *= 2048419325u;
 
-
-    const float random = a * (M_PI / ~(~0u >> 1)); // in [0, 2*Pi]
+    float random = a * (M_PI / ~(~0u >> 1)); // in [0, 2*Pi]
 
     return {std::sin(random), std::cos(random)};
 }

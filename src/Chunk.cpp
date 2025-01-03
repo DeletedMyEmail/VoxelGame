@@ -19,9 +19,9 @@ Chunk::Chunk(const glm::uvec2 chunkPosition, unsigned char** heightMap)
 // (missing: 10: atlas-x, 11-14: atlas-y, 15-18: pos-rel-to-chunk-x, 19-26: pos-rel-to-chunk-y, 27-30: pos-rel-to-chunk-z, 31: unused)
 static constexpr GLuint faces[] = {
     // Front Face
-    0b1001001111u, // Bottom-left
-    0b1001000011u, // Bottom-right
     0b1000000001u, // Top-right
+    0b1001000011u, // Bottom-right
+    0b1001001111u, // Bottom-left
     0b1000001101u, // Top-left
     // Back Face
     0b1011001110u, // Bottom-left
@@ -34,14 +34,14 @@ static constexpr GLuint faces[] = {
     0b0100011100u, // Top-right
     0b0100010101u, // Top-left
     // Right Face
-    0b0111100011u, // Bottom-left
-    0b0111011010u, // Bottom-right
     0b0110011000u, // Top-right
+    0b0111011010u, // Bottom-right
+    0b0111100011u, // Bottom-left
     0b0110100001u, // Top-left
     // Top Face
-    0b0001101101u, // Bottom-left
-    0b0001100001u, // Bottom-right
     0b0000100000u, // Top-right
+    0b0001100001u, // Bottom-right
+    0b0001101101u, // Bottom-left
     0b0000101100u, // Top-left
     // Bottom Face
     0b0011101111u, // Bottom-left
@@ -138,7 +138,6 @@ void Chunk::generateMesh()
 
 void Chunk::createBlocks(unsigned char** heightMap)
 {
-    LOG_INFO("Generating chunk at position: " + std::to_string(m_ChunkPosition.x * CHUNK_SIZE) + ", " + std::to_string(m_ChunkPosition.y * CHUNK_SIZE));
     for (unsigned char x = 0; x < CHUNK_SIZE; x++)
     {
         for (unsigned char z = 0; z < CHUNK_SIZE; z++)
