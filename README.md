@@ -6,7 +6,7 @@ If you run distro using apt package manager, just run ```bash build_debian.sh```
 ### Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle wireframe mode
-- `ESC` to quit 
+- `ESC` to quit
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 
