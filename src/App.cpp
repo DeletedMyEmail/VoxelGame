@@ -1,14 +1,10 @@
 #include "App.h"
-#include "Chunk.h"
-#include "Noise.h"
 #include "Renderer.h"
 #include "Metrics.h"
-#include "stb/stb_image_write.h"
 
 App::App()
     :   m_Window(WindowBuilder().
                  size(1200, 1900).
-                 title("Minecraft Clone").
                  disableCursor().
                  culling().
                  onScroll([this](Window* win, const double x, const double y)
@@ -31,17 +27,21 @@ App::App()
                      }
                  }).
                  build()),
+        m_GameWorld(glm::vec3{4,23,4}, 4),
         m_TextureAtlas("../resources/textureAtlas.png"),
-        m_Shader("../shader/BlockVert.glsl", "../shader/BlockFrag.glsl", nullptr),
-        m_Camera(glm::vec3{0,0,-2}, 90.0f, m_Window.getSettings().height, m_Window.getSettings().width, 0.1f, 1000.0f)
+        m_Shader("../shader/DefaultVert.glsl", "../shader/DefaultFrag.glsl", nullptr),
+        m_Camera(glm::vec3{4,23,4}, 90.0f, m_Window.getSettings().height, m_Window.getSettings().width, 0.1f, 1000.0f)
 {
-    initChunks(4);
 }
+
+glm::vec3 getCamMoveInput(const Window& win);
+glm::vec3 getPlayerMoveInputs(const Window& win);
 
 void App::run()
 {
-    auto prevMousePos = m_Window.getMousePosition();
+    const Shader debugShader("../shader/DebugVert.glsl", "../shader/DebugFrag.glsl", nullptr);
     FrameMetrics metrics;
+
     while (m_Window.isRunning())
     {
         metrics.update();
@@ -53,59 +53,43 @@ void App::run()
 
         clear(m_Window);
 
-        processCamInputs(prevMousePos, metrics.getDeltaTime());
-        m_Camera.update();
+        Player& player = m_GameWorld.getPlayer();
+        player.getPhysics().addVelocity(getPlayerMoveInputs(m_Window) * metrics.getDeltaTime() * player.getSpeed());
+        m_GameWorld.update();
 
-        for (Chunk& chunk : m_Chunks)
-            draw(chunk, m_Shader, m_TextureAtlas, m_Window, m_Camera);
+        m_Camera.move(getCamMoveInput(m_Window) * metrics.getDeltaTime() * m_Camera.getSpeed());
+        m_Camera.update(m_Window.getMousePosition());
+
+        for (Chunk& chunk : m_GameWorld.getChunks())
+            drawChunk(chunk, m_Shader, m_TextureAtlas, m_Window, m_Camera);
+
+        drawPlayer(player.getPhysics().getPosition(), m_Window, debugShader, m_Camera);
+        drawAxes(m_Window, debugShader, m_Camera);
     }
 }
 
-static glm::vec3 getCamMovement(const Window& window)
+glm::vec3 getCamMoveInput(const Window& win)
 {
     glm::vec3 movement(0.0f);
-    if (window.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
-    if (window.isKeyDown(GLFW_KEY_A)) movement.x -= 1.0f;
-    if (window.isKeyDown(GLFW_KEY_D)) movement.x += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
+    if (win.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
+    if (win.isKeyDown(GLFW_KEY_A)) movement.x += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_D)) movement.x -= 1.0f;
+    if (win.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
 
     return movement;
 }
 
-void App::processCamInputs(glm::dvec2& prevMousePos, const float deltaTime)
+glm::vec3 getPlayerMoveInputs(const Window& win)
 {
-    const auto mousePos = m_Window.getMousePosition();
-    if (mousePos != prevMousePos)
-    {
-        const auto relMouseMovement = mousePos - prevMousePos;
+    glm::vec3 movement(0.0f);
+    if (win.isKeyDown(GLFW_KEY_UP)) movement.z += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_DOWN)) movement.z -= 1.0f;
+    if (win.isKeyDown(GLFW_KEY_LEFT)) movement.x += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_RIGHT)) movement.x -= 1.0f;
+    if (win.isKeyDown(GLFW_KEY_X)) movement.y += 1.0f;
+    if (win.isKeyDown(GLFW_KEY_C)) movement.y -= 1.0f;
 
-        m_Camera.rotate(relMouseMovement.x, relMouseMovement.y);
-        prevMousePos = mousePos;
-    }
-
-    auto movement = getCamMovement(m_Window);
-    if (movement != glm::vec3(0))
-    {
-        movement = glm::normalize(movement) * m_Camera.getSpeed() * deltaTime;
-        m_Camera.move(movement);
-    }
-}
-
-void App::initChunks(const unsigned int chunksPerSide)
-{
-    const unsigned int size = Chunk::CHUNK_SIZE * chunksPerSide;
-    unsigned char** heightMap = genPerlinMap(size, size, Chunk::MAX_HEIGHT / 2, Chunk::MAX_HEIGHT, 42);
-
-    m_Chunks.reserve(chunksPerSide * chunksPerSide);
-    for (unsigned int x = 0; x < chunksPerSide; x++)
-    {
-        for (unsigned int z = 0; z < chunksPerSide; z++)
-        {
-            m_Chunks.emplace_back(glm::uvec2{x, z}, heightMap);
-        }
-    }
-
-    freeMap(heightMap, size);
+    return movement;
 }

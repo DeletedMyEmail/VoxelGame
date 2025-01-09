@@ -56,6 +56,8 @@ void Window::createGLFWWindow()
 
     if (m_Settings.fullscreen) {
         m_Window = glfwCreateWindow(mode->width, mode->height, m_Settings.title, glfwGetPrimaryMonitor(), nullptr);
+        m_Settings.width = mode->width;
+        m_Settings.height = mode->height;
     }
     else {
         m_Window = glfwCreateWindow(m_Settings.width, m_Settings.height, m_Settings.title, nullptr, nullptr);

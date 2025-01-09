@@ -3,8 +3,6 @@
 #include "Log.h"
 #include "glm/ext/quaternion_geometric.hpp"
 
-// credit: https://www.youtube.com/watch?v=kCIaHqb60Cw
-
 float cubicInterpolation(const float x1, const float x2, const float weight)
 {
     return (x2 - x1) * (3.0 - weight * 2.0) * weight * weight + x1;

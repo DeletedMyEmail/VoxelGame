@@ -10,7 +10,8 @@ public :
     ~Shader();
 
     void setUniform1f(const std::string& name, float value) const;
-    void setUniform4f(const std::string& name, const glm::mat4& mat) const;
+    void setUniformMat4(const std::string& name, const glm::mat4& mat) const;
+    void setUniform3f(const std::string& name, const glm::vec3& vec) const;
     void setUniform1i(const std::string& name, int value) const;
     void setUniform1u(const std::string& name, unsigned int value) const;
     void setUniform2u(const std::string& name, unsigned int x, unsigned int y) const;

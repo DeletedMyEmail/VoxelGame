@@ -51,7 +51,7 @@ void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layou
             GLCall(glEnableVertexAttribArray(counter))
         }
 
-        if (type == GL_UNSIGNED_INT || GL_INT)
+        if (type == GL_UNSIGNED_INT || type == GL_INT)
         {
             GLCall(glVertexAttribIPointer(counter, count, type, layout.getStride(), (void*) offset))
         }

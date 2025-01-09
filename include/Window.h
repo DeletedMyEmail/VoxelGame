@@ -12,9 +12,9 @@ class Window;
 
 struct WindowSettings
 {
-  int width = 0;
-  int height = 0;
-  const char* title = nullptr;
+  int width = 1;
+  int height = 1;
+  const char* title = "Title";
   bool fullscreen = false;
   bool culling = false;
   bool vysnc = false;
