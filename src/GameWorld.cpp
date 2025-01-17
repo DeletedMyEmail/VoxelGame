@@ -11,7 +11,7 @@ GameWorld::GameWorld(const glm::vec3 playerPos, const unsigned int chunksPerSide
 
 void GameWorld::playerCollisions()
 {
-    PhysicsBody playerBody = m_Player.getPhysics();
+    PhysicsBody& playerBody = m_Player.getPhysics();
     // just in 1 chunk
     const auto chunkPos = glm::uvec2(static_cast<unsigned int>(playerBody.getPosition().x) / Chunk::CHUNK_SIZE, static_cast<unsigned int>(playerBody.getPosition().z) / Chunk::CHUNK_SIZE);
     const Chunk* relevantChunk = nullptr;

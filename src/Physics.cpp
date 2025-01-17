@@ -89,8 +89,9 @@ float PhysicsBody::SweptAABB(const PhysicsBody& other, glm::vec3& normal) const
     float entryTime = std::max(std::max(xEntry, yEntry), zEntry);
     float exitTime = std::min(std::min(xExit, yExit), zExit);
 
+
     // if there was no collision
-    if (entryTime > exitTime || xEntry < 0.0f && yEntry < 0.0f && zEntry < 0.0f || xEntry > 1.0f || yEntry > 1.0f || zEntry > 1.0f )
+    if (entryTime > exitTime || xEntry < 0.0f && yEntry < 0.0f && zEntry < 0.0f || xEntry > 1.0f || yEntry > 1.0f || zEntry > 1.0f)
     {
         normal = glm::vec3(0);
         return 1.0f;
@@ -143,7 +144,6 @@ float PhysicsBody::SweptAABB(const PhysicsBody& other, glm::vec3& normal) const
         }
     }
 
-    // return the time of collision
     return entryTime;
 }
 
@@ -154,22 +154,20 @@ bool PhysicsBody::solveCollision(const PhysicsBody& other)
     if (collisionTime == 1.0f)
         return false;
 
-    m_Position.x += m_Velocity.x * collisionTime;
-    m_Position.y += m_Velocity.y * collisionTime;
-    m_Position.z += m_Velocity.z * collisionTime;
+    m_Velocity *= collisionTime;
 
     const float remainingTime = 1.0f - collisionTime;
 
     // push
     const float magnitude = glm::length(m_Velocity) * remainingTime;
-    float dotprod = glm::dot(m_Velocity, normal);
+    float dot = glm::dot(m_Velocity, normal);
 
-    if (dotprod > 0.0f)
-        dotprod = 1.0f;
-    else if (dotprod < 0.0f)
-        dotprod = -1.0f;
+    if (dot > 0.0f)
+        dot = -1.0f;
+    else if (dot < 0.0f)
+        dot = 1.0f;
 
-    m_Velocity = dotprod * normal * magnitude;
+    m_Velocity += normal * dot * magnitude;
 
     return true;
 }

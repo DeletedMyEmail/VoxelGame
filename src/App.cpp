@@ -5,7 +5,6 @@
 App::App()
     :   m_Window(WindowBuilder().
                  size(1200, 1900).
-                 disableCursor().
                  culling().
                  onScroll([this](Window* win, const double x, const double y)
                  {

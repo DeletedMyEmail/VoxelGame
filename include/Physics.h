@@ -17,7 +17,10 @@ public:
     glm::vec3 getVelocity() const { return m_Velocity; }
     glm::vec3 getPosition() const { return m_Position; }
     glm::vec3 getSize() const { return m_Size; }
-private:
+    void setVelocity(const glm::vec3& velocity) { m_Velocity = velocity; }
+    void setPosition(const glm::vec3& position) { m_Position = position; }
+    void setSize(const glm::vec3& size) { m_Size = size; }
+
     float SweptAABB(const PhysicsBody& other, glm::vec3& normal) const;
 private:
     glm::vec3 m_Position;
