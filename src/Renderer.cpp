@@ -10,22 +10,35 @@ void checkOpenGLErrors()
     }
 }
 
-void drawChunk(Chunk& chunk, const Shader& shader, const Texture& texture, const Window& window, const Camera& cam)
+Renderer::Renderer()
+    :   m_TextureAtlas("../resources/textureAtlas.png"),
+        m_DefaultShader("../shader/DefaultVert.glsl", "../shader/DefaultFrag.glsl", nullptr),
+        m_DebugShader("../shader/DebugVert.glsl", "../shader/DebugFrag.glsl", nullptr)
+{
+    GLCall(glEnable(GL_DEPTH_TEST))
+    GLCall(glEnable(GL_BLEND))
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
+    GLCall(glEnable(GL_CULL_FACE))
+}
+
+Renderer::~Renderer() = default;
+
+void Renderer::drawChunk(Chunk& chunk, const Window& window, const Camera& cam)
 {
     window.bind();
-    texture.bind(0);
-    shader.bind();
+    m_TextureAtlas.bind(0);
+    m_DefaultShader.bind();
     auto[vao, faceCount] = chunk.getMesh();
     vao->bind();
 
-    shader.setUniform1i("u_TextureSlot", 0);
-    shader.setUniformMat4("u_MVP", cam.getViewProjection());
-    shader.setUniform2u("u_ChunkPos", chunk.getPosition().x, chunk.getPosition().y);
+    m_DefaultShader.setUniform1i("u_TextureSlot", 0);
+    m_DefaultShader.setUniformMat4("u_MVP", cam.getViewProjection());
+    m_DefaultShader.setUniform2u("u_ChunkPos", chunk.getPosition().x, chunk.getPosition().y);
 
     GLCall(glDrawArrays(GL_TRIANGLES, 0, faceCount * 6))
 }
 
-void clear(const Window& window, const glm::vec4 color)
+void Renderer::clear(const Window& window, const glm::vec4 color)
 {
     window.bind();
 
@@ -36,7 +49,7 @@ void clear(const Window& window, const glm::vec4 color)
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 }
 
-void drawAxes(const Window& window, const Shader& shader, const Camera& cam)
+void Renderer::drawAxes(const Window& window, const Camera& cam)
 {
     window.bind();
 
@@ -64,14 +77,14 @@ void drawAxes(const Window& window, const Shader& shader, const Camera& cam)
     VAO.addBuffer(vBuffer, layout);
     VAO.bind();
 
-    shader.bind();
-    shader.setUniformMat4("u_MVP", cam.getViewProjection());
-    shader.setUniform3f("u_GlobalPosition", cam.getPosition() + cam.getLookDir());
+    m_DebugShader.bind();
+    m_DebugShader.setUniformMat4("u_MVP", cam.getViewProjection());
+    m_DebugShader.setUniform3f("u_GlobalPosition", cam.getPosition() + cam.getLookDir());
 
     GLCall(glDrawArrays(GL_LINES, 0, 6));
 }
 
-void drawPlayer(const glm::vec3 position, const Window& window, const Shader& shader, const Camera& cam)
+void Renderer::drawPlayer(const glm::vec3 position, const Window& window, const Camera& cam)
 {
     window.bind();
 
@@ -132,9 +145,9 @@ void drawPlayer(const glm::vec3 position, const Window& window, const Shader& sh
     VAO.addBuffer(vBuffer, layout);
     VAO.bind();
 
-    shader.bind();
-    shader.setUniformMat4("u_MVP", cam.getViewProjection());
-    shader.setUniform3f("u_GlobalPosition", position);
+    m_DebugShader.bind();
+    m_DebugShader.setUniformMat4("u_MVP", cam.getViewProjection());
+    m_DebugShader.setUniform3f("u_GlobalPosition", position);
 
     GLCall(glDrawArrays(GL_TRIANGLES, 0, 30));
 }

@@ -14,10 +14,21 @@
 
 void checkOpenGLErrors();
 
-void clear(const Window& window, glm::vec4 color = {0.07f, 0.14f, 0.17f, 1.0f}) ;
-void drawChunk(Chunk& chunk, const Shader& shader, const Texture& texture, const Window& window, const Camera& cam);
-void drawAxes(const Window& window, const Shader& shader, const Camera& cam);
-void drawPlayer(glm::vec3 position, const Window& window, const Shader& shader, const Camera& cam);
+class Renderer
+{
+public:
+    Renderer();
+    ~Renderer();
+
+    void clear(const Window& window, glm::vec4 color = {0.07f, 0.14f, 0.17f, 1.0f}) ;
+    void drawChunk(Chunk& chunk, const Window& window, const Camera& cam);
+    void drawAxes(const Window& window, const Camera& cam);
+    void drawPlayer(glm::vec3 position, const Window& window, const Camera& cam);
+private:
+    Texture m_TextureAtlas;
+    Shader m_DefaultShader, m_DebugShader;
+
+};
 
 constexpr unsigned int FRONT_FACE_INDEX = 0;
 constexpr unsigned int BACK_FACE_INDEX = 1;

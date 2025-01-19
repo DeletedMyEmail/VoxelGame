@@ -1,10 +1,9 @@
 #pragma once
 
+#include <Renderer.h>
 #include "Camera.h"
 #include "Chunk.h"
 #include "GameWorld.h"
-#include "Shader.h"
-#include "Texture.h"
 #include "Window.h"
 
 class App {
@@ -14,9 +13,11 @@ public:
 
     void run();
 private:
+    glm::vec3 getPlayerMoveInputs() const;
+    void processHotkeys(int key, int scancode, int mods);
+private:
     Window m_Window;
     GameWorld m_GameWorld;
-    Texture m_TextureAtlas;
-    Shader m_Shader;
+    Renderer m_Renderer;
     Camera m_Camera;
 };

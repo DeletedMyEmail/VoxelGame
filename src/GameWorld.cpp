@@ -1,9 +1,5 @@
 #include "GameWorld.h"
-
-#include <App.h>
-#include <App.h>
 #include <Window.h>
-
 #include "Log.h"
 #include "Noise.h"
 
@@ -62,26 +58,12 @@ void GameWorld::playerCollisions()
     // TODO: player in multiple chunks at once
 }
 
-glm::vec3 getPlayerMoveInputs(const Window& win)
+void GameWorld::update(const float deltaTime, const glm::vec3 playerInput, const glm::vec3 lookDir)
 {
-    glm::vec3 movement(0.0f);
-    if (win.isKeyDown(GLFW_KEY_W)) movement.z += 1.0f;
-    if (win.isKeyDown(GLFW_KEY_S)) movement.z -= 1.0f;
-    if (win.isKeyDown(GLFW_KEY_A)) movement.x += 1.0f;
-    if (win.isKeyDown(GLFW_KEY_D)) movement.x -= 1.0f;
-    if (win.isKeyDown(GLFW_KEY_SPACE)) movement.y += 1.0f;
-    if (win.isKeyDown(GLFW_KEY_LEFT_SHIFT)) movement.y -= 1.0f;
-
-    return movement;
-}
-
-void GameWorld::update(const float deltaTime, const Window& win, const glm::vec3 lookDir)
-{
-    const glm::vec3 input = getPlayerMoveInputs(win);
     glm::vec3 vel;
-    vel = lookDir * input.z;
-    vel -= normalize(cross(lookDir, glm::vec3(0.0f, 1.0f, 0.0f))) * input.x;
-    vel.y = input.y;
+    vel = lookDir * playerInput.z;
+    vel -= normalize(cross(lookDir, glm::vec3(0.0f, 1.0f, 0.0f))) * playerInput.x;
+    vel.y = playerInput.y;
 
     PhysicsBody& playerBody = m_Player.getPhysics();
     playerBody.addVelocity(vel * deltaTime * m_Player.getSpeed());
