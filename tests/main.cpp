@@ -2,60 +2,64 @@
 #include "Physics.h"
 #include <glm/glm.hpp>
 
-class PhysicsBodyTest : public ::testing::Test
+class PhysicsBodyTest : public testing::Test
 {
 protected:
-    PhysicsBody body1{glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), false};
-    PhysicsBody body2{glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), false};
-
     void SetUp() override {}
 };
 
-TEST_F(PhysicsBodyTest, PositiveVelocityCollision) {
-    body1.setVelocity(glm::vec3(1.0f, 0.0f, 0.0f));
-    body2.setPosition(glm::vec3(1.8f, 0.0f, 0.0f));
+TEST_F(PhysicsBodyTest, PositiveXVelocityCollision)
+{
+    PhysicsBody body1({1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, false);
+    body1.addVelocity({1.0f, 0.0f, 0.0f});
 
-    glm::vec3 normal;
-    float collisionTime = body1.SweptAABB(body2, normal);
+    PhysicsBody body2{glm::vec3(2.5f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), true};
 
-    EXPECT_LT(collisionTime, 1.0f);
-    EXPECT_EQ(normal, glm::vec3(-1.0f, 0.0f, 0.0f));
+    EXPECT_EQ(body1.solveCollision(body2), true);
 }
 
-TEST_F(PhysicsBodyTest, NegativeVelocityCollision) {
-    body1.setVelocity(glm::vec3(-1.0f, 0.0f, 0.0f));
-    body2.setPosition(glm::vec3(-1.8f, 0.0f, 0.0f));
+TEST_F(PhysicsBodyTest, NegativeXVelocityCollision)
+{
+    PhysicsBody body1({2.5f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, false);
+    body1.addVelocity({-1.0f, 0.0f, 0.0f});
 
-    glm::vec3 normal;
-    float collisionTime = body1.SweptAABB(body2, normal);
+    PhysicsBody body2{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), true};
 
-    EXPECT_LT(collisionTime, 1.0f);
-    EXPECT_EQ(normal, glm::vec3(1.0f, 0.0f, 0.0f));
+    EXPECT_EQ(body1.solveCollision(body2), true);
 }
 
-TEST_F(PhysicsBodyTest, NoCollision) {
-    body1.setVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
-    body2.setPosition(glm::vec3(5.0f, 0.0f, 0.0f));
+TEST_F(PhysicsBodyTest, NoCollision)
+{
+    PhysicsBody body1({0.0f, 4.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, false);
+    body1.addVelocity({0.0f, 0.0f, 1.0f});
 
-    glm::vec3 normal;
-    float collisionTime = body1.SweptAABB(body2, normal);
+    PhysicsBody body2{glm::vec3(0.0f, 1.0f, 1.5f), glm::vec3(1.0f, 1.0f, 1.0f), true};
 
-    EXPECT_EQ(collisionTime, 1.0f);
-    EXPECT_EQ(normal, glm::vec3(0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(body1.solveCollision(body2), false);
 }
 
-TEST_F(PhysicsBodyTest, EdgeCollision) {
-    body1.setVelocity(glm::vec3(1.0f, 0.0f, 0.0f));
-    body2.setPosition(glm::vec3(1.0f, 0.0f, 0.0f));
+TEST_F(PhysicsBodyTest, PositiveYVelocityCollision)
+{
+    PhysicsBody body1({0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, false);
+    body1.addVelocity({0.0f, 1.0f, 0.0f});
 
-    glm::vec3 normal;
-    float collisionTime = body1.SweptAABB(body2, normal);
+    PhysicsBody body2{{0.0f, 2.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, true};
 
-    EXPECT_EQ(collisionTime, 0.0f);
-    EXPECT_EQ(normal, glm::vec3(-1.0f, 0.0f, 0.0f));
+    EXPECT_EQ(body1.solveCollision(body2), true);
 }
 
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
+TEST_F(PhysicsBodyTest, NegativeYVelocityCollision)
+{
+    PhysicsBody body1({0.0f, 2.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, false);
+    body1.addVelocity({0.0f, -1.0f, 0.0f});
+
+    PhysicsBody body2{{0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, true};
+
+    EXPECT_EQ(body1.solveCollision(body2), true);
+}
+
+int main(int argc, char **argv)
+{
+    testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

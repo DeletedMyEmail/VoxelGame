@@ -55,7 +55,7 @@ void drawAxes(const Window& window, const Shader& shader, const Camera& cam)
         0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f
     };
 
-    auto vBuffer = std::make_shared<VertexBuffer>(6 * 6 * sizeof(float), axisVertices);
+    const auto vBuffer = std::make_shared<VertexBuffer>(6 * 6 * sizeof(float), axisVertices);
     VertexBufferLayout layout;
     layout.push<float>(3);
     layout.push<float>(3);
@@ -66,7 +66,7 @@ void drawAxes(const Window& window, const Shader& shader, const Camera& cam)
 
     shader.bind();
     shader.setUniformMat4("u_MVP", cam.getViewProjection());
-    shader.setUniform3f("u_GlobalPosition", cam.getPosition() + cam.getLookAt());
+    shader.setUniform3f("u_GlobalPosition", cam.getPosition() + cam.getLookDir());
 
     GLCall(glDrawArrays(GL_LINES, 0, 6));
 }
@@ -123,7 +123,7 @@ void drawPlayer(const glm::vec3 position, const Window& window, const Shader& sh
         -0.5f, -0.5f,  -0.5f,   1.0f, 1.0f, 1.0f, // bl
     };
 
-    auto vBuffer = std::make_shared<VertexBuffer>(30 * 6 * sizeof(float), playerVertices);
+    const auto vBuffer = std::make_shared<VertexBuffer>(30 * 6 * sizeof(float), playerVertices);
     VertexBufferLayout layout;
     layout.push<float>(3);
     layout.push<float>(3);

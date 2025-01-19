@@ -8,7 +8,8 @@
 
 #ifndef RELEASE
     #define GLCall(x) x; checkOpenGLErrors();
-#else    #define GLCall(x) x;
+#else
+    #define GLCall(x) x;
 #endif
 
 void checkOpenGLErrors();
