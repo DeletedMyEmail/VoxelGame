@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Renderer.h>
 #include "Camera.h"
 #include "Chunk.h"
-#include "Shader.h"
-#include "Texture.h"
+#include "GameWorld.h"
 #include "Window.h"
 
 class App {
@@ -13,12 +13,11 @@ public:
 
     void run();
 private:
-    void processCamInputs(glm::dvec2& prevMousePos, float deltaTime);
-    void initChunks(unsigned int chunksPerSide);
+    glm::vec3 getPlayerMoveInputs() const;
+    void processHotkeys(int key, int scancode, int mods);
 private:
     Window m_Window;
-    Texture m_TextureAtlas;
-    Shader m_Shader;
+    GameWorld m_GameWorld;
+    Renderer m_Renderer;
     Camera m_Camera;
-    std::vector<Chunk> m_Chunks;
 };

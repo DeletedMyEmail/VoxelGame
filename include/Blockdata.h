@@ -10,7 +10,7 @@
 enum BlockType {
     SOLID,
     TRANSPARENT,
-    INVISIBLE
+    AIR
 };
 
 struct Blockdata

@@ -10,84 +10,66 @@
 
 class Window;
 
+typedef std::function<void(Window* window, glm::dvec2 offset)> scrollCallback;
+typedef std::function<void(Window* window, bool focused)> focusCallback;
+typedef std::function<void(Window* window, int key, int scancode, int action, int mods)> onKeyCallback;
+typedef std::function<void(Window* window, int button, int action, int mods)> mouseButtonCallback;
+typedef std::function<void(Window* window)> closeCallback;
+typedef std::function<void(Window* window, glm::dvec2 pos)> cursorCallback;
+
 struct WindowSettings
 {
   int width = 0;
   int height = 0;
-  const char* title = nullptr;
+  const char* title = "";
   bool fullscreen = false;
-  bool culling = false;
   bool vysnc = false;
   bool disableCursor = false;
 
-  std::function<void(Window* window, glm::dvec2 pos)> onCursorMoveCallback = nullptr;
-  std::function<void(Window* window)> onCloseCallback = nullptr;
-  std::function<void(Window* window, int button, int action, int mods)> onMouseButtonCallback = nullptr;
-  std::function<void(Window* window, int key, int scancode, int action, int mods)> onKeyCallback = nullptr;
-  std::function<void(Window* window, bool focused)> onFocusCallback = nullptr;
-  std::function<void(Window* window, double xoffset, double yoffset)> onScrollCallback = nullptr;
+  cursorCallback onCursorMove = nullptr;
+  closeCallback onClose = nullptr;
+  mouseButtonCallback onMouseButton = nullptr;
+  onKeyCallback onKey = nullptr;
+  focusCallback onFocus = nullptr;
+  scrollCallback onScroll = nullptr;
 };
 
 class Window
 {
 public:
-  Window(const WindowSettings& settings);
-  Window(Window&& other) noexcept;
+  Window();
+  Window(int width, int height);
   ~Window();
 
-  bool isRunning() const;
-  void stop() const;
+  void bind() const;
+  bool isKeyDown(int pKey) const;
+  bool isMouseButtonPressed(int pButton) const;
+
+  void setVSync(bool enabled);
+  void setCursorDisabled(bool disabled);
+  void onCursorMove(const cursorCallback& callback);
+  void onClose(const closeCallback& callback);
+  void onMouseButton(const mouseButtonCallback& callback);
+  void onKey(const onKeyCallback& callback);
+  auto onFocus(const focusCallback& callback);
+  void onScroll(const scrollCallback& callback);
 
   glm::dvec2 getMousePosition() const;
   double getMouseX() const;
   double getMouseY() const;
-  bool isKeyDown(int pKey) const;
-  bool isMouseButtonPressed(int pButton) const;
-  void bind() const;
+  bool isRunning() const;
+  void stop() const;
+  void setTitle(const std::string& title) const;
 
   const WindowSettings& getSettings() const { return m_Settings; }
   GLFWwindow* getGLFWWindow() const { return m_Window; }
-  void setTitle(const std::string& title) const;
 private:
-  void setCallbacks() const;
+  void init();
   void createGLFWWindow();
-
-  static void windowFocusCallback(GLFWwindow* window, int focused);
-  static void mouseMoveCallback(GLFWwindow* window, double x, double y);
-  static void closeCallback(GLFWwindow* window);
-  static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-  static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-  static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
   static void initGlfw();
 private:
-  GLFWwindow* m_Window;
+  GLFWwindow* m_Window = nullptr;
   WindowSettings m_Settings;
 
   static bool s_glfwInitialized;
-};
-
-class WindowBuilder
-{
-public:
-  WindowBuilder() = default;
-
-  WindowBuilder& vsync(bool enable = true);
-  WindowBuilder& fullscreen(bool enable = true);
-  WindowBuilder& culling(bool enable = true);
-  WindowBuilder& disableCursor(bool enable = true);
-  WindowBuilder& title(const char* title);
-  WindowBuilder& size(int height, int width);
-
-  WindowBuilder& onCursorMove(const std::function<void(Window* window, glm::dvec2 pos)>& callback);
-  WindowBuilder& onKey(const std::function<void(Window* window, int key, int scancode, int action, int mods)>& callback);
-  WindowBuilder& onFocus(const std::function<void(Window* window, bool focused)>& callback);
-  WindowBuilder& onMouseButton(const std::function<void(Window* window, int button, int action, int mods)>& callback);
-  WindowBuilder& onClose(const std::function<void(Window* window)>& callback);
-  WindowBuilder& onScroll(const std::function<void(Window* window, double xoffset, double yoffset)>& callback);
-
-  Window build() const;
-
-  const WindowSettings& getSettings() const { return m_settings; }
-private:
-  WindowSettings m_settings;
 };

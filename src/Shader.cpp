@@ -52,10 +52,16 @@ void Shader::setUniform1f(const std::string &name, const float value) const
     GLCall(glUniform1f(getUniformLocation(name), value))
 }
 
-void Shader::setUniform4f(const std::string& name, const glm::mat4& mat) const
+void Shader::setUniformMat4(const std::string& name, const glm::mat4& mat) const
 {
     bind();
     GLCall(glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)));
+}
+
+void Shader::setUniform3f(const std::string& name, const glm::vec3& vec) const
+{
+    bind();
+    GLCall(glUniform3f(getUniformLocation(name), vec.x, vec.y, vec.z));
 }
 
 void Shader::setUniform1i(const std::string &name, const int value) const

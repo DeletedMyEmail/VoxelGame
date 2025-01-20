@@ -25,11 +25,11 @@ public:
 private:
     void createBlocks(unsigned char** heightMap);
     void selectFaces(std::vector<GLuint>& buffer);
-    unsigned int getUncoveredFaces(glm::uvec3 pos);
+    unsigned int getUncoveredFaces(glm::uvec3 pos) const;
     static unsigned int getBlockIndex(const glm::uvec3 pos) { return pos.x + CHUNK_SIZE * (pos.y + MAX_HEIGHT * pos.z);}
 public:
-    static constexpr unsigned char CHUNK_SIZE = 16;
-    static constexpr unsigned char MAX_HEIGHT = 22;
+    static constexpr unsigned int CHUNK_SIZE = 16;
+    static constexpr unsigned int MAX_HEIGHT = 16;
     static constexpr unsigned int BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
 private:
     VertexArray m_VAO;
