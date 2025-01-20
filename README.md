@@ -1,5 +1,8 @@
 # Hi, I'm a readme file
 
+![image](https://github.com/user-attachments/assets/02378292-1344-40cd-a975-9492c1e2fa94)
+(seed: 42)
+
 ### Build Process
 If you run distro using apt package manager, just run ```bash build_debian.sh```.
 
@@ -7,6 +10,14 @@ If you run distro using apt package manager, just run ```bash build_debian.sh```
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle wireframe mode
 - `ESC` to quit
+
+### Features
+- procedural world generation (perlin noise)
+- face culling (backface culling, hollow chunks)
+- swept AABB collisions (well.. pls don't test)
+- upcoming features
+  - frustrum culling
+  - placing and breaking blocks
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 
