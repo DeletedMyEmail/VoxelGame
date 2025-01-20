@@ -6,6 +6,10 @@
 ### Build Process
 If you run distro using apt package manager, just run ```bash build_debian.sh```.
 
+### Examples
+![image](https://github.com/user-attachments/assets/02378292-1344-40cd-a975-9492c1e2fa94)
+(seed: 42)
+
 ### Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle wireframe mode
