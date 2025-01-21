@@ -46,7 +46,8 @@ void GameWorld::playerCollisions()
                 if (block.type == AIR)
                     continue;
 
-                const PhysicsBody blockBounding({x,y,z}, {1,1,1}, true);
+                const glm::vec3 pos = glm::vec3(x,y,z) + glm::vec3(chunkPos.x, 0, chunkPos.y) * static_cast<float>(Chunk::CHUNK_SIZE);
+                const PhysicsBody blockBounding(pos, {1,1,1}, true);
                 if (playerBody.solveCollision(blockBounding))
                 {
 
