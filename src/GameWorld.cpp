@@ -43,7 +43,7 @@ void GameWorld::playerCollisions()
             for (unsigned int z = zStart; z < zStart+4; z++)
             {
                 const auto& block = relevantChunk->getBlock({x,y,z});
-                if (block.type == AIR)
+                if (block.getBlockType() == AIR)
                     continue;
 
                 const glm::vec3 pos = glm::vec3(x,y,z) + glm::vec3(chunkPos.x, 0, chunkPos.y) * static_cast<float>(Chunk::CHUNK_SIZE);

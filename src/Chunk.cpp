@@ -1,5 +1,4 @@
 #include "Chunk.h"
-
 #include "Log.h"
 #include "Noise.h"
 #include "Renderer.h"
@@ -19,17 +18,17 @@ Chunk::Chunk(const glm::uvec2 chunkPosition, unsigned char** heightMap)
 unsigned int Chunk::getUncoveredFaces(glm::uvec3 pos) const
 {
     unsigned int uncoveredFaces = 0;
-    if (pos.x == 0 || m_Blocks[getBlockIndex({pos.x-1, pos.y, pos.z})].type == AIR)
+    if (pos.x == 0 || m_Blocks[getBlockIndex({pos.x-1, pos.y, pos.z})].getBlockType() == AIR)
         uncoveredFaces |= 1 << LEFT_FACE_INDEX;
-    if (pos.x == CHUNK_SIZE-1 || m_Blocks[getBlockIndex({pos.x+1, pos.y, pos.z})].type == AIR)
+    if (pos.x == CHUNK_SIZE-1 || m_Blocks[getBlockIndex({pos.x+1, pos.y, pos.z})].getBlockType() == AIR)
         uncoveredFaces |= 1 << RIGHT_FACE_INDEX;
-    if (pos.y > 0 && m_Blocks[getBlockIndex({pos.x, pos.y-1, pos.z})].type == AIR)
+    if (pos.y > 0 && m_Blocks[getBlockIndex({pos.x, pos.y-1, pos.z})].getBlockType() == AIR)
         uncoveredFaces |= 1 << BOTTOM_FACE_INDEX;
-    if (pos.y == MAX_HEIGHT-1 || m_Blocks[getBlockIndex({pos.x, pos.y+1, pos.z})].type == AIR)
+    if (pos.y == MAX_HEIGHT-1 || m_Blocks[getBlockIndex({pos.x, pos.y+1, pos.z})].getBlockType() == AIR)
         uncoveredFaces |= 1 << TOP_FACE_INDEX;
-    if (pos.z == 0 || m_Blocks[getBlockIndex({pos.x, pos.y, pos.z-1})].type == AIR)
+    if (pos.z == 0 || m_Blocks[getBlockIndex({pos.x, pos.y, pos.z-1})].getBlockType() == AIR)
         uncoveredFaces |= 1 << FRONT_FACE_INDEX;
-    if (pos.z == CHUNK_SIZE-1 || m_Blocks[getBlockIndex({pos.x, pos.y, pos.z+1})].type == AIR)
+    if (pos.z == CHUNK_SIZE-1 || m_Blocks[getBlockIndex({pos.x, pos.y, pos.z+1})].getBlockType() == AIR)
         uncoveredFaces |= 1 << BACK_FACE_INDEX;
 
     return uncoveredFaces;
@@ -44,8 +43,8 @@ void Chunk::selectFaces(std::vector<GLuint>& buffer)
             for (unsigned int z = 0; z < CHUNK_SIZE; z++)
             {
                 glm::uvec3 pos = {x,y,z};
-                const auto& [type, atlasOffset] = m_Blocks[getBlockIndex(pos)];
-                if (type == AIR)
+                const auto& block = m_Blocks[getBlockIndex(pos)];
+                if (block.getBlockType() == AIR)
                     continue;
 
                 const unsigned int uncoveredFaces = getUncoveredFaces(pos);
@@ -53,6 +52,8 @@ void Chunk::selectFaces(std::vector<GLuint>& buffer)
                     continue;
 
                 unsigned int additionalVertData = 0;
+
+                const glm::uvec2 atlasOffset = getAtlasOffset(block.getTextureType());
                 additionalVertData |= atlasOffset.x << 10;
                 additionalVertData |= atlasOffset.y << 11;
                 additionalVertData |= x << 15;
@@ -111,12 +112,13 @@ void Chunk::createBlocks(unsigned char** heightMap)
 
                 if (y >= localHeight)
                 {
-                    m_Blocks[index] = Blockdata{AIR};
+                    m_Blocks[index].setType(BlockType::AIR);
                 }
                 else
                 {
-                    const auto atlasOffset = y > localHeight-3 ? GRASS_TEXTURE_OFFSET : STONE_TEXTURE_OFFSET;
-                    m_Blocks[index] = Blockdata{SOLID, atlasOffset};
+                    const TextureType texture = y > localHeight-3 ? TextureType::GRASS : TextureType::STONE;
+                    m_Blocks[index].setTexture(texture);
+                    m_Blocks[index].setType(BlockType::SOLID);
                 }
 
             }
