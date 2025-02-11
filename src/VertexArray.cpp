@@ -70,13 +70,6 @@ void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layou
     }
 }
 
-void VertexArray::updateBuffer(GLuint index, const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
-{
-    m_Buffers[index] = buffer;
-    buffer->bind();
-    setAttributes(index, layout, false);
-}
-
 void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
 {
     m_Buffers.emplace_back(buffer);
@@ -111,5 +104,5 @@ void VertexArray::clear()
 
     m_Buffers.clear();
     m_AttribCounter = 0;
-    m_ArrayID = 0;
+    GLCall(glGenVertexArrays(1, &m_ArrayID))
 }

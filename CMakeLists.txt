@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.25)
 project(VoxelGame)
 cmake_policy(SET CMP0072 NEW)
 
-# Uncomment to remove logging at compile time
-# add_compile_definitions(RELEASE)
+add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
+
+# uncomment to remove logging at compile time
+#add_compile_definitions(NOLOG)
+
+# uncomment to remove performance profiling at compile time
+#add_compile_definitions(NOPROFILE)
 
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(spdlog REQUIRED)

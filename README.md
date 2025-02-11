@@ -4,7 +4,7 @@
 (seed: 42)
 
 ### Build Process
-If you run distro using apt package manager, just run ```bash build_debian.sh```.
+If you run a distro using apt package manager, just run ```bash build_debian.sh```.
 
 ### Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
@@ -27,6 +27,7 @@ If you run distro using apt package manager, just run ```bash build_debian.sh```
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Loading texture atlas
 
 ### Learning Resources / Credits
+- [Ray Casting](http://www.cse.yorku.ca/~amana/research/grid.pdf)
 - [OpenGL](https://youtube.com/playlist?list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&si=crdBuV5tGpnvQw_7)
 - [Swept AABB collisions](https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/)
 - [Perlin noise](https://www.youtube.com/watch?v=kCIaHqb60Cw)

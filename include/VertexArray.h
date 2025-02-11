@@ -35,20 +35,22 @@ public:
     VertexArray();
     ~VertexArray();
 
-    void updateBuffer(GLuint index, const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout);
     void addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout);
     void bind() const;
     void unbind() const;
     void clear();
 
+    void setVertexCount(const GLsizei count) { m_VertexCount = count; }
+    GLsizei getVertexCount() const { return m_VertexCount; }
     GLuint getAttribCount() const { return m_AttribCounter; }
     GLuint getBufferCount() const { return m_Buffers.size(); }
 private:
     void setAttributes(GLuint& counter, const VertexBufferLayout& layout, bool enable) const;
 private:
+    std::vector<std::shared_ptr<VertexBuffer>> m_Buffers;
     GLuint m_ArrayID = 0;
     GLuint m_AttribCounter = 0;
-    std::vector<std::shared_ptr<VertexBuffer>> m_Buffers;
+    GLsizei m_VertexCount = 0;
 };
 
 template<>

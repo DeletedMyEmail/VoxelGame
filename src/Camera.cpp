@@ -8,11 +8,11 @@
 #include "../libs/glm/gtx/dual_quaternion.hpp"
 
 Camera::Camera(const glm::vec3 pos, const float fov, const float height, const float width, const float near, const float far)
-    :   m_Dir(0,0,1),
-        m_Position(pos),
-        m_View(glm::lookAt(m_Position, m_Position + m_Dir, glm::vec3(0.0f, 1.0f, 0.0f))),
+    :   m_View(glm::lookAt(m_Position, m_Position + m_Dir, glm::vec3(0.0f, 1.0f, 0.0f))),
         m_Projection(glm::perspective(fov/2.0f, width/height, near, far)),
-        m_ViewProjection(m_Projection * m_View)
+        m_ViewProjection(m_Projection * m_View),
+        m_Dir(0,0,1),
+        m_Position(pos)
 {
 }
 

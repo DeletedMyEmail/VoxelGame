@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Blockdata.h"
 #include "VertexArray.h"
 
-struct Mesh
-{
-    VertexArray* vao;
-    unsigned int faceCount;
+enum class BLOCK_TYPE : unsigned char {
+    AIR,
+    TEST,
+    GRASS,
+    STONE,
 };
 
 class Chunk
@@ -17,10 +17,9 @@ public:
     ~Chunk() = default;
 
     void generateMesh();
-    Mesh getMesh() { return {&m_VAO, m_FaceCount}; }
 
-    const Blockdata& getBlock(const glm::uvec3 pos) const { return m_Blocks[getBlockIndex(pos)]; }
-    Blockdata* getBlocks() { return m_Blocks; }
+    const VertexArray& getMesh() { return m_VAO; }
+    BLOCK_TYPE getBlock(const glm::uvec3 pos) const { return m_Blocks[getBlockIndex(pos)]; }
     const glm::uvec2& getPosition() const { return m_ChunkPosition; }
 private:
     void createBlocks(unsigned char** heightMap);
@@ -34,6 +33,8 @@ public:
 private:
     VertexArray m_VAO;
     glm::uvec2 m_ChunkPosition;
-    Blockdata m_Blocks[BLOCKS_PER_CHUNK];
-    unsigned int m_FaceCount = 0;
+    BLOCK_TYPE m_Blocks[BLOCKS_PER_CHUNK];
 };
+
+glm::uvec2 getAtlasOffset(BLOCK_TYPE block);
+glm::uvec2 getChunkPos(const glm::vec3& pos);

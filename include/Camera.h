@@ -14,17 +14,17 @@ public:
     operator std::string() const;
 
     float getSensitive() const { return m_Sensitivity; }
-    glm::vec3 getPosition() const { return m_Position; }
+    const glm::vec3& getPosition() const { return m_Position; }
     const glm::mat4& getViewProjection() const { return m_ViewProjection; }
-    glm::vec3 getLookDir() const { return m_Dir; }
+    const glm::vec3& getLookDir() const { return m_Dir; }
 private:
     void processCursorMovement(glm::dvec2 mousePos);
     void moveFront(float val);
     void moveSideways(float val);
     void moveUp(float val);
 private:
-    float m_Sensitivity = 0.1f;
-    double m_Yaw = 0, m_Pitch = 0;
-    glm::vec3 m_Dir, m_Position;
     glm::mat4 m_View, m_Projection, m_ViewProjection;
+    glm::vec3 m_Dir, m_Position;
+    double m_Yaw = 0, m_Pitch = 0;
+    float m_Sensitivity = 0.1f;
 };

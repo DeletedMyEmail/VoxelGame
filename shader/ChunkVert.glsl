@@ -12,7 +12,7 @@ out vec3 normal;
 
 vec2 unpackTextureCoords(uint data);
 vec3 unpackNormal(uint data);
-vec3 unpackPos(uint data);
+vec3 unpackBlockMeshPos(uint data);
 vec2 unpackAtlasCoords(uint data);
 vec3 unpackRelPos(uint data);
 vec3 calcPosition(uint data);
@@ -28,7 +28,7 @@ void main()
 vec3 calcPosition(uint data)
 {
     const uint chunkSize = 16u;
-    return vec3(chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y)) + unpackPos(packedVertex) + unpackRelPos(packedVertex);
+    return vec3(chunkSize * uvec3(u_ChunkPos.x, 0, u_ChunkPos.y)) + unpackBlockMeshPos(packedVertex) + unpackRelPos(packedVertex);
 }
 
 vec2 unpackAtlasCoords(uint data)
@@ -84,25 +84,13 @@ vec3 unpackNormal(uint data)
     }
 }
 
-vec3 unpackPos(uint data)
+vec3 unpackBlockMeshPos(uint data)
 {
-    vec3 pos = vec3(0.5f, 0.5f, 0.5f);
+    vec3 pos;
 
-    uint bit = data & 1u;
-    if (bit == 1u)
-    {
-      pos.z = -0.5f;
-    }
-    bit = (data >> 1u) & 1u;
-    if (bit == 1u)
-    {
-      pos.y = -0.5f;
-    }
-    bit = (data >> 2u) & 1u;
-    if (bit == 1u)
-    {
-      pos.x = -0.5f;
-    }
+    pos.x = data & 1u;
+    pos.y = (data >> 1u) & 1u;
+    pos.z = (data >> 2u) & 1u;
 
     return pos;
 }

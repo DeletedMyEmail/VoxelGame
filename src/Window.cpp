@@ -106,7 +106,7 @@ bool Window::isKeyDown(const int pKey) const
     return state == GLFW_PRESS || state == GLFW_REPEAT;
 }
 
-bool Window::isMouseButtonPressed(const int pButton) const
+bool Window::isMouseButtonDown(const int pButton) const
 {
     const int state = glfwGetMouseButton(m_Window, pButton);
     return state == GLFW_PRESS || state == GLFW_REPEAT;

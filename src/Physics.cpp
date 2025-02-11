@@ -43,8 +43,8 @@ bool PhysicsBody::sweptBroadphase(const PhysicsBody& other) const
     bSize.z = m_Velocity.z > 0 ? m_Velocity.z + m_Size.z : m_Size.z - m_Velocity.z;
 
 
-    const glm::vec3 oPos = other.getPosition();
-    const glm::vec3 oSize = other.getSize();
+    const glm::vec3& oPos = other.getPosition();
+    const glm::vec3& oSize = other.getSize();
 
     return !(	bPos.x + bSize.x < oPos.x || bPos.x > oPos.x + oSize.x ||
                 bPos.y + bSize.y < oPos.y || bPos.y > oPos.y + oSize.y ||
@@ -61,8 +61,8 @@ float PhysicsBody::SweptAABB(const PhysicsBody& other, glm::vec3& normal) const
     float xInvEntry, yInvEntry, zInvEntry;
     float xInvExit, yInvExit, zInvExit;
 
-    const glm::vec3 otherPos = other.getPosition();
-    const glm::vec3 otherSize = other.getSize();
+    const glm::vec3& otherPos = other.getPosition();
+    const glm::vec3& otherSize = other.getSize();
 
     // find the distance between the objects on the near and far sides for both x and y
     if (m_Velocity.x > 0.0f)

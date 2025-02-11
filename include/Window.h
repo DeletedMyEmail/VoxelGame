@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <memory>
-
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include "glm/vec4.hpp"
@@ -19,9 +18,9 @@ typedef std::function<void(Window* window, glm::dvec2 pos)> cursorCallback;
 
 struct WindowSettings
 {
+  const char* title = "";
   int width = 0;
   int height = 0;
-  const char* title = "";
   bool fullscreen = false;
   bool vysnc = false;
   bool disableCursor = false;
@@ -43,7 +42,7 @@ public:
 
   void bind() const;
   bool isKeyDown(int pKey) const;
-  bool isMouseButtonPressed(int pButton) const;
+  bool isMouseButtonDown(int pButton) const;
 
   void setVSync(bool enabled);
   void setCursorDisabled(bool disabled);
