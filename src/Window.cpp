@@ -6,14 +6,14 @@ bool Window::s_glfwInitialized = false;
 
 Window::Window()
 {
-    m_Settings.fullscreen = true;
+    m_Fullscreen = true;
     init();
 }
 
 Window::Window(const int width, const int height)
 {
-    m_Settings.width = width;
-    m_Settings.height = height;
+    m_Width = width;
+    m_Height = height;
     init();
 }
 
@@ -42,13 +42,13 @@ void Window::init()
 
 void Window::setVSync(const bool enabled)
 {
-    m_Settings.vysnc = enabled;
+    m_Vsync = enabled;
     GLCall(glfwSwapInterval(enabled))
 }
 
 void Window::setCursorDisabled(const bool disabled)
 {
-    m_Settings.disableCursor = disabled;
+    m_DisableCursor = disabled;
     const int mode = disabled ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL;
 
     GLCall(glfwSetInputMode(m_Window, GLFW_CURSOR, mode))
@@ -58,15 +58,15 @@ void Window::createGLFWWindow()
 {
     const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
-    if (m_Settings.fullscreen)
+    if (m_Fullscreen)
     {
-        m_Window = glfwCreateWindow(mode->width, mode->height, m_Settings.title, glfwGetPrimaryMonitor(), nullptr);
-        m_Settings.width = mode->width;
-        m_Settings.height = mode->height;
+        m_Window = glfwCreateWindow(mode->width, mode->height, m_Title, glfwGetPrimaryMonitor(), nullptr);
+        m_Width = mode->width;
+        m_Height = mode->height;
     }
     else
     {
-        m_Window = glfwCreateWindow(m_Settings.width, m_Settings.height, m_Settings.title, nullptr, nullptr);
+        m_Window = glfwCreateWindow(m_Width, m_Height, m_Title, nullptr, nullptr);
     }
 
     if (!m_Window)
@@ -106,7 +106,7 @@ bool Window::isKeyDown(const int pKey) const
     return state == GLFW_PRESS || state == GLFW_REPEAT;
 }
 
-bool Window::isMouseButtonPressed(const int pButton) const
+bool Window::isMouseButtonDown(const int pButton) const
 {
     const int state = glfwGetMouseButton(m_Window, pButton);
     return state == GLFW_PRESS || state == GLFW_REPEAT;
@@ -119,63 +119,63 @@ void Window::setTitle(const std::string& title) const
 
 void Window::onCursorMove(const cursorCallback& callback)
 {
-    m_Settings.onCursorMove = callback;
+    m_CursorMoveFunc = callback;
     GLCall(glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, const double xpos, const double ypos)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        win->m_Settings.onCursorMove(win, glm::dvec2{xpos, ypos});
+        win->m_CursorMoveFunc(win, glm::dvec2{xpos, ypos});
     }))
 }
 
 void Window::onClose(const closeCallback& callback)
 {
-    m_Settings.onClose = callback;
+    m_CloseFunc = callback;
     GLCall(glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        win->m_Settings.onClose(win);
+        win->m_CloseFunc(win);
     }))
 }
 
 void Window::onMouseButton(const mouseButtonCallback& callback)
 {
-    m_Settings.onMouseButton = callback;
+    m_MouseButtonFunc = callback;
     GLCall(glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, const int button, const int action, const int mods)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        win->m_Settings.onMouseButton(win, button, action, mods);
+        win->m_MouseButtonFunc(win, button, action, mods);
     }))
 }
 
 
 void Window::onKey(const onKeyCallback& callback)
 {
-    m_Settings.onKey = callback;
+    m_KeyChangeFunc = callback;
     GLCall(glfwSetKeyCallback(m_Window, [](GLFWwindow* window, const int key, const int scancode, const int action, const int mods)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        win->m_Settings.onKey(win, key, scancode, action, mods);
+        win->m_KeyChangeFunc(win, key, scancode, action, mods);
     }))
 }
 
 void Window::onScroll(const scrollCallback& callback)
 {
-    m_Settings.onScroll = callback;
+    m_ScrollFunc = callback;
     GLCall(glfwSetScrollCallback(m_Window, [](GLFWwindow* window, const double xoffset, const double yoffset)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        win->m_Settings.onScroll(win, {xoffset, yoffset});
+        win->m_ScrollFunc(win, {xoffset, yoffset});
     }))
 }
 
 auto Window::onFocus(const focusCallback& callback)
 {
-    m_Settings.onFocus = callback;
+    m_FocusFunc = callback;
     GLCall(glfwSetWindowFocusCallback(m_Window, [](GLFWwindow* window, const int focused)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
-        if (focused && win->m_Settings.disableCursor)
+        if (focused && win->m_DisableCursor)
         {
             GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED))
         }
@@ -184,7 +184,7 @@ auto Window::onFocus(const focusCallback& callback)
             GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL))
         }
 
-        win->m_Settings.onFocus(win, focused);
+        win->m_FocusFunc(win, focused);
     }))
 }
 

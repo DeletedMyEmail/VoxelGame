@@ -53,11 +53,11 @@ void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layou
 
         if (type == GL_UNSIGNED_INT || type == GL_INT)
         {
-            GLCall(glVertexAttribIPointer(counter, count, type, layout.getStride(), (void*) offset))
+            GLCall(glVertexAttribIPointer(counter, count, type, layout.getStride(), reinterpret_cast<void*>(offset)))
         }
         else
         {
-            GLCall(glVertexAttribPointer(counter, count, type, normalized, layout.getStride(), (void*) offset))
+            GLCall(glVertexAttribPointer(counter, count, type, normalized, layout.getStride(), reinterpret_cast<void*>(offset)))
         }
 
         if (instanceDivisor != 0)
@@ -68,13 +68,6 @@ void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layou
         counter++;
         offset += sizeOfGLType(type) * count;
     }
-}
-
-void VertexArray::updateBuffer(GLuint index, const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
-{
-    m_Buffers[index] = buffer;
-    buffer->bind();
-    setAttributes(index, layout, false);
 }
 
 void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
@@ -111,5 +104,5 @@ void VertexArray::clear()
 
     m_Buffers.clear();
     m_AttribCounter = 0;
-    m_ArrayID = 0;
+    GLCall(glGenVertexArrays(1, &m_ArrayID))
 }

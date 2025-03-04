@@ -1,13 +1,32 @@
 cmake_minimum_required(VERSION 3.25)
 project(VoxelGame)
 cmake_policy(SET CMP0072 NEW)
+set(CMAKE_CXX_STANDARD 17)
+add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
-# Uncomment to remove logging at compile time
-# add_compile_definitions(RELEASE)
+# uncomment to remove logging at compile time
+#add_compile_definitions(NOLOG)
+
+# uncomment to remove performance profiling at compile time
+#add_compile_definitions(NOPROFILE)
+
+include(FetchContent)
+
+FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+
+)
+FetchContent_MakeAvailable(glfw)
+
+FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG        v1.9.2
+)
+FetchContent_MakeAvailable(spdlog)
 
 FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(spdlog REQUIRED)
-set(CMAKE_CXX_STANDARD 17)
 
 FILE(GLOB_RECURSE SOURCE "src/*.cpp" "libs/*.cpp" "libs/*.c")
 

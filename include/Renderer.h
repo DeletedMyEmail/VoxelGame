@@ -14,20 +14,25 @@
 
 void checkOpenGLErrors();
 
+enum DRAW_GEOMETRY
+{
+    LINES = GL_LINES,
+    TRIANGLES = GL_TRIANGLES,
+};
+
 class Renderer
 {
 public:
-    Renderer();
+    Renderer(int width, int height);
     ~Renderer();
 
-    void clear(const Window& window, glm::vec4 color = {0.07f, 0.14f, 0.17f, 1.0f}) ;
-    void drawChunk(Chunk& chunk, const Window& window, const Camera& cam);
-    void drawAxes(const Window& window, const Camera& cam);
-    void drawPlayer(glm::vec3 position, const Window& window, const Camera& cam);
+    void update(const Window& window, const glm::vec4& color = {0.07f, 0.14f, 0.17f, 1.0f}) const;
+    void drawChunk(Chunk& chunk, const Camera& cam) const;
+    void draw(const VertexArray& vao, DRAW_GEOMETRY geo, const glm::vec3& position, const Camera& cam) const;
+    void draw(const char* text, const glm::ivec2& position, float scale) const;
 private:
     Texture m_TextureAtlas;
-    Shader m_DefaultShader, m_DebugShader;
-
+    Shader m_ChunkShader, m_BasicShader;
 };
 
 constexpr unsigned int FRONT_FACE_INDEX = 0;
@@ -41,34 +46,33 @@ constexpr unsigned int BOTTOM_FACE_INDEX = 5;
 // (missing: 10: atlas-x, 11-14: atlas-y, 15-18: pos-rel-to-chunk-x, 19-26: pos-rel-to-chunk-y, 27-30: pos-rel-to-chunk-z, 31: unused)
 constexpr GLuint BLOCK_FACES[] = {
     // Front Face
-    0b1000000001u, // Top-right
-    0b1001000011u, // Bottom-right
-    0b1001001111u, // Bottom-left
-    0b1000001101u, // Top-left
+    0b1000000110u, // Top-right
+    0b1001000100u, // Bottom-right
+    0b1001001000u, // Bottom-left
+    0b1000001010u, // Top-left
     // Back Face
-    0b1011001110u, // Bottom-left
-    0b1011010010u, // Bottom-right
-    0b1010010000u, // Top-right
-    0b1010001100u, // Top-left
+    0b1011001001u, // Bottom-left
+    0b1011010101u, // Bottom-right
+    0b1010010111u, // Top-right
+    0b1010001011u, // Top-left
     // Left Face
-    0b0101010111u, // Bottom-left
-    0b0101011110u, // Bottom-right
-    0b0100011100u, // Top-right
-    0b0100010101u, // Top-left
+    0b0101010000u, // Bottom-left
+    0b0101011001u, // Bottom-right
+    0b0100011011u, // Top-right
+    0b0100010010u, // Top-left
     // Right Face
-    0b0110011000u, // Top-right
-    0b0111011010u, // Bottom-right
-    0b0111100011u, // Bottom-left
-    0b0110100001u, // Top-left
+    0b0110011111u, // Top-right
+    0b0111011101u, // Bottom-right
+    0b0111100100u, // Bottom-left
+    0b0110100110u, // Top-left
     // Top Face
-    0b0000100000u, // Top-right
-    0b0001100001u, // Bottom-right
-    0b0001101101u, // Bottom-left
-    0b0000101100u, // Top-left
+    0b0000100111u, // Top-right
+    0b0001100110u, // Bottom-right
+    0b0001101010u, // Bottom-left
+    0b0000101011u, // Top-left
     // Bottom Face
-    0b0011101111u, // Bottom-left
-    0b0011110011u, // Bottom-right
-    0b0010110010u, // Top-right
-    0b0010101110u, // Top-left
+    0b0011101000u, // Bottom-left
+    0b0011110100u, // Bottom-right
+    0b0010110101u, // Top-right
+    0b0010101001u, // Top-left
 };
-

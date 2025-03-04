@@ -1,10 +1,14 @@
-#include "App.h"
+#include "Profiling.h"
 #include "Log.h"
 
-int main() {
-    Log::init();
-    App app{};
-    app.run();
+void run();
 
+int main() {
+    LOG_INIT();
+    PROFILER_INIT(10);
+
+    run();
+
+    PROFILER_END();
     return 0;
 }
