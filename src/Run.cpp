@@ -1,9 +1,5 @@
-#include <Camera.h>
-#include <Chunk.h>
 #include <Player.h>
 #include <Renderer.h>
-#include <VertexArray.h>
-#include <Window.h>
 #include "Log.h"
 #include "Noise.h"
 
@@ -11,15 +7,15 @@
 
 void createAxesVAO(VertexArray& vao);
 void createHighlightVAO(VertexArray& vao);
-Chunk& getChunk(glm::vec2 pos, std::vector<Chunk>& m_Chunks);
 void moverPlayer(const Window& window, const Camera& cam, Player& player, std::vector<Chunk>& chunks, float deltaTime, bool debugMode);
 bool castRay(std::vector<Chunk>& chunks, const glm::vec3& origin, const glm::vec3& direction, float maxDistance, glm::vec3& hitPos);
+Chunk& getChunk(glm::vec2 pos, std::vector<Chunk>& m_Chunks);
 
 void run()
 {
-    Window window(1920, 1080);
-    Camera cam(glm::vec3{4,Chunk::CHUNK_SIZE+3,4}, 90.0f, window.getSettings().height, window.getSettings().width, 0.1f, 1000.0f);
-    Player player(glm::vec3{2,Chunk::CHUNK_SIZE+2,2});
+    Window window;
+    Camera cam(glm::vec3{1,Chunk::CHUNK_SIZE+3,1}, 90.0f, window.getHeight(), window.getWidth(), 0.1f, 1000.0f);
+    Player player(glm::vec3{1,Chunk::CHUNK_SIZE+3,1});
     Renderer renderer;
     VertexArray highlightVAO, axesVAO;
     createHighlightVAO(highlightVAO);
@@ -56,32 +52,41 @@ void run()
             if (key == GLFW_KEY_TAB)
                 debugMode = !debugMode;
          });
+    glm::dvec2 prevCursorPos = window.getMousePosition();
+    window.onCursorMove([&cam, &prevCursorPos](Window* win, const glm::dvec2 pos)
+        {
+            const glm::dvec2 offset = pos - prevCursorPos;
+            cam.rotate({offset.x, offset.y});
+            prevCursorPos = pos;
+        });
 
-    unsigned frameCount = 0;
-    float timeSinceDisplay = 0.0f, lastTime = glfwGetTime();
     // main loop
+    //unsigned frameCount = 0;
+    //float timeSinceDisplay = 0.0f
+    float lastTime = glfwGetTime();
     while (window.isRunning())
     {
         renderer.clear(window);
 
-        // get delta time and display fps
+        // calc delta time and display fps
         const float currentTime = glfwGetTime();
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-        timeSinceDisplay += deltaTime;
+        /*timeSinceDisplay += deltaTime;
         frameCount++;
         if (timeSinceDisplay >= 1.0f)
         {
             window.setTitle("FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(timeSinceDisplay / frameCount * 1000) + "ms");
             frameCount = timeSinceDisplay = 0;
-        }
+        }*/
 
-        // update plater
+        // movement
         moverPlayer(window, cam, player, chunks, deltaTime, debugMode);
-        const glm::vec3& camToPlayer = player.getPhysics().getPosition() + glm::vec3(0.5f) - cam.getPosition();
+        const glm::vec3 camToPlayer = player.getPhysics().getPosition() + glm::vec3(0.5f) - cam.getPosition();
         cam.translate(camToPlayer);
-        cam.update(window.getMousePosition());
+        cam.updateView();
 
+        // highlight block
         if (window.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT))
         {
             glm::vec3 blockPos;
@@ -98,6 +103,7 @@ void run()
     }
 }
 
+// experimental ;-; (euphemism for not working)
 bool castRay(std::vector<Chunk>& chunks, const glm::vec3& origin, const glm::vec3& direction, const float maxDistance, glm::vec3& hitPos)
 {
     const glm::uvec2 chunkPos = getChunkPos(origin);
@@ -108,8 +114,14 @@ bool castRay(std::vector<Chunk>& chunks, const glm::vec3& origin, const glm::vec
     glm::vec3 tMax = glm::vec3(voxelCoords + steps) - origin;
     const glm::vec3 tDelta = glm::abs(1.0f / (direction * tMax));
 
-    do
+    while(Chunk::inBounds(voxelCoords))
     {
+        if (chunk.getBlock(voxelCoords) != BLOCK_TYPE::AIR)
+        {
+            hitPos = {static_cast<unsigned>(voxelCoords.x) + chunkPos.x * Chunk::CHUNK_SIZE, static_cast<unsigned>(voxelCoords.y), static_cast<unsigned>(voxelCoords.z) + chunkPos.y * Chunk::CHUNK_SIZE};
+            return true;
+        }
+
         if(tMax.x < tMax.y)
         {
             if(tMax.x < tMax.z)
@@ -136,32 +148,27 @@ bool castRay(std::vector<Chunk>& chunks, const glm::vec3& origin, const glm::vec
                 tMax.z += tDelta.z;
             }
         }
-
-        if (chunk.getBlock(voxelCoords) != BLOCK_TYPE::AIR)
-        {
-            hitPos = {static_cast<unsigned>(voxelCoords.x) + chunkPos.x * Chunk::CHUNK_SIZE, static_cast<unsigned>(voxelCoords.y), static_cast<unsigned>(voxelCoords.z) + chunkPos.y * Chunk::CHUNK_SIZE};
-            return true;
-        }
     }
-    while(true);
 
-    assert(false);
+    return false;
 }
 
 void moverPlayer(const Window& window, const Camera& cam, Player& player, std::vector<Chunk>& chunks, const float deltaTime, const bool debugMode)
 {
+    // movement
     glm::vec3 input(0.0f);
-    if (window.isKeyDown(GLFW_KEY_W)) input.z += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_S)) input.z -= 1.0f;
-    if (window.isKeyDown(GLFW_KEY_A)) input.x += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_D)) input.x -= 1.0f;
-    if (window.isKeyDown(GLFW_KEY_SPACE)) input.y += 1.0f;
-    if (window.isKeyDown(GLFW_KEY_LEFT_SHIFT)) input.y -= 1.0f;
+    input.z += 1.0f * window.isKeyDown(GLFW_KEY_W);
+    input.z -= 1.0f * window.isKeyDown(GLFW_KEY_S);
+    input.x += 1.0f * window.isKeyDown(GLFW_KEY_A);
+    input.x -= 1.0f * window.isKeyDown(GLFW_KEY_D);
+    input.y += 1.0f * window.isKeyDown(GLFW_KEY_SPACE);
+    input.y -= 1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
-    glm::vec3 vel;
-    vel = cam.getLookDir() * input.z;
-    vel -= normalize(cross(cam.getLookDir(), glm::vec3(0.0f, 1.0f, 0.0f))) * input.x;
-    vel.y = input.y;
+    const glm::vec3 dir = cam.getLookDir();
+    const glm::vec3 right = -glm::normalize(cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 forward = glm::normalize(glm::vec3{dir.x, 0.0f, dir.z});
+    static glm::vec3 up(0.0f, 1.0f, 0.0f);
+    const glm::vec3 vel = forward * input.z + right * input.x + up * input.y;
 
     PhysicsBody& playerBody = player.getPhysics();
     playerBody.addVelocity(vel * deltaTime * player.getSpeed());
@@ -173,7 +180,6 @@ void moverPlayer(const Window& window, const Camera& cam, Player& player, std::v
     }
 
     // physics
-
     const auto chunkPos = getChunkPos(playerBody.getPosition());
     const Chunk* relevantChunk = nullptr;
 
@@ -203,16 +209,12 @@ void moverPlayer(const Window& window, const Camera& cam, Player& player, std::v
         {
             for (unsigned int z = zStart; z < zStart+4; z++)
             {
-                const BLOCK_TYPE block = relevantChunk->getBlock({x,y,z});
-                if (block == BLOCK_TYPE::AIR)
+                if (relevantChunk->getBlock({x,y,z}) == BLOCK_TYPE::AIR)
                     continue;
 
                 const glm::vec3 pos = glm::vec3(x,y,z) + glm::vec3(chunkPos.x, 0, chunkPos.y) * static_cast<float>(Chunk::CHUNK_SIZE);
                 const PhysicsBody blockBounding(pos, {1,1,1}, true);
-                if (playerBody.solveCollision(blockBounding))
-                {
-
-                }
+                playerBody.solveCollision(blockBounding);
             }
         }
     }

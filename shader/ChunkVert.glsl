@@ -65,6 +65,7 @@ vec2 unpackTextureCoords(uint data)
 vec3 unpackNormal(uint data)
 {
     uint x = (data >> 7u) & 7u;
+    // TODO: branchless
 
     switch (x) {
       case 0u:

@@ -4,11 +4,12 @@
 (seed: 42)
 
 ### Build Process
-If you run a distro using apt package manager, just run ```bash build_debian.sh```.
+Install cmake and run ```bash build_debian.sh``` in your terminal. 
+This will create a build directory and compile the project.
 
 ### Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
-- `TAB` to toggle wireframe mode
+- `TAB` to toggle debug mode
 - `ESC` to quit
 
 ### Features
@@ -16,8 +17,8 @@ If you run a distro using apt package manager, just run ```bash build_debian.sh`
 - face culling (backface culling, hollow chunks)
 - swept AABB collisions (well.. pls don't test)
 - upcoming features
-  - frustrum culling
   - placing and breaking blocks
+  - frustum culling
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 

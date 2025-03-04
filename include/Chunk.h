@@ -17,6 +17,7 @@ public:
     ~Chunk() = default;
 
     void generateMesh();
+    static bool inBounds(const glm::uvec3 pos) { return pos.x < CHUNK_SIZE && pos.y < MAX_HEIGHT && pos.z < CHUNK_SIZE; };
 
     const VertexArray& getMesh() { return m_VAO; }
     BLOCK_TYPE getBlock(const glm::uvec3 pos) const { return m_Blocks[getBlockIndex(pos)]; }

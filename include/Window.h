@@ -16,23 +16,6 @@ typedef std::function<void(Window* window, int button, int action, int mods)> mo
 typedef std::function<void(Window* window)> closeCallback;
 typedef std::function<void(Window* window, glm::dvec2 pos)> cursorCallback;
 
-struct WindowSettings
-{
-  const char* title = "";
-  int width = 0;
-  int height = 0;
-  bool fullscreen = false;
-  bool vysnc = false;
-  bool disableCursor = false;
-
-  cursorCallback onCursorMove = nullptr;
-  closeCallback onClose = nullptr;
-  mouseButtonCallback onMouseButton = nullptr;
-  onKeyCallback onKey = nullptr;
-  focusCallback onFocus = nullptr;
-  scrollCallback onScroll = nullptr;
-};
-
 class Window
 {
 public:
@@ -43,6 +26,8 @@ public:
   void bind() const;
   bool isKeyDown(int pKey) const;
   bool isMouseButtonDown(int pButton) const;
+  bool isRunning() const;
+  void stop() const;
 
   void setVSync(bool enabled);
   void setCursorDisabled(bool disabled);
@@ -53,22 +38,33 @@ public:
   auto onFocus(const focusCallback& callback);
   void onScroll(const scrollCallback& callback);
 
+  void setTitle(const std::string& title) const;
   glm::dvec2 getMousePosition() const;
   double getMouseX() const;
   double getMouseY() const;
-  bool isRunning() const;
-  void stop() const;
-  void setTitle(const std::string& title) const;
-
-  const WindowSettings& getSettings() const { return m_Settings; }
   GLFWwindow* getGLFWWindow() const { return m_Window; }
+  int getWidth() const { return m_Width; }
+  int getHeight() const { return m_Height; }
 private:
   void init();
   void createGLFWWindow();
   static void initGlfw();
 private:
   GLFWwindow* m_Window = nullptr;
-  WindowSettings m_Settings;
+
+  const char* m_Title = "";
+  int m_Width = 0;
+  int m_Height = 0;
+  bool m_Fullscreen = false;
+  bool m_Vsync = false;
+  bool m_DisableCursor = false;
+
+  cursorCallback m_CursorMoveFunc = nullptr;
+  closeCallback m_CloseFunc = nullptr;
+  mouseButtonCallback m_MouseButtonFunc = nullptr;
+  onKeyCallback m_KeyChangeFunc = nullptr;
+  focusCallback m_FocusFunc = nullptr;
+  scrollCallback m_ScrollFunc = nullptr;
 
   static bool s_glfwInitialized;
 };
