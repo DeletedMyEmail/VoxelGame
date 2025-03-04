@@ -14,9 +14,9 @@ Chunk& getChunk(glm::vec2 pos, std::vector<Chunk>& m_Chunks);
 void run()
 {
     Window window;
-    Camera cam(glm::vec3{1,Chunk::CHUNK_SIZE+3,1}, 90.0f, window.getHeight(), window.getWidth(), 0.1f, 1000.0f);
+    Camera cam(glm::vec3{1,Chunk::CHUNK_SIZE+3,1}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, 1000.0f);
     Player player(glm::vec3{1,Chunk::CHUNK_SIZE+3,1});
-    Renderer renderer;
+    Renderer renderer(window.getWidth(), window.getHeight());
     VertexArray highlightVAO, axesVAO;
     createHighlightVAO(highlightVAO);
     createAxesVAO(axesVAO);
@@ -61,24 +61,18 @@ void run()
         });
 
     // main loop
-    //unsigned frameCount = 0;
-    //float timeSinceDisplay = 0.0f
+    unsigned frameCount = 0;
+    float timeSinceDisplay = 0.0f;
     float lastTime = glfwGetTime();
+    std::string text;
     while (window.isRunning())
     {
-        renderer.clear(window);
-
         // calc delta time and display fps
         const float currentTime = glfwGetTime();
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-        /*timeSinceDisplay += deltaTime;
+        timeSinceDisplay += deltaTime;
         frameCount++;
-        if (timeSinceDisplay >= 1.0f)
-        {
-            window.setTitle("FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(timeSinceDisplay / frameCount * 1000) + "ms");
-            frameCount = timeSinceDisplay = 0;
-        }*/
 
         // movement
         moverPlayer(window, cam, player, chunks, deltaTime, debugMode);
@@ -91,15 +85,25 @@ void run()
         {
             glm::vec3 blockPos;
             if (castRay(chunks, cam.getPosition(), cam.getLookDir(), 20.0f, blockPos))
-                renderer.draw(highlightVAO, TRIANGLES, blockPos, window, cam);
+                renderer.draw(highlightVAO, TRIANGLES, blockPos, cam);
         }
 
         // draw
         for (Chunk& chunk : chunks)
-            renderer.drawChunk(chunk, window, cam);
+            renderer.drawChunk(chunk, cam);
 
         if (debugMode)
-            renderer.draw(axesVAO, LINES, cam.getPosition() + cam.getLookDir(), window, cam);
+            renderer.draw(axesVAO, LINES, cam.getPosition() + cam.getLookDir(), cam);
+
+        // draw fps
+        if (timeSinceDisplay >= 1.0f)
+        {
+            text = "FPS: " + std::to_string(frameCount) + "  |  Avg frame time: " + std::to_string(timeSinceDisplay / frameCount * 1000) + "ms";
+            frameCount = timeSinceDisplay = 0;
+        }
+        renderer.draw(text.c_str(), glm::ivec2(0), 2);
+
+        renderer.update(window);
     }
 }
 
@@ -234,6 +238,32 @@ Chunk& getChunk(const glm::vec2 pos, std::vector<Chunk>& m_Chunks)
     assert(false);
 }
 
+void createAxesVAO(VertexArray& vao)
+{
+    float axisVertices[] =
+    {
+        // X axis
+        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
+        0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
+
+        // Y axis
+        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0,
+        0.0f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0,
+
+        // Z axis
+        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f, 1.0,
+        0.0f, 0.0f, 0.5f,   0.0f, 0.0f, 1.0f, 1.0
+    };
+
+    const auto vBuffer = std::make_shared<VertexBuffer>(6 * 7 * sizeof(float), axisVertices);
+    VertexBufferLayout layout;
+    layout.push<float>(3);
+    layout.push<float>(4);
+
+    vao.addBuffer(vBuffer, layout);
+    vao.setVertexCount(6);
+}
+
 void createHighlightVAO(VertexArray& vao)
 {
     float vertices[] =
@@ -284,30 +314,4 @@ void createHighlightVAO(VertexArray& vao)
 
     vao.addBuffer(vBuffer, layout);
     vao.setVertexCount(36);
-}
-
-void createAxesVAO(VertexArray& vao)
-{
-    float axisVertices[] =
-    {
-        // X axis
-        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
-        0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
-
-        // Y axis
-        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0,
-        0.0f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0,
-
-        // Z axis
-        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f, 1.0,
-        0.0f, 0.0f, 0.5f,   0.0f, 0.0f, 1.0f, 1.0
-    };
-
-    const auto vBuffer = std::make_shared<VertexBuffer>(6 * 7 * sizeof(float), axisVertices);
-    VertexBufferLayout layout;
-    layout.push<float>(3);
-    layout.push<float>(4);
-
-    vao.addBuffer(vBuffer, layout);
-    vao.setVertexCount(6);
 }

@@ -23,12 +23,13 @@ enum DRAW_GEOMETRY
 class Renderer
 {
 public:
-    Renderer();
+    Renderer(int width, int height);
     ~Renderer();
 
-    void clear(const Window& window, const glm::vec4& color = {0.07f, 0.14f, 0.17f, 1.0f}) const;
-    void drawChunk(Chunk& chunk, const Window& window, const Camera& cam) const;
-    void draw(const VertexArray& vao, DRAW_GEOMETRY geo, const glm::vec3& position, const Window& window, const Camera& cam) const;
+    void update(const Window& window, const glm::vec4& color = {0.07f, 0.14f, 0.17f, 1.0f}) const;
+    void drawChunk(Chunk& chunk, const Camera& cam) const;
+    void draw(const VertexArray& vao, DRAW_GEOMETRY geo, const glm::vec3& position, const Camera& cam) const;
+    void draw(const char* text, const glm::ivec2& position, float scale) const;
 private:
     Texture m_TextureAtlas;
     Shader m_ChunkShader, m_BasicShader;

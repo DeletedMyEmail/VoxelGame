@@ -5,7 +5,7 @@
 
 class Camera {
 public:
-    Camera(glm::vec3 pos, float fov, float height, float width, float near, float far);
+    Camera(glm::vec3 pos, float fov, float width, float height, float near, float far);
 
     void updateView();
     void move(const glm::vec3& translation);

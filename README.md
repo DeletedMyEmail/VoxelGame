@@ -26,6 +26,7 @@ This will create a build directory and compile the project.
 - [glfw](https://github.com/glfw/glfw) - Window managing
 - [glm](https://github.com/g-truc/glm) - Quick math library, because I'm not a psychopath
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Loading texture atlas
+- [glText](https://github.com/vallentin/glText) - Text rendering
 
 ### Learning Resources / Credits
 - [Ray Casting](http://www.cse.yorku.ca/~amana/research/grid.pdf)
