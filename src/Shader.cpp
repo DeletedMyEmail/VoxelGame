@@ -1,8 +1,7 @@
 #include "Shader.h"
-#include "Log.h"
-#include "Renderer.h"
 #include <fstream>
 #include <sstream>
+#include "OpenGLHelper.h"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -86,7 +85,7 @@ int Shader::getUniformLocation(const std::string &name) const
 {
     const int location = glGetUniformLocation(m_ProgrammID, name.c_str());
     if (location == -1)
-        LOG_WARN("Uniform not found: " + name);
+        LOG_WARN("Uniform not found: {}", name);
     return location;
 }
 
@@ -113,7 +112,7 @@ GLuint Shader::compile(const char* shaderSource, const GLenum shaderType)
         char message[length];
         GLCall(glGetShaderInfoLog(shaderID, length, &length, message))
 
-        LOG_ERROR(std::string("Shader compilation error: ")+message);
+        LOG_ERROR("Shader compilation error: {}", std::string(message));
         exit(-1);
     }
 
@@ -126,7 +125,7 @@ std::string Shader::parse(const char* shaderSource)
 
     if (!lShaderFile.is_open())
     {
-        LOG_ERROR(std::string("Shader file not found: ") + shaderSource);
+        LOG_ERROR("Shader file not found: {}", shaderSource);
         exit(-1);
     }
 

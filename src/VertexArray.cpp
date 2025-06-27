@@ -1,7 +1,17 @@
 #include "VertexArray.h"
-#include "Renderer.h"
+#include "OpenGLHelper.h"
 
-unsigned int sizeOfGLType(const GLenum type)
+GLuint createBuffer(const GLvoid* data, const GLsizei size, const GLenum target, const GLenum usage)
+{
+    GLuint bufferId = 0;
+    GLCall(glGenBuffers(1, &bufferId));
+    GLCall(glBindBuffer(target, bufferId));
+    GLCall(glBufferData(target, size, data, usage));
+
+    return bufferId;
+}
+
+static unsigned int sizeOfGLType(const GLenum type)
 {
     switch (type) {
     case GL_FLOAT:
@@ -17,77 +27,63 @@ unsigned int sizeOfGLType(const GLenum type)
     }
 }
 
-template <>
-void VertexBufferLayout::push<GLfloat>(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
+void VertexBufferLayout::pushFloat(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
 {
-    m_LayoutElements.emplace_back(LayoutElement{count, GL_FLOAT, normalized, instanceDivisor});
-    m_Stride += count * sizeof(GLfloat);
+    layoutElements.emplace_back(LayoutElement{count, GL_FLOAT, normalized, instanceDivisor});
+    stride += count * sizeof(GLfloat);
 }
 
-template <>
-void VertexBufferLayout::push<GLuint>(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
+void VertexBufferLayout::pushUInt(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
 {
-    m_LayoutElements.emplace_back(LayoutElement{count, GL_UNSIGNED_INT, normalized, instanceDivisor});
-    m_Stride += count * sizeof(GLuint);
+    layoutElements.emplace_back(LayoutElement{count, GL_UNSIGNED_INT, normalized, instanceDivisor});
+    stride += count * sizeof(GLuint);
+}
+
+void VertexBufferLayout::pushInt(const GLint count, const GLboolean normalized, const GLsizei instanceDivisor)
+{
+    layoutElements.emplace_back(LayoutElement{count, GL_INT, normalized, instanceDivisor});
+    stride += count * sizeof(GLint);
 }
 
 VertexArray::VertexArray()
-    : m_ArrayID(0)
 {
-    GLCall(glGenVertexArrays(1, &m_ArrayID))
+    GLCall(glGenVertexArrays(1, &arrayID))
 }
 
-void VertexArray::setAttributes(GLuint& counter, const VertexBufferLayout& layout, const bool enable) const
+void VertexArray::addBuffer(const GLuint bufferId, const VertexBufferLayout& layout)
 {
+    buffers.emplace_back(bufferId);
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferId))
     bind();
 
-    const auto& attributes = layout.getAttributes();
+    const auto& attributes = layout.layoutElements;
     unsigned int offset = 0;
 
     for (auto [count, type, normalized, instanceDivisor] : attributes)
     {
-        if (enable)
-        {
-            GLCall(glEnableVertexAttribArray(counter))
-        }
+        GLCall(glEnableVertexAttribArray(attribCounter))
 
         if (type == GL_UNSIGNED_INT || type == GL_INT)
-        {
-            GLCall(glVertexAttribIPointer(counter, count, type, layout.getStride(), reinterpret_cast<void*>(offset)))
-        }
+            GLCall(glVertexAttribIPointer(attribCounter, count, type, layout.stride, reinterpret_cast<void*>(offset)))
         else
-        {
-            GLCall(glVertexAttribPointer(counter, count, type, normalized, layout.getStride(), reinterpret_cast<void*>(offset)))
-        }
+            GLCall(glVertexAttribPointer(attribCounter, count, type, normalized, layout.stride, reinterpret_cast<void*>(offset)))
 
         if (instanceDivisor != 0)
-        {
-            GLCall(glVertexAttribDivisor(counter, instanceDivisor))
-        }
+            GLCall(glVertexAttribDivisor(attribCounter, instanceDivisor))
 
-        counter++;
+        attribCounter++;
         offset += sizeOfGLType(type) * count;
     }
 }
 
-void VertexArray::addBuffer(const std::shared_ptr<VertexBuffer>& buffer, const VertexBufferLayout& layout)
-{
-    m_Buffers.emplace_back(buffer);
-    buffer->bind();
-    setAttributes(m_AttribCounter, layout, true);
-}
-
 VertexArray::~VertexArray()
 {
-    if (m_ArrayID != 0)
-    {
-        GLCall(glDeleteVertexArrays(1, &m_ArrayID))
-    }
+    clear();
 }
 
 void VertexArray::bind() const
 {
-    GLCall(glBindVertexArray(m_ArrayID))
+    GLCall(glBindVertexArray(arrayID))
 }
 
 void VertexArray::unbind() const
@@ -97,12 +93,12 @@ void VertexArray::unbind() const
 
 void VertexArray::clear()
 {
-    if (m_ArrayID != 0)
-    {
-        GLCall(glDeleteVertexArrays(1, &m_ArrayID))
-    }
+    if (arrayID != 0)
+        GLCall(glDeleteVertexArrays(1, &arrayID))
 
-    m_Buffers.clear();
-    m_AttribCounter = 0;
-    GLCall(glGenVertexArrays(1, &m_ArrayID))
+    for (const auto& buffer : buffers)
+        GLCall(glDeleteBuffers(1, &buffer))
+    buffers.clear();
+    attribCounter = 0;
+    GLCall(glGenVertexArrays(1, &arrayID))
 }

@@ -1,6 +1,6 @@
 #include "Window.h"
-#include "Log.h"
-#include "Renderer.h"
+#include "cstmlib/Log.h"
+#include "OpenGLHelper.h"
 
 bool Window::s_glfwInitialized = false;
 

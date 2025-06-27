@@ -1,41 +1,26 @@
 #pragma once
 
+#include "Block.h"
 #include "VertexArray.h"
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "FastNoiseLite.h"
 
-enum class BLOCK_TYPE : unsigned char {
-    AIR,
-    TEST,
-    GRASS,
-    STONE,
-};
-
-class Chunk
+struct Chunk
 {
-public:
     Chunk();
-    Chunk(glm::uvec2 chunkPosition, unsigned char** heightMap);
-    ~Chunk() = default;
+    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise);
+    void bake();
+    BLOCK_TYPE getBlockUnsafe(const glm::uvec3& pos) const;
+    BLOCK_TYPE getBlockSafe(const glm::uvec3& pos) const;
 
-    void generateMesh();
-    static bool inBounds(const glm::uvec3 pos) { return pos.x < CHUNK_SIZE && pos.y < MAX_HEIGHT && pos.z < CHUNK_SIZE; };
+    static constexpr uint32_t CHUNK_SIZE = 16;
+    static constexpr uint32_t MAX_HEIGHT = 16;
+    static constexpr uint32_t MIN_HEIGHT = MAX_HEIGHT / 2;
+    static constexpr uint32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
 
-    const VertexArray& getMesh() { return m_VAO; }
-    BLOCK_TYPE getBlock(const glm::uvec3 pos) const { return m_Blocks[getBlockIndex(pos)]; }
-    const glm::uvec2& getPosition() const { return m_ChunkPosition; }
-private:
-    void createBlocks(unsigned char** heightMap);
-    void selectFaces(std::vector<GLuint>& buffer);
-    unsigned int getUncoveredFaces(glm::uvec3 pos) const;
-    static unsigned int getBlockIndex(const glm::uvec3 pos) { return pos.x + CHUNK_SIZE * (pos.y + MAX_HEIGHT * pos.z);}
-public:
-    static constexpr unsigned int CHUNK_SIZE = 16;
-    static constexpr unsigned int MAX_HEIGHT = 16;
-    static constexpr unsigned int BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
-private:
-    VertexArray m_VAO;
-    glm::uvec2 m_ChunkPosition;
-    BLOCK_TYPE m_Blocks[BLOCKS_PER_CHUNK];
+    VertexArray vao;
+    glm::uvec2 chunkPosition;
+    BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
+    bool isDirty = true;
 };
-
-glm::uvec2 getAtlasOffset(BLOCK_TYPE block);
-glm::uvec2 getChunkPos(const glm::vec3& pos);
