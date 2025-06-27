@@ -13,6 +13,7 @@
 #include "Shader.h"
 #include "Window.h"
 #include "OpenGLHelper.h"
+#include "Texture.h"
 #include "VertexArray.h"
 
 VertexArray createAxesVAO();
@@ -48,12 +49,13 @@ int main(int argc, char* argv[])
 
 #pragma endregion
 
-    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
     gltInit();
     gltViewport(window.getWidth(), window.getHeight());
 
     Shader basicShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
     Shader blockShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
+    Texture textureAtlas("../resources/textures/textureAtlas.png");
 
     unsigned frameCount = 0;
     float timeSinceDisplay = 0.0f;
@@ -83,9 +85,12 @@ int main(int argc, char* argv[])
             cam.move(glm::normalize(vel) * deltaTime * 60.0f);
         cam.updateView();
 
+        textureAtlas.bind(0);
         blockShader.bind();
         blockShader.setUniformMat4("u_VP", cam.getViewProjection());
-        blockShader.setUniform3f("u_ChunkOffset", {0,0,0});
+        blockShader.setUniform3f("u_chunkOffset", {0,0,0});
+        blockShader.setUniform1i("u_textureSlot", 0);
+
         if (chunk.isDirty)
             chunk.bake();
         chunk.vao.bind();
@@ -149,12 +154,12 @@ VertexArray createAxesVAO()
 glm::vec3 moveInput(const Window& window, const glm::vec3& dir)
 {
     glm::vec3 input(0.0f);
-    input.z += 1.0f * window.isKeyDown(GLFW_KEY_W);
-    input.z -= 1.0f * window.isKeyDown(GLFW_KEY_S);
-    input.x += 1.0f * window.isKeyDown(GLFW_KEY_A);
-    input.x -= 1.0f * window.isKeyDown(GLFW_KEY_D);
+    input.z += -1.0f * window.isKeyDown(GLFW_KEY_W);
+    input.z += 1.0f * window.isKeyDown(GLFW_KEY_S);
+    input.x += -1.0f * window.isKeyDown(GLFW_KEY_A);
+    input.x += 1.0f * window.isKeyDown(GLFW_KEY_D);
     input.y += 1.0f * window.isKeyDown(GLFW_KEY_SPACE);
-    input.y -= 1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
+    input.y += -1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
     const glm::vec3 right = -glm::normalize(cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
     const glm::vec3 forward = glm::normalize(glm::vec3{dir.x, 0.0f, dir.z});

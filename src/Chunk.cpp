@@ -1,19 +1,6 @@
 #include "Chunk.h"
 #include "OpenGLHelper.h"
 
-static glm::uvec2 getAtlasOffset(const BLOCK_TYPE block)
-{
-    switch (block)
-    {
-        case BLOCK_TYPE::GRASS:
-            return {1,0};
-        case BLOCK_TYPE::STONE:
-            return {1,1};
-        default:
-            return {0,0};
-    }
-}
-
 static uint8_t getBlockIndex(const glm::uvec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::MAX_HEIGHT; }
 
 static bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; };
@@ -42,7 +29,7 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise)
                     blocks[index] = BLOCK_TYPE::AIR;
                 else
                 {
-                    const BLOCK_TYPE type = y > localHeight-3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
+                    const BLOCK_TYPE type = y > localHeight-3 ? BLOCK_TYPE::TEST : BLOCK_TYPE::STONE;
                     blocks[index] = type;
                 }
 
@@ -71,7 +58,8 @@ void Chunk::bake()
                 // TODO: only for uncovered faces
                 for (uint32_t i = 0; i < 6; i++)
                 {
-                    blockdata packedData = (i << 28) | (x << 24) | (y << 20) | (z << 12);
+                    const glm::uvec2 atlasOffset = getAtlasOffset(block, i);
+                    blockdata packedData = (i << 28) | (x << 24) | (y << 20) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
                     for (uint32_t j = 0; j < 6; j++)
                         buffer.push_back(packedData); // TODO: magic number
 
