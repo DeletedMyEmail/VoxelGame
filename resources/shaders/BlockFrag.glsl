@@ -1,6 +1,6 @@
 #version 330 core
 
-const float s_atlasSize = 12.0f; // 16x16 texture atlas
+const float s_atlasSize = 16.0f; // 16x16 texture atlas
 
 in vec2 v_uv;
 in vec3 v_normal;

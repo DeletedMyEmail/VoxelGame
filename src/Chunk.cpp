@@ -29,7 +29,7 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise)
                     blocks[index] = BLOCK_TYPE::AIR;
                 else
                 {
-                    const BLOCK_TYPE type = y > localHeight-3 ? BLOCK_TYPE::TEST : BLOCK_TYPE::STONE;
+                    const BLOCK_TYPE type = y > localHeight-3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
                     blocks[index] = type;
                 }
 

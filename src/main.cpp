@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 
     Shader basicShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
     Shader blockShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
-    Texture textureAtlas("../resources/textures/textureAtlas.png");
+    Texture textureAtlas("../resources/textures/TextureAtlas.png");
 
     unsigned frameCount = 0;
     float timeSinceDisplay = 0.0f;
@@ -154,18 +154,18 @@ VertexArray createAxesVAO()
 glm::vec3 moveInput(const Window& window, const glm::vec3& dir)
 {
     glm::vec3 input(0.0f);
-    input.z += -1.0f * window.isKeyDown(GLFW_KEY_W);
-    input.z += 1.0f * window.isKeyDown(GLFW_KEY_S);
+    input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);
+    input.z += -1.0f * window.isKeyDown(GLFW_KEY_S);
     input.x += -1.0f * window.isKeyDown(GLFW_KEY_A);
-    input.x += 1.0f * window.isKeyDown(GLFW_KEY_D);
-    input.y += 1.0f * window.isKeyDown(GLFW_KEY_SPACE);
+    input.x +=  1.0f * window.isKeyDown(GLFW_KEY_D);
+    input.y +=  1.0f * window.isKeyDown(GLFW_KEY_SPACE);
     input.y += -1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
-    const glm::vec3 right = -glm::normalize(cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
+    /*const glm::vec3 right = -glm::normalize(cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
     const glm::vec3 forward = glm::normalize(glm::vec3{dir.x, 0.0f, dir.z});
-    static glm::vec3 up(0.0f, 1.0f, 0.0f);
-
-    return  forward * input.z + right * input.x + up * input.y;
+    static glm::vec3 up(0.0f, 1.0f, 0.0f);*/
+    //return  forward * input.z + right * input.x + up * input.y;
+    return input;
 }
 
 void drawText(const std::string& txt)
