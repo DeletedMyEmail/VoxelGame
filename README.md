@@ -12,11 +12,12 @@ This will create a build directory and compile the project.
 ### Features
 - [ ] procedural world generation
   - [x] noise maps for terrain height (for each biome)
+  - [ ] noise maps for biome distribution
   - [ ] ...
 - [ ] skybox
 - [x] pack vertex into 1 int
 - [ ] send 1 vertex to draw whole face
-- [ ] face culling 
+- [x] face culling 
 - [ ] frustum culling
 - [ ] placing and breaking blocks
 - [ ] collisions

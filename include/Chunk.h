@@ -22,7 +22,7 @@ struct Chunk
 {
     Chunk();
     Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);
-    void bake();
+    void bake(Chunk* neighborChunks[3][3]);
     BLOCK_TYPE getBlockUnsafe(const glm::uvec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::uvec3& pos) const;
 

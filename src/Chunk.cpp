@@ -41,8 +41,7 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const 
     }
 }
 
-// TODO: check nearby chunks
-void Chunk::bake()
+void Chunk::bake(Chunk* neighborChunks[3][3])
 {
     std::vector<blockdata> buffer;
     uint32_t faceCount = 0;
@@ -58,22 +57,46 @@ void Chunk::bake()
                 if (block == BLOCK_TYPE::AIR)
                     continue;
 
-                // TODO: only for uncovered faces
                 for (uint32_t i = 0; i < 6; i++)
                 {
-                    glm::uvec3 pos;
+                    if (i == BOTTOM && y == 0)
+                        continue;
+                    if (i == TOP && y == MAX_HEIGHT - 1)
+                        continue;
+
+                    glm::uvec3 neighbourBlockPos;
                     switch (i)
                     {
-                        case FACES::BACK: pos = {x, y, z - 1}; break;
-                        case FACES::FRONT: pos = {x, y, z + 1}; break;
-                        case FACES::LEFT: pos = {x - 1, y, z}; break;
-                        case FACES::RIGHT: pos = {x + 1, y, z}; break;
-                        case FACES::TOP: pos = {x, y + 1, z}; break;
-                        case FACES::BOTTOM: pos = {x, y - 1, z}; break;
+                        case BACK: neighbourBlockPos = {x, y, z - 1}; break;
+                        case FRONT: neighbourBlockPos = {x, y, z + 1}; break;
+                        case LEFT: neighbourBlockPos = {x - 1, y, z}; break;
+                        case RIGHT: neighbourBlockPos = {x + 1, y, z}; break;
+                        case TOP: neighbourBlockPos = {x, y + 1, z}; break;
+                        case BOTTOM: neighbourBlockPos = {x, y - 1, z}; break;
+                        default: assert(false);
                     }
 
-                    if (inBounds(pos) && getBlockUnsafe(pos) != BLOCK_TYPE::AIR)
+                    if (inBounds(neighbourBlockPos) && getBlockUnsafe(neighbourBlockPos) != BLOCK_TYPE::AIR)
                         continue;
+                    if (!inBounds(neighbourBlockPos))
+                    {
+                        // check if a neighboring chunk has a covering block
+                        int dx = 1, dz = 1;
+                        glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
+
+                        if (neighbourBlockPos.x == CHUNK_SIZE) { dx = 2; blockPosInOtherChunk.x = 0; }
+                        else if (neighbourBlockPos.x > CHUNK_SIZE) { dx = 0; blockPosInOtherChunk.x = CHUNK_SIZE - 1; }
+
+                        if (neighbourBlockPos.z == CHUNK_SIZE) { dz = 2; blockPosInOtherChunk.z = 0; }
+                        else if (neighbourBlockPos.z > CHUNK_SIZE) { dz = 0; blockPosInOtherChunk.z = CHUNK_SIZE - 1; }
+
+                        assert(dx != 1 || dz != 1);
+
+                        const Chunk* neighborChunk = neighborChunks[dx][dz];
+                        assert(!neighborChunk || neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+                        if (neighborChunk && neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::AIR)
+                            continue;
+                    }
 
                     const glm::uvec2 atlasOffset = getAtlasOffset(block, i);
                     blockdata packedData = (i << 28) | (x << 24) | (y << 16) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);

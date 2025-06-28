@@ -64,17 +64,18 @@ int main(int argc, char* argv[])
 
     auto axisVbo = createAxesVAO();
 
-    BIOME b = MOUNTAIN;
-    FastNoiseLite noise = createBiomeNoise(b, 42);
+    BIOME b = HILLS;
+    uint32_t worldSize = 30;
+    FastNoiseLite noise = createBiomeNoise(b, 1337);
+
     std::vector<Chunk> chunks;
-    uint32_t worldSize = 10;
     for (uint32_t x = 0; x < worldSize; x++)
         for (uint32_t z = 0; z < worldSize; z++)
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
 
     while (window.isRunning())
     {
-        glClearColor(0.12f, 0.2f, 0.25f, 1.0f);
+        glClearColor(0.5f, 0.8f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const float currentTime = glfwGetTime();
@@ -96,7 +97,28 @@ int main(int argc, char* argv[])
         for (auto& chunk : chunks)
         {
             if (chunk.isDirty)
-                chunk.bake();
+            {
+                Chunk* neighbors[3][3];
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dz = -1; dz <= 1; dz++)
+                    {
+                        if (dx == 0 && dz == 0) // skip self
+                            continue;
+
+                        glm::uvec2 neighbourPos = glm::uvec2{dx, dz} + chunk.chunkPosition;
+                        auto neighbour = std::ranges::find_if(chunks,
+                            [neighbourPos](const Chunk& c) { return c.chunkPosition == neighbourPos; });
+
+                        if (neighbour == chunks.end())
+                            neighbors[dx + 1][dz + 1] = nullptr;
+                        else
+                            neighbors[dx + 1][dz + 1] = &(*neighbour);
+                    }
+                }
+
+                chunk.bake(neighbors);
+            }
 
             chunk.vao.bind();
             setUniform3f(blockShader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
