@@ -61,12 +61,21 @@ void Chunk::bake()
                 // TODO: only for uncovered faces
                 for (uint32_t i = 0; i < 6; i++)
                 {
+                    glm::uvec3 pos;
+                    switch (i)
+                    {
+                        case FACES::BACK: pos = {x, y, z - 1}; break;
+                        case FACES::FRONT: pos = {x, y, z + 1}; break;
+                        case FACES::LEFT: pos = {x - 1, y, z}; break;
+                        case FACES::RIGHT: pos = {x + 1, y, z}; break;
+                        case FACES::TOP: pos = {x, y + 1, z}; break;
+                        case FACES::BOTTOM: pos = {x, y - 1, z}; break;
+                    }
+
+                    if (inBounds(pos) && getBlockUnsafe(pos) != BLOCK_TYPE::AIR)
+                        continue;
+
                     const glm::uvec2 atlasOffset = getAtlasOffset(block, i);
-                    assert(x < 16);
-                    assert(y < 256);
-                    assert(z < 16);
-                    assert(atlasOffset.x < 16);
-                    assert(atlasOffset.y < 16);
                     blockdata packedData = (i << 28) | (x << 24) | (y << 16) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
                     for (uint32_t j = 0; j < 6; j++)
                         buffer.push_back(packedData);

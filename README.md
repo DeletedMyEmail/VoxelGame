@@ -11,6 +11,8 @@ This will create a build directory and compile the project.
 
 ### Features
 - [ ] procedural world generation
+  - [x] noise maps for terrain height (for each biome)
+  - [ ] ...
 - [ ] skybox
 - [x] pack vertex into 1 int
 - [ ] send 1 vertex to draw whole face
