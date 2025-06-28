@@ -6,10 +6,22 @@
 #include "glm/vec3.hpp"
 #include "FastNoiseLite.h"
 
+enum BIOME
+{
+    PLAINS = 0,
+    DESERT,
+    FOREST,
+    MOUNTAIN,
+    HILLS
+};
+
+FastNoiseLite createBiomeNoise(BIOME b, int32_t seed);
+BLOCK_TYPE defaultBiomeBlock(BIOME b);
+
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise);
+    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);
     void bake();
     BLOCK_TYPE getBlockUnsafe(const glm::uvec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::uvec3& pos) const;
@@ -27,14 +39,3 @@ struct Chunk
 };
 
 inline glm::vec3 chunkPosToWorldPos(const glm::uvec2& chunkPos) { return {chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
-
-enum BIOME
-{
-    PLAINS = 0,
-    DESERT,
-    FOREST,
-    MOUNTAIN,
-    HILLS
-};
-
-FastNoiseLite createBiomeNoise(BIOME b, int32_t seed);

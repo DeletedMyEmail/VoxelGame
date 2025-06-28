@@ -17,9 +17,10 @@ Chunk::Chunk()
 {
 }
 
-Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise)
+Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const BIOME biome)
     : chunkPosition(chunkPosition), blocks{}
 {
+    BLOCK_TYPE defaultBlock = defaultBiomeBlock(biome);
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
@@ -34,8 +35,7 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise)
                 if (y >= localHeight)
                     blocks[index] = BLOCK_TYPE::AIR;
                 else
-                    blocks[index] = y == localHeight-1 ? BLOCK_TYPE::GRASS_FULL : y > localHeight-3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
-
+                    blocks[index] = y > localHeight-5 ? defaultBlock : BLOCK_TYPE::STONE;
             }
         }
     }
@@ -133,4 +133,24 @@ FastNoiseLite createBiomeNoise(const BIOME b, const int32_t seed)
     }
 
     return noise;
+}
+
+BLOCK_TYPE defaultBiomeBlock(const BIOME b)
+{
+    switch (b)
+    {
+        case PLAINS:
+            return BLOCK_TYPE::GRASS;
+        case DESERT:
+            return BLOCK_TYPE::SAND;
+        case FOREST:
+            return BLOCK_TYPE::GRASS;
+        case MOUNTAIN:
+            return BLOCK_TYPE::STONE;
+        case HILLS:
+            return BLOCK_TYPE::GRASS;
+        default:
+            return BLOCK_TYPE::INVALID;
+    }
+
 }

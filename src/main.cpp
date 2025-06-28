@@ -64,14 +64,13 @@ int main(int argc, char* argv[])
 
     auto axisVbo = createAxesVAO();
 
-
-    FastNoiseLite noise = createBiomeNoise(MOUNTAIN, 42);
+    BIOME b = MOUNTAIN;
+    FastNoiseLite noise = createBiomeNoise(b, 42);
     std::vector<Chunk> chunks;
     uint32_t worldSize = 10;
     for (uint32_t x = 0; x < worldSize; x++)
         for (uint32_t z = 0; z < worldSize; z++)
-            chunks.emplace_back(glm::uvec2{x, z}, noise);
-
+            chunks.emplace_back(glm::uvec2{x, z}, noise, b);
 
     while (window.isRunning())
     {
