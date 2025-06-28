@@ -64,10 +64,14 @@ int main(int argc, char* argv[])
 
     auto axisVbo = createAxesVAO();
 
-    FastNoiseLite noise(42);
-    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    noise.SetFrequency(0.1f);
-    Chunk chunk({0,0}, noise);
+
+    FastNoiseLite noise = createBiomeNoise(MOUNTAIN, 42);
+    std::vector<Chunk> chunks;
+    uint32_t worldSize = 10;
+    for (uint32_t x = 0; x < worldSize; x++)
+        for (uint32_t z = 0; z < worldSize; z++)
+            chunks.emplace_back(glm::uvec2{x, z}, noise);
+
 
     while (window.isRunning())
     {
@@ -80,27 +84,31 @@ int main(int argc, char* argv[])
         timeSinceDisplay += deltaTime;
         frameCount++;
 
-        const auto vel = moveInput(window, cam.getLookDir());
+        const auto vel = moveInput(window, cam.lookDir);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * deltaTime * 60.0f);
         cam.updateView();
 
         textureAtlas.bind(0);
         bind(blockShader);
-        setUniformMat4(blockShader, "u_VP", cam.getViewProjection());
-        setUniform3f(blockShader, "u_chunkOffset", {0,0,0});
+        setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
 
-        if (chunk.isDirty)
-            chunk.bake();
-        chunk.vao.bind();
-        GLCall(glDrawArrays(GL_TRIANGLES, 0, chunk.vao.vertexCount));
+        for (auto& chunk : chunks)
+        {
+            if (chunk.isDirty)
+                chunk.bake();
+
+            chunk.vao.bind();
+            setUniform3f(blockShader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
+            GLCall(glDrawArrays(GL_TRIANGLES, 0, chunk.vao.vertexCount));
+        }
 
 #pragma region drawDebug
         axisVbo.bind();
         bind(basicShader);
-        setUniformMat4(basicShader, "u_VP", cam.getViewProjection());
-        setUniform3f(basicShader, "u_GlobalPosition", cam.getPosition() + cam.getLookDir());
+        setUniformMat4(basicShader, "u_VP", cam.viewProjection);
+        setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
         GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
 #pragma endregion
 
@@ -108,7 +116,7 @@ int main(int argc, char* argv[])
         if (timeSinceDisplay >= 1.0f)
         {
             text = fmt::format("x: {:.2f}, y: {:.2f}, z: {:.2f}, fps: {}, avg frame time {}ms",
-                        cam.getPosition().x, cam.getPosition().y, cam.getPosition().z, std::to_string(frameCount), std::to_string(timeSinceDisplay / frameCount * 1000));
+                        cam.position.x, cam.position.y, cam.position.z, std::to_string(frameCount), std::to_string(timeSinceDisplay / frameCount * 1000));
             frameCount = timeSinceDisplay = 0;
         }
         drawText(text);

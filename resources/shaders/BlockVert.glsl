@@ -1,6 +1,6 @@
 #version 330 core
 
-// 0x F(face) F(x) F(y) FF(z) F(atlas x) F(atlas y) F(unused)
+// 0x F(face) F(x) FF(y) F(z) F(atlas x) F(atlas y) F(unused)
 layout (location = 0) in uint in_packedData;
 
 uniform mat4 u_VP;
@@ -66,8 +66,8 @@ void main()
 {
     vec3 translation = u_chunkOffset;
     translation.x += float((in_packedData >> 24u) & 0xFu);
-    translation.y += float((in_packedData >> 20u) & 0xFu);
-    translation.z += float((in_packedData >> 12u) & 0xFFu);
+    translation.y += float((in_packedData >> 16u) & 0xFFu);
+    translation.z += float((in_packedData >> 12u) & 0xFu);
 
     uint faceIndex = (in_packedData >> 28u) & 0xFu;
     uint vertexIndex = faceIndex * 6u + uint(gl_VertexID) % 6u;

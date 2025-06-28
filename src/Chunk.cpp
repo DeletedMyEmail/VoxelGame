@@ -1,11 +1,16 @@
 #include "Chunk.h"
 #include "OpenGLHelper.h"
 
-static uint8_t getBlockIndex(const glm::uvec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::MAX_HEIGHT; }
+
+static uint32_t getBlockIndex(const glm::uvec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::MAX_HEIGHT; }
 
 static bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; };
 
-uint32_t noiseToHeight(const float value) { return Chunk::MIN_HEIGHT + ((value + 1.0f) / 2.0f) * (Chunk::MAX_HEIGHT - Chunk::MIN_HEIGHT); }
+uint32_t noiseToHeight(const float value)
+{
+    const float normalized = (value + 1.0f) * 0.5f;
+    return Chunk::MIN_GEN_HEIGHT + normalized * (Chunk::MAX_GEN_HEIGHT - Chunk::MIN_GEN_HEIGHT);
+}
 
 Chunk::Chunk()
     : chunkPosition({0}), blocks{}
@@ -15,23 +20,21 @@ Chunk::Chunk()
 Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise)
     : chunkPosition(chunkPosition), blocks{}
 {
-    for (uint8_t x = 0; x < CHUNK_SIZE; x++)
+    for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
-        for (uint8_t z = 0; z < CHUNK_SIZE; z++)
+        for (uint32_t z = 0; z < CHUNK_SIZE; z++)
         {
-            const uint8_t localHeight = noiseToHeight(noise.GetNoise((float) x, (float) z));
+            const glm::vec3 worldPos = chunkPosToWorldPos(chunkPosition) + glm::vec3{x, 0.0f, z};
+            const uint32_t localHeight = noiseToHeight(noise.GetNoise(worldPos.x, worldPos.z));
 
-            for (uint8_t y = 0; y < MAX_HEIGHT; y++)
+            for (uint32_t y = 0; y < MAX_HEIGHT; y++)
             {
                 const auto index = getBlockIndex({x,y,z});
 
                 if (y >= localHeight)
                     blocks[index] = BLOCK_TYPE::AIR;
                 else
-                {
-                    const BLOCK_TYPE type = y > localHeight-3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
-                    blocks[index] = type;
-                }
+                    blocks[index] = y == localHeight-1 ? BLOCK_TYPE::GRASS_FULL : y > localHeight-3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
 
             }
         }
@@ -59,9 +62,14 @@ void Chunk::bake()
                 for (uint32_t i = 0; i < 6; i++)
                 {
                     const glm::uvec2 atlasOffset = getAtlasOffset(block, i);
-                    blockdata packedData = (i << 28) | (x << 24) | (y << 20) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
+                    assert(x < 16);
+                    assert(y < 256);
+                    assert(z < 16);
+                    assert(atlasOffset.x < 16);
+                    assert(atlasOffset.y < 16);
+                    blockdata packedData = (i << 28) | (x << 24) | (y << 16) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
                     for (uint32_t j = 0; j < 6; j++)
-                        buffer.push_back(packedData); // TODO: magic number
+                        buffer.push_back(packedData);
 
                     faceCount++;
                 }
@@ -89,4 +97,40 @@ BLOCK_TYPE Chunk::getBlockSafe(const glm::uvec3& pos) const
         return getBlockUnsafe(pos);
 
     return BLOCK_TYPE::INVALID;
+}
+
+
+FastNoiseLite createBiomeNoise(const BIOME b, const int32_t seed)
+{
+    FastNoiseLite noise(seed);
+    switch (b)
+    {
+    case PLAINS:
+        noise.SetNoiseType(FastNoiseLite::NoiseType_ValueCubic);
+        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        noise.SetFrequency(0.007f);
+        break;
+    case DESERT:
+        noise.SetNoiseType(FastNoiseLite::NoiseType_Value);
+        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        noise.SetFrequency(0.005f);
+        break;
+    case FOREST:
+        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
+        noise.SetFractalType(FastNoiseLite::FractalType_None);
+        noise.SetFrequency(0.002f);
+        break;
+    case MOUNTAIN:
+        noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        noise.SetFrequency(0.008f);
+        break;
+    case HILLS:
+        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
+        noise.SetFractalType(FastNoiseLite::FractalType_Ridged);
+        noise.SetFrequency(0.007f);
+        break;
+    }
+
+    return noise;
 }
