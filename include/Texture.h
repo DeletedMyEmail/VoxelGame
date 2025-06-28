@@ -1,15 +1,13 @@
 #pragma once
 
-class Texture
+struct Texture
 {
-    public:
-      explicit Texture(const char* path);
-      ~Texture();
+    Texture(const char* path);
+    ~Texture();
+    void bind(unsigned int slot = 0) const;
+    void unbind() const;
 
-      void bind(unsigned int slot = 0) const;
-      void unbind() const;
-    private:
-      unsigned int m_ID;
-      const char* m_FilePath;
-      int m_Width, m_Height, m_BPP;
+    unsigned int m_id;
+    const char* m_filePath;
+    int m_width, m_height, m_bpp;
 };

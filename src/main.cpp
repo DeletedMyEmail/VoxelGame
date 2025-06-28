@@ -53,8 +53,8 @@ int main(int argc, char* argv[])
     gltInit();
     gltViewport(window.getWidth(), window.getHeight());
 
-    Shader basicShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
-    Shader blockShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
+    GLuint basicShader = createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
+    GLuint blockShader = createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
     Texture textureAtlas("../resources/textures/TextureAtlas.png");
 
     unsigned frameCount = 0;
@@ -86,10 +86,10 @@ int main(int argc, char* argv[])
         cam.updateView();
 
         textureAtlas.bind(0);
-        blockShader.bind();
-        blockShader.setUniformMat4("u_VP", cam.getViewProjection());
-        blockShader.setUniform3f("u_chunkOffset", {0,0,0});
-        blockShader.setUniform1i("u_textureSlot", 0);
+        bind(blockShader);
+        setUniformMat4(blockShader, "u_VP", cam.getViewProjection());
+        setUniform3f(blockShader, "u_chunkOffset", {0,0,0});
+        setUniform1i(blockShader, "u_textureSlot", 0);
 
         if (chunk.isDirty)
             chunk.bake();
@@ -98,9 +98,9 @@ int main(int argc, char* argv[])
 
 #pragma region drawDebug
         axisVbo.bind();
-        basicShader.bind();
-        basicShader.setUniformMat4("u_VP", cam.getViewProjection());
-        basicShader.setUniform3f("u_GlobalPosition", cam.getPosition() + cam.getLookDir());
+        bind(basicShader);
+        setUniformMat4(basicShader, "u_VP", cam.getViewProjection());
+        setUniform3f(basicShader, "u_GlobalPosition", cam.getPosition() + cam.getLookDir());
         GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
 #pragma endregion
 
