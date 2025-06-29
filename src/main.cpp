@@ -51,6 +51,13 @@ int main(int argc, char* argv[])
             cam.rotate({offset.x, offset.y});
             prevCursorPos = pos;
         });
+    float camSpeed = 70.0f;
+    window.onScroll([&camSpeed](Window* win, glm::vec2 offset)
+        {
+            camSpeed += offset.y * 2.0f;
+            if (camSpeed < 1.f)
+                camSpeed = 1.f;
+        });
 
 #pragma endregion
 
@@ -78,9 +85,12 @@ int main(int argc, char* argv[])
         for (uint32_t z = 0; z < worldSize; z++)
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
 
+    float exposure = 0;
+    float cycleDirection = 1.0f;
     while (window.isRunning())
     {
-        glClearColor(0.5f, 0.8f, 0.9f, 1.0f);
+        float skyExposure = 0.5f + 0.5f * exposure;
+        glClearColor(0.5f * skyExposure, 0.8f * skyExposure, 0.9f * skyExposure, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const float currentTime = glfwGetTime();
@@ -91,13 +101,19 @@ int main(int argc, char* argv[])
 
         const auto vel = moveInput(window, cam.lookDir);
         if (glm::length(vel) > 0.0f)
-            cam.move(glm::normalize(vel) * deltaTime * 60.0f);
+            cam.move(glm::normalize(vel) * deltaTime * camSpeed);
         cam.updateView();
 
         textureAtlas.bind(0);
         bind(blockShader);
         setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
+        setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
+        exposure = exposure + cycleDirection * 0.1f * deltaTime;
+        if (exposure > 1.0f)
+            cycleDirection = -1.0f;
+        else if (exposure < 0.0f)
+            cycleDirection = 1.0f;
 
         bool newChunkBaked = false;
         for (auto& chunk : chunks)

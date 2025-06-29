@@ -6,6 +6,7 @@ in vec2 v_uv;
 in vec3 v_normal;
 
 uniform sampler2D u_textureSlot;
+uniform vec3 u_exposure;
 
 layout(location = 0) out vec4 out_color;
 
@@ -15,8 +16,6 @@ vec3 unchartedTonemapping(vec3 color);
 
 void main()
 {
-    vec3 exposure = vec3(1.0f);
-
     vec3 modelColor = getTextureColor(v_uv, u_textureSlot).xyz;
     modelColor = pow(modelColor, vec3(2.2)); // gamma correction!
 
@@ -31,7 +30,7 @@ void main()
     vec3 color = modelColor * lighting;
 
     // tonemapping
-    color = unchartedTonemapping(color * exposure);
+    color = unchartedTonemapping(color * u_exposure);
     color = pow(color, vec3(1/2.2)); //gama correction!
 
     out_color = vec4(color, 1.0f);
