@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     glm::dvec2 prevCursorPos = window.getMousePosition();
 
     std::vector<Chunk> chunks;
-    BIOME b = DESERT;
+    BIOME b = FOREST;
     uint32_t worldSize = 30;
     FastNoiseLite noise = createBiomeNoise(b, 1337);
     for (uint32_t x = 0; x < worldSize; x++)
@@ -75,12 +75,12 @@ int main(int argc, char* argv[])
             auto getChunk = [&chunks](const glm::ivec3& blockPos) -> Chunk*
             {
                glm::uvec2 chunkPos = worldPosToChunkPos(glm::vec3(blockPos));
-               auto it = std::ranges::find_if(chunks, [chunkPos](const Chunk& c) {
+               const auto it = std::ranges::find_if(chunks, [chunkPos](const Chunk& c) {
                    return c.chunkPosition == chunkPos;
                });
 
                 if (it != chunks.end())
-                   return &(*it);
+                   return &*it;
                 return nullptr;
             };
 
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
             LOG_INFO("Ray: hit: {}, pos: {} {} {}, block: {}, face: {}",
                      res.hit, res.pos.x, res.pos.y, res.pos.z, static_cast<int>(res.blockType), static_cast<int>(res.face));
             if (res.hit)
-               res.chunk->setBlockUnsafe(worldPosToChunkBlockPos(res.pos), BLOCK_TYPE::TEST);
+               res.chunk->setBlockUnsafe(worldPosToChunkBlockPos(res.pos), BLOCK_TYPE::AIR);
         }
     });
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 
     auto axisVbo = createAxesVAO();
 
-    float exposure = 0;
+    float exposure = 1;
     float cycleDirection = 1.0f;
     while (window.isRunning())
     {
@@ -133,29 +133,11 @@ int main(int argc, char* argv[])
         setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
-        exposure = exposure + cycleDirection * 0.1f * deltaTime;
+        //exposure = exposure + cycleDirection * 0.1f * deltaTime;
         if (exposure > 1.0f)
             cycleDirection = -1.0f;
         else if (exposure < 0.0f)
             cycleDirection = 1.0f;
-
-        auto getChunk = [&chunks](const glm::ivec3& blockPos) -> Chunk*
-        {
-            glm::uvec2 chunkPos = worldPosToChunkPos(glm::vec3(blockPos));
-            auto it = std::ranges::find_if(chunks, [chunkPos](const Chunk& c) {
-                return c.chunkPosition == chunkPos;
-            });
-
-            if (it != chunks.end())
-                return &(*it);
-            return nullptr;
-        };
-
-        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE},getChunk);
-        LOG_INFO("Ray: hit: {}, pos: {} {} {}, block: {}, face: {}",
-                 res.hit, res.pos.x, res.pos.y, res.pos.z, static_cast<int>(res.blockType), static_cast<int>(res.face));
-        if (res.hit)
-            res.chunk->setBlockUnsafe(worldPosToChunkBlockPos(res.pos), BLOCK_TYPE::TEST);
 
         bool newChunkBaked = false;
         for (auto& chunk : chunks)

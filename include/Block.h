@@ -22,7 +22,10 @@ enum class BLOCK_TYPE
     GRASS,
     GRASS_FULL,
     STONE,
-    SAND
+    SAND,
+    WOOD,
+    PUMPKIN,
+    MELONE
 };
 
 typedef GLuint blockdata;
@@ -41,6 +44,12 @@ inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
             return {0+face,2};
         case BLOCK_TYPE::SAND:
             return {6+face,2};
+        case BLOCK_TYPE::WOOD:
+            return {0+face,3};
+        case BLOCK_TYPE::PUMPKIN:
+            return {6+face,3};
+        case BLOCK_TYPE::MELONE:
+            return {6+face,4};
         default:
             return {0,0};
     }
