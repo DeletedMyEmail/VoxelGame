@@ -29,7 +29,8 @@ int main(int argc, char* argv[])
     Window window;
     Camera cam(glm::vec3{0,0,-10}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, 1000.0f);
     glm::dvec2 prevCursorPos = window.getMousePosition();
-    window.onKey([](Window* win, const int key, const int scancode, const int action, const int mods)
+    std::vector<Chunk> chunks;
+    window.onKey([&chunks](Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
@@ -39,6 +40,10 @@ int main(int argc, char* argv[])
             win->setCursorDisabled(true);
         else if (key == GLFW_KEY_B)
             win->setCursorDisabled(false);
+        else if (key == GLFW_KEY_X)
+            for (auto& chunk : chunks)
+                chunk.isDirty = true;
+
     });
     window.onCursorMove([&cam, &prevCursorPos](Window* win, const glm::dvec2 pos)
         {
@@ -64,11 +69,11 @@ int main(int argc, char* argv[])
 
     auto axisVbo = createAxesVAO();
 
-    BIOME b = HILLS;
+    BIOME b = DESERT;
     uint32_t worldSize = 30;
     FastNoiseLite noise = createBiomeNoise(b, 1337);
 
-    std::vector<Chunk> chunks;
+
     for (uint32_t x = 0; x < worldSize; x++)
         for (uint32_t z = 0; z < worldSize; z++)
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
@@ -94,10 +99,13 @@ int main(int argc, char* argv[])
         setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
 
+        bool newChunkBaked = false;
         for (auto& chunk : chunks)
         {
             if (chunk.isDirty)
             {
+                if (newChunkBaked)
+                    continue;
                 Chunk* neighbors[3][3];
                 for (int dx = -1; dx <= 1; dx++)
                 {
@@ -118,6 +126,7 @@ int main(int argc, char* argv[])
                 }
 
                 chunk.bake(neighbors);
+                newChunkBaked = true;
             }
 
             chunk.vao.bind();
