@@ -3,7 +3,7 @@
 #include "glad/glad.h"
 #include "glm/vec2.hpp"
 
-enum FACES : uint8_t
+enum FACE
 {
     BACK = 0,
     FRONT = 1,
@@ -11,9 +11,10 @@ enum FACES : uint8_t
     RIGHT = 3,
     BOTTOM = 4,
     TOP = 5,
+    INVALID = 6
 };
 
-enum class BLOCK_TYPE : uint8_t
+enum class BLOCK_TYPE
 {
     TEST,
     INVALID,

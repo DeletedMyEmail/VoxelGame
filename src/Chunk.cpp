@@ -25,8 +25,8 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const 
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
         {
-            const glm::vec3 worldPos = chunkPosToWorldPos(chunkPosition) + glm::vec3{x, 0.0f, z};
-            const uint32_t localHeight = noiseToHeight(noise.GetNoise(worldPos.x, worldPos.z));
+            const glm::uvec3 worldPos = chunkPosToWorldBlockPos(chunkPosition) + glm::uvec3{x, 0, z};
+            const uint32_t localHeight = noiseToHeight(noise.GetNoise((float) worldPos.x, (float) worldPos.z));
 
             for (uint32_t y = 0; y < MAX_HEIGHT; y++)
             {
@@ -131,6 +131,22 @@ BLOCK_TYPE Chunk::getBlockSafe(const glm::uvec3& pos) const
     return BLOCK_TYPE::INVALID;
 }
 
+void Chunk::setBlockUnsafe(const glm::uvec3& pos, BLOCK_TYPE block)
+{
+    blocks[getBlockIndex(pos)] = block;
+    isDirty = true;
+}
+
+void Chunk::setBlockSafe(const glm::uvec3& pos, BLOCK_TYPE block)
+{
+    if (inBounds(pos))
+    {
+        setBlockUnsafe(pos, block);
+        isDirty = true;
+    }
+    else
+        LOG_WARN("BLock not found in chunk: ({}, {}, {})", pos.x, pos.y, pos.z);
+}
 
 FastNoiseLite createBiomeNoise(const BIOME b, const int32_t seed)
 {

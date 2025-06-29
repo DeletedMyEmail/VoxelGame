@@ -1,0 +1,91 @@
+#include <glm/glm.hpp>
+#include <cmath>
+#include <functional>
+#include <limits>
+#include "Block.h"
+#include "Raycast.h"
+
+#include <stdexcept>
+
+// Helper functions
+inline float mod(float value, float modulus) {
+    return std::fmod(std::fmod(value, modulus) + modulus, modulus);
+}
+
+inline float intbound(float s, float ds) {
+    if (ds < 0) {
+        return intbound(-s, -ds);
+    } else {
+        s = mod(s, 1.0f);
+        return (1.0f - s) / ds;
+    }
+}
+
+inline int signum(float x) {
+    return (x > 0) - (x < 0);
+}
+
+
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, const std::function<Chunk*(const glm::ivec3& blockPos)>& getChunk)
+{
+    glm::ivec3 blockPos{std::floor(origin.x), std::floor(origin.y), std::floor(origin.z)};
+    int stepX = signum(dir.x), stepY = signum(dir.y), stepZ = signum(dir.z);
+    float tMaxX = (dir.x != 0) ? intbound(origin.x, dir.x) : std::numeric_limits<float>::infinity();
+    float tMaxY = (dir.y != 0) ? intbound(origin.y, dir.y) : std::numeric_limits<float>::infinity();
+    float tMaxZ = (dir.z != 0) ? intbound(origin.z, dir.z) : std::numeric_limits<float>::infinity();
+    float tDeltaX = (dir.x != 0) ? std::abs(1.0f / dir.x) : std::numeric_limits<float>::infinity();
+    float tDeltaY = (dir.y != 0) ? std::abs(1.0f / dir.y) : std::numeric_limits<float>::infinity();
+    float tDeltaZ = (dir.z != 0) ? std::abs(1.0f / dir.z) : std::numeric_limits<float>::infinity();
+    FACE face = INVALID;
+    
+    assert(dir.x != 0 || dir.y != 0 || dir.z != 0);
+    
+    float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
+    float maxT = radius / length;
+
+    while ((stepX > 0 ? blockPos.x < worldSize.x : blockPos.x >= 0) &&
+           (stepY > 0 ? blockPos.y < worldSize.y : blockPos.y >= 0) &&
+           (stepZ > 0 ? blockPos.z < worldSize.z : blockPos.z >= 0))
+    {
+        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.x >= worldSize.x || blockPos.y >= worldSize.y || blockPos.z >= worldSize.z))
+        {
+            Chunk* chunk = getChunk(blockPos);
+            assert(chunk != nullptr);
+            const BLOCK_TYPE block = chunk->getBlockUnsafe(worldPosToChunkBlockPos(blockPos));
+            assert(block != BLOCK_TYPE::INVALID);
+            if (block != BLOCK_TYPE::AIR)
+            {
+                assert(face != INVALID);
+                return {blockPos, chunk, block, face, true};
+            }
+        }
+
+        if (tMaxX < tMaxY) {
+            if (tMaxX < tMaxZ) {
+                if (tMaxX > maxT) break;
+                blockPos.x += stepX;
+                tMaxX += tDeltaX;
+                face = stepX == 1 ? RIGHT : LEFT;
+            } else {
+                if (tMaxZ > maxT) break;
+                blockPos.z += stepZ;
+                tMaxZ += tDeltaZ;
+                face = stepZ == 1 ? FRONT : BACK;
+            }
+        } else {
+            if (tMaxY < tMaxZ) {
+                if (tMaxY > maxT) break;
+                blockPos.y += stepY;
+                tMaxY += tDeltaY;
+                face = stepZ == 1 ? TOP : BOTTOM;
+            } else {
+                if (tMaxZ > maxT) break;
+                blockPos.z += stepZ;
+                tMaxZ += tDeltaZ;
+                face = stepZ == 1 ? FRONT : BACK;
+            }
+        }
+    }
+
+    return {blockPos, nullptr, BLOCK_TYPE::INVALID, FACE::INVALID, false};
+}
