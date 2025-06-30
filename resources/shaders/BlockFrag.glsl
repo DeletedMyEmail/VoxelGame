@@ -16,6 +16,12 @@ vec3 unchartedTonemapping(vec3 color);
 
 void main()
 {
+    if (v_uv == vec2(-1.0f, -1.0f))
+    {
+        out_color = vec4(0.8f, 0.8f, 0.8f, 1.0f);
+        return;
+    }
+
     vec3 modelColor = getTextureColor(v_uv, u_textureSlot).xyz;
     modelColor = pow(modelColor, vec3(2.2)); // gamma correction!
 

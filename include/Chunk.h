@@ -42,5 +42,6 @@ struct Chunk
 };
 
 inline glm::uvec3 chunkPosToWorldBlockPos(const glm::uvec2& chunkPos) { return glm::uvec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
-inline glm::uvec3 worldPosToChunkBlockPos(const glm::uvec3& worldPos) { return glm::uvec3{std::floor(worldPos.x % Chunk::CHUNK_SIZE), worldPos.y,std::floor(worldPos.z % Chunk::CHUNK_SIZE)};}
-inline glm::uvec2 worldPosToChunkPos(const glm::uvec3& worldPos) { return glm::uvec2{std::floor(worldPos.x / Chunk::CHUNK_SIZE),std::floor(worldPos.z / Chunk::CHUNK_SIZE)}; }
+inline glm::uvec3 worldPosToChunkBlockPos(const glm::uvec3& worldPos) { return glm::uvec3{worldPos.x % Chunk::CHUNK_SIZE, worldPos.y,worldPos.z % Chunk::CHUNK_SIZE};}
+inline glm::uvec2 worldPosToChunkPos(const glm::uvec3& worldPos) { return glm::uvec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
+Chunk* getChunk(std::vector<Chunk>& chunks, const glm::uvec2& chunkPos);

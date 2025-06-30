@@ -11,4 +11,4 @@ struct RaycastResult
     bool hit;
 };
 
-RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, float radius, const glm::ivec3& worldSize, const std::function<Chunk*(const glm::ivec3& blockPos)>& getChunk);
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, float radius, const glm::ivec3& worldSize, std::vector<Chunk>& chunks);

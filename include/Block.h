@@ -17,6 +17,7 @@ enum FACE
 enum class BLOCK_TYPE
 {
     TEST,
+    HIGHLIGHTED,
     INVALID,
     AIR,
     GRASS,
@@ -50,6 +51,8 @@ inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
             return {6+face,3};
         case BLOCK_TYPE::MELONE:
             return {6+face,4};
+        case BLOCK_TYPE::HIGHLIGHTED:
+            return {15,0};
         default:
             return {0,0};
     }

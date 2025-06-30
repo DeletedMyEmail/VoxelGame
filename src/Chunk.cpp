@@ -131,7 +131,7 @@ BLOCK_TYPE Chunk::getBlockSafe(const glm::uvec3& pos) const
     return BLOCK_TYPE::INVALID;
 }
 
-void Chunk::setBlockUnsafe(const glm::uvec3& pos, BLOCK_TYPE block)
+void Chunk::setBlockUnsafe(const glm::uvec3& pos, const BLOCK_TYPE block)
 {
     blocks[getBlockIndex(pos)] = block;
     isDirty = true;
@@ -192,7 +192,7 @@ BLOCK_TYPE defaultBiomeBlock(const BIOME b)
         case DESERT:
             return BLOCK_TYPE::SAND;
         case FOREST:
-            return BLOCK_TYPE::MELONE;
+            return BLOCK_TYPE::WOOD;
         case MOUNTAIN:
             return BLOCK_TYPE::STONE;
         case HILLS:
@@ -202,3 +202,15 @@ BLOCK_TYPE defaultBiomeBlock(const BIOME b)
     }
 
 }
+
+Chunk* getChunk(std::vector<Chunk>& chunks, const glm::uvec2& chunkPos)
+{
+    const auto it = std::ranges::find_if(chunks, [chunkPos](const Chunk& c) {
+        return c.chunkPosition == chunkPos;
+    });
+
+    if (it != chunks.end())
+        return &*it;
+
+    return nullptr;
+};

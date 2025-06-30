@@ -25,8 +25,7 @@ inline int signum(float x) {
     return (x > 0) - (x < 0);
 }
 
-
-RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, const std::function<Chunk*(const glm::ivec3& blockPos)>& getChunk)
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::vector<Chunk>& chunks)
 {
     glm::ivec3 blockPos{std::floor(origin.x), std::floor(origin.y), std::floor(origin.z)};
     int stepX = signum(dir.x), stepY = signum(dir.y), stepZ = signum(dir.z);
@@ -37,9 +36,9 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     float tDeltaY = (dir.y != 0) ? std::abs(1.0f / dir.y) : std::numeric_limits<float>::infinity();
     float tDeltaZ = (dir.z != 0) ? std::abs(1.0f / dir.z) : std::numeric_limits<float>::infinity();
     FACE face = INVALID;
-    
+
     assert(dir.x != 0 || dir.y != 0 || dir.z != 0);
-    
+
     float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
     float maxT = radius / length;
 
@@ -49,15 +48,12 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     {
         if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.x >= worldSize.x || blockPos.y >= worldSize.y || blockPos.z >= worldSize.z))
         {
-            Chunk* chunk = getChunk(blockPos);
+            Chunk* chunk = getChunk(chunks, worldPosToChunkPos(blockPos));
             assert(chunk != nullptr);
             const BLOCK_TYPE block = chunk->getBlockUnsafe(worldPosToChunkBlockPos(blockPos));
             assert(block != BLOCK_TYPE::INVALID);
             if (block != BLOCK_TYPE::AIR)
-            {
-                assert(face != INVALID);
-                return {blockPos, chunk, block, face, true};
-            }
+               return {blockPos, chunk, block, face, face != INVALID};
         }
 
         if (tMaxX < tMaxY) {

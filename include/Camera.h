@@ -18,4 +18,7 @@ struct Camera
     glm::vec3 lookDir, position;
     double yaw = 0, pitch = 0;
     float sensitivity = 0.1f;
+
+private:
+    void updateLookDirection();
 };

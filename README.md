@@ -22,6 +22,7 @@ This will create a build directory and compile the project.
 - [x] face culling 
 - [ ] frustum culling
 - [ ] placing and breaking blocks
+  - [x] block selection
   - [ ] face selection
   - [ ] block breaking
   - [ ] block placing
@@ -40,4 +41,3 @@ This will create a build directory and compile the project.
 - [Ray Casting](http://www.cse.yorku.ca/~amana/research/grid.pdf)
 - [OpenGL](https://youtube.com/playlist?list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&si=crdBuV5tGpnvQw_7)
 - [Swept AABB collisions](https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/)
-- [Block selection](https://gamedev.stackexchange.com/questions/47362/cast-ray-to-select-block-in-voxel-game)

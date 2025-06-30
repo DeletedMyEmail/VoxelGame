@@ -11,12 +11,13 @@
 glm::vec3 up{0,1.0f,0};
 
 Camera::Camera(const glm::vec3 pos, const float fov, const float width, const float height, const float near, const float far)
-    :   view(glm::lookAt(position, position + lookDir, up)),
-        projection(glm::perspective(fov/2.0f, width/height, near, far)),
-        viewProjection(projection * view),
-        lookDir(0,0,1),
-        position(pos)
+    :   projection(glm::perspective(glm::radians(fov), width/height, near, far)),
+        position(pos),
+        yaw(-90.0)
 {
+    updateLookDirection();
+    view = glm::lookAt(position, position + lookDir, up);
+    viewProjection = projection * view;
 }
 
 void Camera::translate(const glm::vec3& translation)
@@ -47,6 +48,11 @@ void Camera::rotate(const glm::dvec2 relPos)
     pitch -= relPos.y * sensitivity;
     pitch = glm::clamp(pitch, -89.0, 89.0);
 
+    updateLookDirection();
+}
+
+void Camera::updateLookDirection()
+{
     glm::vec3 front;
     front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
     front.y = sin(glm::radians(pitch));
