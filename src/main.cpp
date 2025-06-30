@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
 
     Window window;
     Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, 1000.0f);
+    float camSpeed = 70.0f;
 
     std::vector<Chunk> chunks;
     BIOME b = FOREST;
@@ -45,6 +46,9 @@ int main(int argc, char* argv[])
     for (uint32_t x = 0; x < worldSize; x++)
         for (uint32_t z = 0; z < worldSize; z++)
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
+
+    std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
+    int32_t comboIndex = 0;
 
 #pragma region window
     glm::dvec2 prevCursorPos = window.getMousePosition();
@@ -75,41 +79,33 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    float camSpeed = 70.0f;
-    window.onScroll([&camSpeed](Window* win, glm::vec2 offset)
-        {
-            camSpeed += offset.y * 2.0f;
-            if (camSpeed < 1.f)
-                camSpeed = 1.f;
-        });
-    window.onMouseButton([&cam, &chunks, worldSize, &cursorLocked](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunks, worldSize, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
         if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
         RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
-        if (res.hit)
-        {
-            const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
+        if (!res.hit)
+            return;
+
+        const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
+        if (comboSelection[comboIndex] == "None")
             res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
-            if (positionInChunk.x == 0)
-                getChunk(chunks, res.chunk->chunkPosition);
 
-            Chunk* c = nullptr;
-            if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
-                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
-            else if (positionInChunk.x == 0)
-                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
-            if (c != nullptr)
-                c->isDirty = true;
-            if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
-                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
-            else if (positionInChunk.z == 0)
-                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
-            if (c != nullptr)
-                c->isDirty = true;
+        Chunk* c = nullptr;
+        if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
+            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
+        else if (positionInChunk.x == 0)
+            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
+        if (c != nullptr)
+            c->isDirty = true;
+        if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
+            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
+        else if (positionInChunk.z == 0)
+            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
+        if (c != nullptr)
+            c->isDirty = true;
 
-        }
     });
 
     window.setCursorDisabled(cursorLocked);
@@ -182,6 +178,7 @@ int main(int argc, char* argv[])
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
             ImGui::SliderFloat("Camera Speed", &camSpeed, 1.0f, 200.0f);
+            ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
