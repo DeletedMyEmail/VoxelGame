@@ -7,6 +7,10 @@
 #include "glm/gtx/dual_quaternion.hpp"
 #include <cstmlib/Profiling.h>
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
 #include "Camera.h"
 #include "Chunk.h"
 #include "FastNoiseLite.h"
@@ -21,11 +25,13 @@ VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window, const glm::vec3& dir);
 void drawText(const std::string& txt);
 
-
 int main(int argc, char* argv[])
 {
     LOG_INIT();
     PROFILER_INIT(0);
+
+    bool debugMode = false;
+    bool cursorLocked = true;
 
     Window window;
     Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, 1000.0f);
@@ -39,29 +45,37 @@ int main(int argc, char* argv[])
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
 
 #pragma region window
+    window.setCursorDisabled(cursorLocked);
     glm::dvec2 prevCursorPos = window.getMousePosition();
 
-    window.onKey([&chunks](Window* win, const int key, const int scancode, const int action, const int mods)
+    window.onKey([&chunks, &debugMode, &cursorLocked](Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
         if (key == GLFW_KEY_ESCAPE)
             win->stop();
+        else if (key == GLFW_KEY_TAB)
+            debugMode = !debugMode;
         else if (key == GLFW_KEY_V)
-            win->setCursorDisabled(true);
-        else if (key == GLFW_KEY_B)
-            win->setCursorDisabled(false);
+        {
+            cursorLocked = !cursorLocked;
+            win->setCursorDisabled(cursorLocked);
+            //ImGuiIO& io = ImGui::GetIO();
+            //io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+        }
         else if (key == GLFW_KEY_X)
             for (auto& chunk : chunks)
                 chunk.isDirty = true;
 
     });
-    window.onCursorMove([&cam, &prevCursorPos](Window* win, const glm::dvec2 pos)
+    window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
         {
             const glm::dvec2 offset = pos - prevCursorPos;
-            cam.rotate({offset.x, offset.y});
+            if (cursorLocked)
+                cam.rotate({offset.x, offset.y});
             prevCursorPos = pos;
         });
+
     float camSpeed = 70.0f;
     window.onScroll([&camSpeed](Window* win, glm::vec2 offset)
         {
@@ -69,33 +83,33 @@ int main(int argc, char* argv[])
             if (camSpeed < 1.f)
                 camSpeed = 1.f;
         });
-    window.onMouseButton([&cam, &chunks, worldSize](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunks, worldSize, cursorLocked](Window* win, int button, int action, int mods)
     {
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+        if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
+            return;
+
+        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
+        if (res.hit)
         {
-            RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
-            if (res.hit)
-            {
-                const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
-                res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
-                if (positionInChunk.x == 0)
-                    getChunk(chunks, res.chunk->chunkPosition);
+            const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
+            res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
+            if (positionInChunk.x == 0)
+                getChunk(chunks, res.chunk->chunkPosition);
 
-                Chunk* c = nullptr;
-                if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
-                    c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
-                else if (positionInChunk.x == 0)
-                    c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
-                if (c != nullptr)
-                    c->isDirty = true;
-                if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
-                    c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
-                else if (positionInChunk.z == 0)
-                    c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
-                if (c != nullptr)
-                    c->isDirty = true;
+            Chunk* c = nullptr;
+            if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
+                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
+            else if (positionInChunk.x == 0)
+                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
+            if (c != nullptr)
+                c->isDirty = true;
+            if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
+                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
+            else if (positionInChunk.z == 0)
+                c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
+            if (c != nullptr)
+                c->isDirty = true;
 
-            }
         }
     });
 
@@ -105,25 +119,31 @@ int main(int argc, char* argv[])
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    if (!gltInit())
-        LOG_WARN("Failed to initialize glText");
-    gltViewport(window.getWidth(), window.getHeight());
+    // ImGui initialization
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window.getGLFWWindow(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     GLuint basicShader = createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
     GLuint blockShader = createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
     Texture textureAtlas("../resources/textures/TextureAtlas.png");
 
-    unsigned frameCount = 0;
-    float timeSinceDisplay = 0.0f;
-    float lastTime = glfwGetTime();
-    std::string text;
-
     auto axisVbo = createAxesVAO();
 
     float exposure = 1;
-    float cycleDirection = 1.0f;
+    float lastTime = glfwGetTime();
     while (window.isRunning())
     {
+        if (debugMode)
+        {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+        }
+
         float skyExposure = 0.5f + 0.5f * exposure;
         glClearColor(0.5f * skyExposure, 0.8f * skyExposure, 0.9f * skyExposure, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -131,8 +151,6 @@ int main(int argc, char* argv[])
         const float currentTime = glfwGetTime();
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-        timeSinceDisplay += deltaTime;
-        frameCount++;
 
         const auto vel = rawInput(window, cam.lookDir);
         if (glm::length(vel) > 0.0f)
@@ -144,12 +162,6 @@ int main(int argc, char* argv[])
         setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
-
-        //exposure = exposure + cycleDirection * 0.1f * deltaTime;
-        if (exposure > 1.0f)
-            cycleDirection = -1.0f;
-        else if (exposure < 0.0f)
-            cycleDirection = 1.0f;
 
         uint32_t chunksBaked = 0;
         uint32_t MAX_BAKE_PER_FRAME = 4;
@@ -216,56 +228,30 @@ int main(int argc, char* argv[])
             glDepthFunc(GL_LESS);
         }
 
-#pragma region drawDebug
-        axisVbo.bind();
-        bind(basicShader);
-        setUniformMat4(basicShader, "u_VP", cam.viewProjection);
-        setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
-        GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
+        if (debugMode)
+        {
+            axisVbo.bind();
+            bind(basicShader);
+            setUniformMat4(basicShader, "u_VP", cam.viewProjection);
+            setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
+            GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
 
-        /*static glm::vec3 pos = cam.position + cam.lookDir;
-        static float buffer[] =
-        {
-            0.0f, 0.0f, 0.0f,   1.0f, .0f, 1.0f, 1.0,
-            cam.lookDir.x, cam.lookDir.y, cam.lookDir.z,   1.0f, 1.0f, 1.0f, 1.0,
-        };
-        if (window.isKeyDown(GLFW_KEY_1))
-        {
-            pos = cam.position + cam.lookDir;
-            buffer[7] = cam.lookDir.x * 15;
-            buffer[8] = cam.lookDir.y * 15;
-            buffer[9] = cam.lookDir.z * 15;
+            ImGui::Begin("Debug");
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
+            ImGui::SliderFloat("Camera Speed", &camSpeed, 1.0f, 200.0f);
+            ImGui::End();
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         }
-
-
-        VertexArray lookVao;
-        VertexBufferLayout layout;
-        layout.pushFloat(3);
-        layout.pushFloat(4);
-        lookVao.addBuffer(createBuffer(buffer, sizeof(buffer)), layout);
-        lookVao.vertexCount = 2;
-        lookVao.bind();
-        bind(basicShader);
-        setUniformMat4(basicShader, "u_VP", cam.viewProjection);
-        setUniform3f(basicShader, "u_GlobalPosition", pos);
-        GLCall(glDrawArrays(GL_LINES, 0, lookVao.vertexCount));*/
-
-#pragma endregion
-
-#pragma region metrics
-        if (timeSinceDisplay >= 1.0f)
-        {
-            text = fmt::format("x: {:.2f}, y: {:.2f}, z: {:.2f}, fps: {}, avg frame time {}ms",
-                        cam.position.x, cam.position.y, cam.position.z, std::to_string(frameCount), std::to_string(timeSinceDisplay / frameCount * 1000));
-            frameCount = timeSinceDisplay = 0;
-        }
-        drawText(text);
-#pragma endregion
 
         glfwSwapBuffers(window.getGLFWWindow());
         glfwPollEvents();
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     PROFILER_END();
@@ -310,17 +296,4 @@ glm::vec3 rawInput(const Window& window, const glm::vec3& dir)
     input.y += -1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
     return input;
-}
-
-void drawText(const std::string& txt)
-{
-    GLCall(glFrontFace(GL_CW));
-    GLTtext* glText = gltCreateText();
-    gltSetText(glText, txt.c_str());
-    gltBeginDraw();
-    gltColor(1.0f, 1.0f, 1.0f, 1.0f);
-    gltDrawText2D(glText, 10.0f, 10.0f, 2.0f);
-    gltEndDraw();
-    gltDeleteText(glText);
-    GLCall(glFrontFace(GL_CCW))
 }

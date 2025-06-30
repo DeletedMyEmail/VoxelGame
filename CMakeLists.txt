@@ -5,21 +5,21 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
 # uncomment to remove logging at compile time
-#add_compile_definitions(NOLOG)
+# add_compile_definitions(NOLOG)
 
 # uncomment to remove performance profiling at compile time
 add_compile_definitions(NOPROFILE)
 
 include(FetchContent)
 
+# Fetch GLFW
 FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-
 )
 FetchContent_MakeAvailable(glfw)
 
-include(FetchContent)
+# Fetch Custom Libraries
 FetchContent_Declare(
         cstmlib
         GIT_REPOSITORY https://github.com/DeletedMyEmail/CustomLibs.git
@@ -27,7 +27,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cstmlib)
 
-include(FetchContent)
+# Fetch FastNoiseLite
 FetchContent_Declare(
         fastnoise
         GIT_REPOSITORY https://github.com/Auburn/FastNoiseLite.git
@@ -35,21 +35,50 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fastnoise)
 
-FIND_PACKAGE(OpenGL REQUIRED)
+# Fetch ImGui
+FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.89.7  # Adjust version/tag as needed
+)
+FetchContent_MakeAvailable(imgui)
+
+find_package(OpenGL REQUIRED)
 
 FILE(GLOB_RECURSE SOURCE "src/*.cpp" "libs/*.cpp" "libs/*.c")
 include_directories("include/" "libs/")
 
 add_executable(${PROJECT_NAME} ${SOURCE})
-target_link_libraries(${PROJECT_NAME} glfw OpenGL::GL cstmlib)
-target_include_directories(${PROJECT_NAME} PRIVATE ${fastnoise_SOURCE_DIR}/Cpp)
+# ImGui include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${fastnoise_SOURCE_DIR}/Cpp
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
+)
+
+# Add ImGui sources to the executable
+target_sources(${PROJECT_NAME} PRIVATE
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+
+# Link libraries
+target_link_libraries(${PROJECT_NAME}
+        glfw
+        OpenGL::GL
+        cstmlib
+)
 
 # Add testing ---------------------------------------------------------------
 
 enable_testing()
 
 # Fetch Google Test
-include(FetchContent)
 FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
@@ -62,7 +91,14 @@ list(REMOVE_ITEM TEST_SOURCE "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 add_executable(${PROJECT_NAME}_tests ${TEST_SOURCE})
 
-target_link_libraries(${PROJECT_NAME}_tests gtest gtest_main pthread glfw OpenGL::GL spdlog::spdlog_header_only)
+target_link_libraries(${PROJECT_NAME}_tests
+        gtest
+        gtest_main
+        pthread
+        glfw
+        OpenGL::GL
+        spdlog::spdlog_header_only
+)
 
 # Add test command
 add_test(NAME RunTests COMMAND ${PROJECT_NAME}_tests)
