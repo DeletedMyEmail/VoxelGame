@@ -24,6 +24,8 @@
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window, const glm::vec3& dir);
 void drawText(const std::string& txt);
+void drawChunks(std::vector<Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes);
+void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
 {
@@ -128,7 +130,6 @@ int main(int argc, char* argv[])
     GLuint basicShader = createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
     GLuint blockShader = createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
     Texture textureAtlas("../resources/textures/TextureAtlas.png");
-
     auto axisVbo = createAxesVAO();
 
     float exposure = 1;
@@ -155,76 +156,19 @@ int main(int argc, char* argv[])
             cam.move(glm::normalize(vel) * deltaTime * camSpeed);
         cam.updateView();
 
+
+#pragma region draw
         textureAtlas.bind(0);
         bind(blockShader);
         setUniformMat4(blockShader, "u_VP", cam.viewProjection);
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        uint32_t chunksBaked = 0;
-        uint32_t MAX_BAKE_PER_FRAME = 4;
-        for (auto& chunk : chunks)
-        {
-            if (chunk.isDirty)
-            {
-                if (chunksBaked >= MAX_BAKE_PER_FRAME)
-                    continue;
-
-                Chunk* neighbors[3][3];
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    for (int dz = -1; dz <= 1; dz++)
-                    {
-                        if (dx == 0 && dz == 0) // skip self
-                            continue;
-
-                        glm::uvec2 neighbourPos = glm::uvec2{dx, dz} + chunk.chunkPosition;
-                        Chunk* neighbour = getChunk(chunks, neighbourPos);
-
-                        if (!neighbour)
-                            neighbors[dx + 1][dz + 1] = nullptr;
-                        else
-                            neighbors[dx + 1][dz + 1] = &(*neighbour);
-                    }
-                }
-
-                chunk.bake(neighbors);
-                chunksBaked++;
-            }
-
-            chunk.vao.bind();
-            setUniform3f(blockShader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
-            GLCall(glDrawArrays(GL_TRIANGLES, 0, chunk.vao.vertexCount));
-        }
+        drawChunks(chunks, blockShader, 4);
 
         RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
         if (res.hit)
-        {
-            glEnable(GL_DEPTH_TEST);
-            glDepthFunc(GL_LEQUAL);
-
-            glm::uvec3 positionInChunk = worldPosToChunkBlockPos(res.pos);
-            uint32_t buffer[36];
-            uint32_t index = 0;
-            for (uint32_t i = 0; i < 6; i++)
-            {
-                const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, 0);
-                blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
-                for (uint32_t j = 0; j < 6; j++)
-                {
-                    buffer[index++] = packedData;
-                }
-            }
-            VertexArray highlightVao;
-            VertexBufferLayout highlightLayout;
-            highlightLayout.pushUInt(1);
-            highlightVao.addBuffer(createBuffer(buffer, sizeof(buffer)), highlightLayout);
-            highlightVao.vertexCount = 36;
-            highlightVao.bind();
-            setUniform3f(blockShader, "u_chunkOffset", {res.chunk->chunkPosition.x * Chunk::CHUNK_SIZE, 0, res.chunk->chunkPosition.y * Chunk::CHUNK_SIZE});
-            glDrawArrays(GL_TRIANGLES, 0, highlightVao.vertexCount);
-            glDepthFunc(GL_LESS);
-        }
+            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {
@@ -242,6 +186,7 @@ int main(int argc, char* argv[])
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         }
+#pragma endregion
 
         glfwSwapBuffers(window.getGLFWWindow());
         glfwPollEvents();
@@ -254,6 +199,72 @@ int main(int argc, char* argv[])
 
     PROFILER_END();
     return 0;
+}
+
+void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, const GLuint shader)
+{
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glm::uvec3 positionInChunk = worldPosToChunkBlockPos(worldPos);
+    uint32_t buffer[36];
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < 6; i++)
+    {
+        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, 0);
+        blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
+        for (uint32_t j = 0; j < 6; j++)
+        {
+            buffer[index++] = packedData;
+        }
+    }
+    VertexArray highlightVao;
+    VertexBufferLayout highlightLayout;
+    highlightLayout.pushUInt(1);
+    highlightVao.addBuffer(createBuffer(buffer, sizeof(buffer)), highlightLayout);
+    highlightVao.vertexCount = 36;
+    highlightVao.bind();
+    setUniform3f(shader, "u_chunkOffset", {chunkPos.x * Chunk::CHUNK_SIZE, 0, chunkPos.y * Chunk::CHUNK_SIZE});
+    glDrawArrays(GL_TRIANGLES, 0, highlightVao.vertexCount);
+    glDepthFunc(GL_LESS);
+}
+
+void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes)
+{
+    uint32_t chunksBaked = 0;
+    for (auto& chunk : chunks)
+    {
+        if (chunk.isDirty)
+        {
+            if (chunksBaked >= maxChunkBakes)
+                continue;
+
+            Chunk* neighbors[3][3];
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    if (dx == 0 && dz == 0) // skip self
+                        continue;
+
+                    glm::uvec2 neighbourPos = glm::uvec2{dx, dz} + chunk.chunkPosition;
+                    Chunk* neighbour = getChunk(chunks, neighbourPos);
+
+                    if (!neighbour)
+                        neighbors[dx + 1][dz + 1] = nullptr;
+                    else
+                        neighbors[dx + 1][dz + 1] = &(*neighbour);
+                }
+            }
+
+            chunk.bake(neighbors);
+            chunksBaked++;
+        }
+
+        chunk.vao.bind();
+        setUniform3f(shader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
+        GLCall(glDrawArrays(GL_TRIANGLES, 0, chunk.vao.vertexCount));
+    }
 }
 
 VertexArray createAxesVAO()

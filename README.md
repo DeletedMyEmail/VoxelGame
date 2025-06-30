@@ -18,6 +18,8 @@ This will create a build directory and compile the project.
   - [ ] noise maps for biome distribution
   - [ ] ...
 - [x] pack vertex into 1 int
+- [x] imgui debug menu
+- [ ] block select ui
 - [ ] send 1 vertex to draw whole face
 - [x] face culling 
 - [ ] frustum culling
