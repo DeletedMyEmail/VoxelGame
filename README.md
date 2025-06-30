@@ -23,8 +23,8 @@ This will create a build directory and compile the project.
 - [ ] frustum culling
 - [ ] placing and breaking blocks
   - [x] block selection
-  - [ ] face selection
-  - [ ] block breaking
+  - [x] face selection
+  - [x] block breaking
   - [ ] block placing
 - [ ] collisions
 

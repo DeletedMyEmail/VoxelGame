@@ -16,14 +16,8 @@ vec3 unchartedTonemapping(vec3 color);
 
 void main()
 {
-    if (v_uv == vec2(-1.0f, -1.0f))
-    {
-        out_color = vec4(0.8f, 0.8f, 0.8f, 1.0f);
-        return;
-    }
-
-    vec3 modelColor = getTextureColor(v_uv, u_textureSlot).xyz;
-    modelColor = pow(modelColor, vec3(2.2)); // gamma correction!
+    vec4 modelColor = getTextureColor(v_uv, u_textureSlot);
+    modelColor.rgb = pow(modelColor.rgb, vec3(2.2)); // gamma correction!
 
     // lighting
     vec3 lightColor = vec3(0.8);
@@ -33,13 +27,14 @@ void main()
     float diffuseStrength = max(0.0, dot(lightSource, v_normal));
     lighting += diffuseStrength * lightColor * 0.7; // add diffuse
 
-    vec3 color = modelColor * lighting;
+    modelColor.rgb *= lighting;
+    vec4 color = modelColor;
 
     // tonemapping
-    color = unchartedTonemapping(color * u_exposure);
-    color = pow(color, vec3(1/2.2)); //gama correction!
+    color.rgb = unchartedTonemapping(color.rgb * u_exposure);
+    color.rgb = pow(color.rgb, vec3(1/2.2)); //gama correction!
 
-    out_color = vec4(color, 1.0f);
+    out_color = color;
 }
 
 vec4 getTextureColor(vec2 uvCoords, sampler2D textureSlot)

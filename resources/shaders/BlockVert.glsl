@@ -1,6 +1,6 @@
 #version 330 core
 
-// 0x F(face) F(x) FF(y) F(z) F(atlas x) F(atlas y) F(flags: 1 bit for highlight, 3 bits unused)
+// 0x F(face) F(x) FF(y) F(z) F(atlas x) F(atlas y) F(flags: 4 bits unused)
 layout (location = 0) in uint in_packedData;
 
 uniform mat4 u_VP;
@@ -75,12 +75,6 @@ void main()
     gl_Position = u_VP * vec4(vertexPos + translation, 1.0f);
 
     v_normal = s_normals[faceIndex];
-
-    if (((in_packedData >> 3u) & 1u) == 1u) // highlight flag
-    {
-        v_uv = vec2(-1.0f, -1.0f); // no UVs for highlight
-        return;
-    }
 
     uvec2 offset;
     if (faceIndex == 0u || faceIndex == 1u)
