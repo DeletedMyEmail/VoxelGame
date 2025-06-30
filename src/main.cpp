@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     LOG_INIT();
     PROFILER_INIT(0);
 
-    bool debugMode = false;
+    bool debugMode = true;
     bool cursorLocked = true;
 
     Window window;
@@ -45,10 +45,9 @@ int main(int argc, char* argv[])
             chunks.emplace_back(glm::uvec2{x, z}, noise, b);
 
 #pragma region window
-    window.setCursorDisabled(cursorLocked);
     glm::dvec2 prevCursorPos = window.getMousePosition();
 
-    window.onKey([&chunks, &debugMode, &cursorLocked](Window* win, const int key, const int scancode, const int action, const int mods)
+    window.onKey([&chunks, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
@@ -60,8 +59,6 @@ int main(int argc, char* argv[])
         {
             cursorLocked = !cursorLocked;
             win->setCursorDisabled(cursorLocked);
-            //ImGuiIO& io = ImGui::GetIO();
-            //io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
         }
         else if (key == GLFW_KEY_X)
             for (auto& chunk : chunks)
@@ -83,7 +80,7 @@ int main(int argc, char* argv[])
             if (camSpeed < 1.f)
                 camSpeed = 1.f;
         });
-    window.onMouseButton([&cam, &chunks, worldSize, cursorLocked](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunks, worldSize, &cursorLocked](Window* win, int button, int action, int mods)
     {
         if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
@@ -113,16 +110,17 @@ int main(int argc, char* argv[])
         }
     });
 
+    window.setCursorDisabled(cursorLocked);
 #pragma endregion
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // ImGui initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window.getGLFWWindow(), true);
     ImGui_ImplOpenGL3_Init("#version 330");
