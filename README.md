@@ -10,9 +10,8 @@ This will create a build directory and compile the project.
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle debug mode
 - `ESC` to quit
-- `V` disable mouse cursor
-- `b` enable mouse cursor
-- `x` refresh (drop all chunks)
+- `V` toggle mouse cursor
+- `X` refresh (drop all chunks)
 
 ### Roadmap
 - [ ] graphics & optimizations

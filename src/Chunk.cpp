@@ -74,9 +74,10 @@ void Chunk::bake(Chunk* neighborChunks[3][3])
                         default: assert(false);
                     }
 
-                    if (inBounds(neighbourBlockPos) && getBlockUnsafe(neighbourBlockPos) != BLOCK_TYPE::AIR)
+                    BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
+                    if (neighbourBlock != BLOCK_TYPE::AIR && neighbourBlock != BLOCK_TYPE::INVALID)
                         continue;
-                    if (!inBounds(neighbourBlockPos))
+                    if (neighbourBlock == BLOCK_TYPE::INVALID && neighbourBlockPos.y < MAX_HEIGHT)
                     {
                         // check if a neighboring chunk has a covering block
                         int dx = 1, dz = 1;
@@ -91,7 +92,7 @@ void Chunk::bake(Chunk* neighborChunks[3][3])
                         assert(dx != 1 || dz != 1);
 
                         const Chunk* neighborChunk = neighborChunks[dx][dz];
-                        assert(!neighborChunk || neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+                        assert(!neighborChunk || neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
                         if (neighborChunk && neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::AIR)
                             continue;
                     }
@@ -200,14 +201,28 @@ BLOCK_TYPE defaultBiomeBlock(const BIOME b)
 
 }
 
-Chunk* getChunk(std::vector<Chunk>& chunks, const glm::uvec2& chunkPos)
+uint64_t packChunkPos(uint32_t x, uint32_t y)
 {
-    const auto it = std::ranges::find_if(chunks, [chunkPos](const Chunk& c) {
-        return c.chunkPosition == chunkPos;
-    });
+    return (uint64_t(x) << 32) | y;
+}
 
-    if (it != chunks.end())
-        return &*it;
+void getNeighbors(std::unordered_map<uint64_t, Chunk>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3])
+{
+    static constexpr glm::ivec2 offs[8] = {
+        {-1,-1},{0,-1},{1,-1},
+        {-1, 0},        {1, 0},
+        {-1, 1},{0, 1},{1, 1}
+    };
 
-    return nullptr;
-};
+    for (auto& d : offs)
+    {
+        const glm::ivec2 p = glm::ivec2(chunkPos) + d;
+        if (p.x < 0 || p.y < 0)
+            continue;
+
+        auto it = chunks.find(packChunkPos(p.x, p.y));
+        neighbors[d.x + 1][d.y + 1] = (it != chunks.end())
+                          ? &it->second
+                          : nullptr;
+    }
+}

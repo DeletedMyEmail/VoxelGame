@@ -23,15 +23,15 @@
 #include "VertexArray.h"
 
 VertexArray createAxesVAO();
-glm::vec3 rawInput(const Window& window, const glm::vec3& dir);
+glm::vec3 rawInput(const Window& window);
 void drawText(const std::string& txt);
-void drawChunks(std::vector<Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes, const glm::vec3& cameraPosition, float maxDistance);
+void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes, const glm::vec3& cameraPosition, float maxDistance);
 void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
 {
     LOG_INIT();
-    PROFILER_INIT(0);
+    PROFILER_INIT(10);
 
     bool debugMode = true;
     bool cursorLocked = true;
@@ -40,12 +40,13 @@ int main(int argc, char* argv[])
     Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE);
     float camSpeed = 70.0f;
 
-    std::vector<Chunk> chunks;
+
+    std::unordered_map<uint64_t, Chunk> chunks;
 
     FastNoiseLite noise = createBiomeNoise(config::WORLD_BIOME, 1337);
     for (uint32_t x = 0; x < config::WORLD_CHUNK_SIZE; x++)
         for (uint32_t z = 0; z < config::WORLD_CHUNK_SIZE; z++)
-            chunks.emplace_back(glm::uvec2{x, z}, noise, config::WORLD_BIOME);
+            chunks.emplace(packChunkPos(x, z), Chunk(glm::uvec2{x, z}, noise, config::WORLD_BIOME));
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
@@ -67,7 +68,7 @@ int main(int argc, char* argv[])
             win->setCursorDisabled(cursorLocked);
         }
         else if (key == GLFW_KEY_X)
-            for (auto& chunk : chunks)
+            for (auto& [_, chunk] : chunks)
                 chunk.isDirty = true;
 
     });
@@ -127,29 +128,36 @@ int main(int argc, char* argv[])
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
                 else if (neighbourBlockPos.z > Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighborChunk = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z});
-                if (!neighborChunk)
+                const glm::uvec2 chunkPos = res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z};
+                auto neighborChunk = chunks.find(packChunkPos(chunkPos.x, chunkPos.y));
+                if (neighborChunk == chunks.end())
                     return;
 
-                assert(neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                neighborChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
+                assert(neighborChunk->second.getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+                neighborChunk->second.setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
-        Chunk* c = nullptr;
-        if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
-        else if (positionInChunk.x == 0)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
-        if (c != nullptr)
-            c->isDirty = true;
-        if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
-        else if (positionInChunk.z == 0)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
-        if (c != nullptr)
-            c->isDirty = true;
-
+        if (positionInChunk.x == 0)
+        {
+            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y));
+            if (it != chunks.end()) it->second.isDirty = true;
+        }
+        else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
+        {
+            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y));
+            if (it != chunks.end()) it->second.isDirty = true;
+        }
+        if (positionInChunk.z == 0)
+        {
+            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1));
+            if (it != chunks.end()) it->second.isDirty = true;
+        }
+        else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
+        {
+            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1));
+            if (it != chunks.end()) it->second.isDirty = true;
+        }
     });
 
     window.setCursorDisabled(cursorLocked);
@@ -191,7 +199,7 @@ int main(int argc, char* argv[])
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        const auto vel = rawInput(window, cam.lookDir);
+        const auto vel = rawInput(window);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * deltaTime * camSpeed);
         cam.updateView();
@@ -271,12 +279,12 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     glDepthFunc(GL_LESS);
 }
 
-void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes, const glm::vec3& cameraPosition, const float maxDistance)
+void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes, const glm::vec3& cameraPosition, const float maxDistance)
 {
-    glm::vec2 camPosXZ{ cameraPosition.x, cameraPosition.z };
+    const glm::vec2 camPosXZ{ cameraPosition.x, cameraPosition.z };
 
     uint32_t chunksBaked = 0;
-    for (auto& chunk : chunks)
+    for (auto& [_, chunk] : chunks)
     {
         glm::vec2 chunkPosWorld = glm::vec2(chunk.chunkPosition) * (float) Chunk::CHUNK_SIZE;
 
@@ -288,23 +296,8 @@ void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t 
             if (chunksBaked >= maxChunkBakes)
                 continue;
 
-            Chunk* neighbors[3][3];
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                for (int dz = -1; dz <= 1; dz++)
-                {
-                    if (dx == 0 && dz == 0) // skip self
-                        continue;
-
-                    glm::uvec2 neighbourPos = glm::uvec2{dx, dz} + chunk.chunkPosition;
-                    Chunk* neighbour = getChunk(chunks, neighbourPos);
-
-                    if (!neighbour)
-                        neighbors[dx + 1][dz + 1] = nullptr;
-                    else
-                        neighbors[dx + 1][dz + 1] = &(*neighbour);
-                }
-            }
+            Chunk* neighbors[3][3] = {};
+            getNeighbors(chunks, chunk.chunkPosition, neighbors);
 
             chunk.bake(neighbors);
             chunksBaked++;
@@ -319,7 +312,7 @@ void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t 
 
 VertexArray createAxesVAO()
 {
-    float axisVertices[] =
+    const float axisVertices[] =
     {
         // X axis
         0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
@@ -344,7 +337,7 @@ VertexArray createAxesVAO()
     return vao;
 }
 
-glm::vec3 rawInput(const Window& window, const glm::vec3& dir)
+glm::vec3 rawInput(const Window& window)
 {
     glm::vec3 input(0.0f);
     input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);

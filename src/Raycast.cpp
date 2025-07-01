@@ -19,7 +19,7 @@ static float intbound(float s, float ds)
 
 static int signum(const float x) { return (x > 0) - (x < 0); }
 
-RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::vector<Chunk>& chunks)
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::unordered_map<uint64_t, Chunk>& chunks)
 {
     glm::ivec3 blockPos{std::floor(origin.x), std::floor(origin.y), std::floor(origin.z)};
     int stepX = signum(dir.x), stepY = signum(dir.y), stepZ = signum(dir.z);
@@ -42,8 +42,10 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     {
         if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.x >= worldSize.x || blockPos.y >= worldSize.y || blockPos.z >= worldSize.z))
         {
-            Chunk* chunk = getChunk(chunks, worldPosToChunkPos(blockPos));
-            assert(chunk != nullptr);
+            glm::uvec2 chunkPos = worldPosToChunkPos(blockPos);
+            auto it = chunks.find(packChunkPos(chunkPos.x, chunkPos.y));
+            assert(it != chunks.end());
+            Chunk* chunk = &it->second;
             const BLOCK_TYPE block = chunk->getBlockUnsafe(worldPosToChunkBlockPos(blockPos));
             assert(block != BLOCK_TYPE::INVALID);
             if (block != BLOCK_TYPE::AIR)

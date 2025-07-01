@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "Block.h"
 #include "VertexArray.h"
 #include "glm/vec2.hpp"
@@ -28,7 +30,6 @@ struct Chunk
     void setBlockUnsafe(const glm::uvec3& pos, BLOCK_TYPE block);
     void setBlockSafe(const glm::uvec3& pos, BLOCK_TYPE block);
 
-
     static constexpr uint32_t CHUNK_SIZE = 16;
     static constexpr uint32_t MAX_HEIGHT = 256;
     static constexpr uint32_t MAX_GEN_HEIGHT = 128;
@@ -45,4 +46,6 @@ inline glm::uvec3 chunkPosToWorldBlockPos(const glm::uvec2& chunkPos) { return g
 inline glm::uvec3 worldPosToChunkBlockPos(const glm::uvec3& worldPos) { return glm::uvec3{worldPos.x % Chunk::CHUNK_SIZE, worldPos.y,worldPos.z % Chunk::CHUNK_SIZE};}
 inline glm::uvec2 worldPosToChunkPos(const glm::uvec3& worldPos) { return glm::uvec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
 inline bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; }
-Chunk* getChunk(std::vector<Chunk>& chunks, const glm::uvec2& chunkPos);
+uint64_t packChunkPos(uint32_t x, uint32_t y);
+void getNeighbors(std::unordered_map<uint64_t, Chunk>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3]);
+
