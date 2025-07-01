@@ -24,7 +24,7 @@
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window, const glm::vec3& dir);
 void drawText(const std::string& txt);
-void drawChunks(std::vector<Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes);
+void drawChunks(std::vector<Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes, const glm::vec3& cameraPosition, float maxDistance);
 void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
@@ -34,14 +34,16 @@ int main(int argc, char* argv[])
 
     bool debugMode = true;
     bool cursorLocked = true;
+    float RENDER_DISTANCE = Chunk::CHUNK_SIZE * 32;
+    const uint32_t MAX_BAKES = 4;
 
     Window window;
-    Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, 1000.0f);
+    Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, RENDER_DISTANCE);
     float camSpeed = 70.0f;
 
     std::vector<Chunk> chunks;
-    BIOME b = FOREST;
-    uint32_t worldSize = 30;
+    BIOME b = HILLS;
+    uint32_t worldSize = 128;
     FastNoiseLite noise = createBiomeNoise(b, 1337);
     for (uint32_t x = 0; x < worldSize; x++)
         for (uint32_t z = 0; z < worldSize; z++)
@@ -103,13 +105,6 @@ int main(int argc, char* argv[])
             else if (comboSelection[comboIndex] == "Wood")
                 blockType = BLOCK_TYPE::WOOD;
             assert(blockType != BLOCK_TYPE::INVALID);
-
-            /*LOG_INFO("Face: {}", res.face == BACK ? "BACK" :
-                     res.face == FRONT ? "FRONT" :
-                     res.face == LEFT ? "LEFT" :
-                     res.face == RIGHT ? "RIGHT" :
-                     res.face == TOP ? "TOP" :
-                     res.face == BOTTOM ? "BOTTOM" : "INVALID");*/
 
             glm::uvec3 offset;
             switch (res.face)
@@ -211,7 +206,7 @@ int main(int argc, char* argv[])
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        drawChunks(chunks, blockShader, 4);
+        drawChunks(chunks, blockShader, MAX_BAKES, cam.position, RENDER_DISTANCE);
 
         RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
         if (res.hit)
@@ -228,12 +223,13 @@ int main(int argc, char* argv[])
             ImGui::Begin("Debug");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
-            ImGui::SliderFloat("Camera Speed", &camSpeed, 1.0f, 200.0f);
+            ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
             ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         }
+
 #pragma endregion
 
         glfwSwapBuffers(window.getGLFWWindow());
@@ -277,11 +273,18 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     glDepthFunc(GL_LESS);
 }
 
-void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes)
+void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes, const glm::vec3& cameraPosition, const float maxDistance)
 {
+    glm::vec2 camPosXZ{ cameraPosition.x, cameraPosition.z };
+
     uint32_t chunksBaked = 0;
     for (auto& chunk : chunks)
     {
+        glm::vec2 chunkPosWorld = glm::vec2(chunk.chunkPosition) * (float) Chunk::CHUNK_SIZE;
+
+        if (glm::distance(chunkPosWorld, camPosXZ) > maxDistance)
+            continue;
+
         if (chunk.isDirty)
         {
             if (chunksBaked >= maxChunkBakes)

@@ -4,26 +4,20 @@
 #include <limits>
 #include "Block.h"
 #include "Raycast.h"
-
 #include <stdexcept>
 
-// Helper functions
-inline float mod(float value, float modulus) {
-    return std::fmod(std::fmod(value, modulus) + modulus, modulus);
-}
+static float mod(float value, float modulus) { return std::fmod(std::fmod(value, modulus) + modulus, modulus); }
 
-inline float intbound(float s, float ds) {
-    if (ds < 0) {
+static float intbound(float s, float ds)
+{
+    if (ds < 0)
         return intbound(-s, -ds);
-    } else {
-        s = mod(s, 1.0f);
-        return (1.0f - s) / ds;
-    }
+
+    s = mod(s, 1.0f);
+    return (1.0f - s) / ds;
 }
 
-inline int signum(float x) {
-    return (x > 0) - (x < 0);
-}
+static int signum(const float x) { return (x > 0) - (x < 0); }
 
 RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::vector<Chunk>& chunks)
 {

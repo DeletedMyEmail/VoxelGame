@@ -13,23 +13,26 @@ This will create a build directory and compile the project.
 - `x` refresh (drop all chunks)
 
 ### Roadmap
-- [ ] procedural world generation
-  - [x] noise maps for terrain height (for each biome)
-  - [ ] noise maps for biome distribution
-  - [ ] ...
-- [x] 1 int -> 1 vertex
-- [x] 1 int -> whole face
-- [x] imgui debug menu
-- [x] face culling 
-- [ ] frustum culling
-- [x] placing and breaking blocks
-  - [x] block selection
-  - [x] face selection
-  - [x] block breaking
-  - [x] block select ui
-  - [x] block placing
-- [ ] particle system
-- [ ] collisions
+- [ ] graphics & optimizations
+  - [x] 1 int -> 1 vertex
+  - [x] 1 int -> whole face
+  - [x] imgui debug menu
+  - [x] face culling
+  - [ ] frustum culling
+    - [x] 
+    - [ ] more complex version
+  - [ ] particle system
+
+
+- [ ] game mechanics
+  - [ ] collisions
+  - [ ] infinite world
+    - [x] chunk system
+    - [ ] chunk loading and unloading
+  - [x] placing and breaking blocks
+  - [ ] procedural world generation
+    - [x] noise maps for terrain height (for each biome)
+    - [ ] noise maps for biome distribution
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 
@@ -39,8 +42,3 @@ This will create a build directory and compile the project.
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Loading texture atlas
 - [glText](https://github.com/vallentin/glText) - Text rendering
 - [FastNoiseLite](https://github.com/Auburn/FastNoiseLite) - Noise generation
-
-### Learning Resources / Credits
-- [Ray Casting](http://www.cse.yorku.ca/~amana/research/grid.pdf)
-- [OpenGL](https://youtube.com/playlist?list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&si=crdBuV5tGpnvQw_7)
-- [Swept AABB collisions](https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/)
