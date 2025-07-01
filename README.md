@@ -17,9 +17,9 @@ This will create a build directory and compile the project.
   - [x] noise maps for terrain height (for each biome)
   - [ ] noise maps for biome distribution
   - [ ] ...
-- [x] pack vertex into 1 int
+- [x] 1 int -> 1 vertex
+- [x] 1 int -> whole face
 - [x] imgui debug menu
-- [ ] send 1 vertex to draw whole face
 - [x] face culling 
 - [ ] frustum culling
 - [x] placing and breaking blocks
@@ -28,6 +28,7 @@ This will create a build directory and compile the project.
   - [x] block breaking
   - [x] block select ui
   - [x] block placing
+- [ ] particle system
 - [ ] collisions
 
 ### Libraries

@@ -36,5 +36,5 @@ struct VertexArray
     std::vector<GLuint> buffers;
     GLuint arrayID = 0;
     GLuint attribCounter = 0;
-    GLsizei vertexCount = 0;
+    GLuint vertexCount = 0;
 };

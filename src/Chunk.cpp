@@ -98,8 +98,7 @@ void Chunk::bake(Chunk* neighborChunks[3][3])
 
                     const glm::uvec2 atlasOffset = getAtlasOffset(block, i);
                     blockdata packedData = (i << 28) | (x << 24) | (y << 16) | (z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
-                    for (uint32_t j = 0; j < 6; j++)
-                        buffer.push_back(packedData);
+                    buffer.push_back(packedData);
 
                     faceCount++;
                 }
@@ -108,11 +107,11 @@ void Chunk::bake(Chunk* neighborChunks[3][3])
     }
 
     vao.clear();
-    const GLuint vbo = createBuffer(buffer.data(), buffer.size() * sizeof(blockdata));
+    const GLuint instanceVbo = createBuffer(buffer.data(), buffer.size() * sizeof(blockdata));
     VertexBufferLayout layout;
-    layout.pushUInt(1);
-    vao.addBuffer(vbo, layout);
-    vao.vertexCount = faceCount * 6;
+    layout.pushUInt(1, false, 1);
+    vao.addBuffer(instanceVbo, layout);
+    vao.vertexCount = faceCount;
     isDirty = false;
 }
 

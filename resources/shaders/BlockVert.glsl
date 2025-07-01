@@ -78,11 +78,11 @@ void main()
 
     uvec2 offset;
     if (faceIndex == 0u || faceIndex == 1u)
-        offset = uvec2(vertexPos.x == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
+    offset = uvec2(vertexPos.x == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
     else if (faceIndex == 2u || faceIndex == 3u)
-        offset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
+    offset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
     else if (faceIndex == 4u || faceIndex == 5u)
-        offset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.x == 1.0f ? 0 : 1);
+    offset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.x == 1.0f ? 0 : 1);
 
     v_uv = vec2(
     float(((in_packedData >> 8u) & 0xFu) + offset.x),

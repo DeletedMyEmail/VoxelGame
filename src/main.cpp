@@ -311,7 +311,8 @@ void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t 
 
         chunk.vao.bind();
         setUniform3f(shader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
-        GLCall(glDrawArrays(GL_TRIANGLES, 0, chunk.vao.vertexCount));
+
+        GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk.vao.vertexCount));
     }
 }
 
