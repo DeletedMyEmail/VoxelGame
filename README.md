@@ -1,5 +1,7 @@
 # Hi, I'm a readme file
 
+![image](https://github.com/user-attachments/assets/c086933c-c18a-4289-9ee4-a8d35243db03)
+
 ### Build Process
 Install cmake and run ```bash build.sh``` in your terminal. 
 This will create a build directory and compile the project.
@@ -19,7 +21,7 @@ This will create a build directory and compile the project.
   - [x] imgui debug menu
   - [x] face culling
   - [ ] frustum culling
-    - [x] 
+    - [x] simple circular frustum culling 
     - [ ] more complex version
   - [ ] particle system
 
