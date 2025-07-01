@@ -4,7 +4,7 @@
 
 struct RaycastResult
 {
-    glm::ivec3 pos;
+    glm::uvec3 pos;
     Chunk* chunk;
     BLOCK_TYPE blockType;
     FACE face;

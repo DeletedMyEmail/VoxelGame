@@ -91,6 +91,57 @@ int main(int argc, char* argv[])
         const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
         if (comboSelection[comboIndex] == "None")
             res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
+        else
+        {
+            BLOCK_TYPE blockType = BLOCK_TYPE::INVALID;
+            if (comboSelection[comboIndex] == "Stone")
+                blockType = BLOCK_TYPE::STONE;
+            else if (comboSelection[comboIndex] == "Grass")
+                blockType = BLOCK_TYPE::GRASS;
+            else if (comboSelection[comboIndex] == "Sand")
+                blockType = BLOCK_TYPE::SAND;
+            else if (comboSelection[comboIndex] == "Wood")
+                blockType = BLOCK_TYPE::WOOD;
+            assert(blockType != BLOCK_TYPE::INVALID);
+
+            /*LOG_INFO("Face: {}", res.face == BACK ? "BACK" :
+                     res.face == FRONT ? "FRONT" :
+                     res.face == LEFT ? "LEFT" :
+                     res.face == RIGHT ? "RIGHT" :
+                     res.face == TOP ? "TOP" :
+                     res.face == BOTTOM ? "BOTTOM" : "INVALID");*/
+
+            glm::uvec3 offset;
+            switch (res.face)
+            {
+                case BACK: offset = {0,0,-1}; break;
+                case FRONT: offset = {0,1,1}; break;
+                case LEFT: offset = {-1,0,0}; break;
+                case RIGHT: offset = {1,0,0}; break;
+                case TOP: offset = {0, 1, 0}; break;
+                case BOTTOM: offset = {0, -1, 0}; break;
+                default: assert(false);
+            }
+            glm::uvec3 neighbourBlockPos = positionInChunk + offset;
+
+            if (inBounds(neighbourBlockPos))
+                res.chunk->setBlockUnsafe(neighbourBlockPos, blockType);
+            else
+            {
+                glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
+                if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
+                else if (neighbourBlockPos.x > Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
+                if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
+                else if (neighbourBlockPos.z > Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
+
+                Chunk* neighborChunk = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z});
+                if (!neighborChunk)
+                    return;
+
+                assert(neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+                neighborChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
+            }
+        }
 
         Chunk* c = nullptr;
         if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)

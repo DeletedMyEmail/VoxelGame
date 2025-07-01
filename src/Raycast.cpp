@@ -61,24 +61,24 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
                 if (tMaxX > maxT) break;
                 blockPos.x += stepX;
                 tMaxX += tDeltaX;
-                face = stepX == 1 ? RIGHT : LEFT;
+                face = (stepX > 0 ? FACE::LEFT : FACE::RIGHT);
             } else {
                 if (tMaxZ > maxT) break;
                 blockPos.z += stepZ;
                 tMaxZ += tDeltaZ;
-                face = stepZ == 1 ? FRONT : BACK;
+                face = (stepZ > 0 ? FACE::BACK : FACE::FRONT);
             }
         } else {
             if (tMaxY < tMaxZ) {
                 if (tMaxY > maxT) break;
                 blockPos.y += stepY;
                 tMaxY += tDeltaY;
-                face = stepZ == 1 ? TOP : BOTTOM;
+                face = (stepY > 0 ? FACE::BOTTOM : FACE::TOP);
             } else {
                 if (tMaxZ > maxT) break;
                 blockPos.z += stepZ;
                 tMaxZ += tDeltaZ;
-                face = stepZ == 1 ? FRONT : BACK;
+                face = (stepZ > 0 ? FACE::BACK : FACE::FRONT);
             }
         }
     }

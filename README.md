@@ -19,15 +19,15 @@ This will create a build directory and compile the project.
   - [ ] ...
 - [x] pack vertex into 1 int
 - [x] imgui debug menu
-- [ ] block select ui
 - [ ] send 1 vertex to draw whole face
 - [x] face culling 
 - [ ] frustum culling
-- [ ] placing and breaking blocks
+- [x] placing and breaking blocks
   - [x] block selection
   - [x] face selection
   - [x] block breaking
-  - [ ] block placing
+  - [x] block select ui
+  - [x] block placing
 - [ ] collisions
 
 ### Libraries

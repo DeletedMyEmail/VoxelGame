@@ -4,8 +4,6 @@
 
 static uint32_t getBlockIndex(const glm::uvec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::MAX_HEIGHT; }
 
-static bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; };
-
 uint32_t noiseToHeight(const float value)
 {
     const float normalized = (value + 1.0f) * 0.5f;
