@@ -13,6 +13,7 @@
 
 #include "Camera.h"
 #include "Chunk.h"
+#include "Config.h"
 #include "FastNoiseLite.h"
 #include "Shader.h"
 #include "Window.h"
@@ -34,20 +35,17 @@ int main(int argc, char* argv[])
 
     bool debugMode = true;
     bool cursorLocked = true;
-    float RENDER_DISTANCE = Chunk::CHUNK_SIZE * 32;
-    const uint32_t MAX_BAKES = 4;
 
     Window window;
-    Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, RENDER_DISTANCE);
+    Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE);
     float camSpeed = 70.0f;
 
     std::vector<Chunk> chunks;
-    BIOME b = HILLS;
-    uint32_t worldSize = 128;
-    FastNoiseLite noise = createBiomeNoise(b, 1337);
-    for (uint32_t x = 0; x < worldSize; x++)
-        for (uint32_t z = 0; z < worldSize; z++)
-            chunks.emplace_back(glm::uvec2{x, z}, noise, b);
+
+    FastNoiseLite noise = createBiomeNoise(config::WORLD_BIOME, 1337);
+    for (uint32_t x = 0; x < config::WORLD_CHUNK_SIZE; x++)
+        for (uint32_t z = 0; z < config::WORLD_CHUNK_SIZE; z++)
+            chunks.emplace_back(glm::uvec2{x, z}, noise, config::WORLD_BIOME);
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
@@ -81,12 +79,12 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    window.onMouseButton([&cam, &chunks, worldSize, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunks, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
         if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
+        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{config::WORLD_CHUNK_SIZE * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, config::WORLD_CHUNK_SIZE * Chunk::CHUNK_SIZE}, chunks);
         if (!res.hit)
             return;
 
@@ -206,9 +204,9 @@ int main(int argc, char* argv[])
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        drawChunks(chunks, blockShader, MAX_BAKES, cam.position, RENDER_DISTANCE);
+        drawChunks(chunks, blockShader, config::MAX_BAKES_PER_FRAME, cam.position, config::RENDER_DISTANCE);
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{worldSize * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, worldSize * Chunk::CHUNK_SIZE}, chunks);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, config::WORLD_SIZE, chunks);
         if (res.hit)
             drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
@@ -219,9 +217,9 @@ int main(int argc, char* argv[])
             setUniformMat4(basicShader, "u_VP", cam.viewProjection);
             setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
             GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
-
             ImGui::Begin("Debug");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cam.position.x, cam.position.y, cam.position.z);
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
             ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
             ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
