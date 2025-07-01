@@ -3,7 +3,7 @@
 #include "../libs/glm/ext/matrix_transform.hpp"
 #include "../libs/glm/gtc/matrix_transform.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
-#include <Log.h>
+#include <cstmlib/Log.h>
 #include <sstream>
 
 #include "../libs/glm/gtx/dual_quaternion.hpp"
@@ -11,51 +11,58 @@
 glm::vec3 up{0,1.0f,0};
 
 Camera::Camera(const glm::vec3 pos, const float fov, const float width, const float height, const float near, const float far)
-    :   m_View(glm::lookAt(m_Position, m_Position + m_Dir, up)),
-        m_Projection(glm::perspective(fov/2.0f, width/height, near, far)),
-        m_ViewProjection(m_Projection * m_View),
-        m_Dir(0,0,1),
-        m_Position(pos)
+    :   projection(glm::perspective(glm::radians(fov), width/height, near, far)),
+        position(pos),
+        yaw(-90.0)
 {
+    updateLookDirection();
+    view = glm::lookAt(position, position + lookDir, up);
+    viewProjection = projection * view;
 }
 
 void Camera::translate(const glm::vec3& translation)
 {
-    m_Position += translation;
+    position += translation;
 }
 
 void Camera::move(const glm::vec3& translation)
 {
+    const glm::vec3 right = normalize(cross(lookDir, up));
     // left / right
-    m_Position += -normalize(cross(m_Dir, up)) * translation.x;
+    position += right * translation.x;
     // up / down
-    m_Position.y += translation.y;
+    position.y += translation.y;
     // front / back
-    m_Position.z += translation.z * m_Dir.z;
+    position += lookDir * translation.z;
 }
 
 void Camera::updateView()
 {
-    m_View = glm::lookAt(m_Position, m_Position + m_Dir, up);
-    m_ViewProjection = m_Projection * m_View;
+    view = glm::lookAt(position, position + lookDir, up);
+    viewProjection = projection * view;
 }
 
 void Camera::rotate(const glm::dvec2 relPos)
 {
-    m_Yaw += relPos.x * m_Sensitivity;
-    m_Pitch -= relPos.y * m_Sensitivity;
-    m_Pitch = glm::clamp(m_Pitch, -89.0, 89.0);
+    yaw += relPos.x * sensitivity;
+    pitch -= relPos.y * sensitivity;
+    pitch = glm::clamp(pitch, -89.0, 89.0);
 
+    updateLookDirection();
+}
+
+void Camera::updateLookDirection()
+{
     glm::vec3 front;
-    front.x = cos(glm::radians(m_Pitch)) * cos(glm::radians(m_Yaw));
-    front.y = sin(glm::radians(m_Pitch));
-    front.z = cos(glm::radians(m_Pitch)) * sin(glm::radians(m_Yaw));
-    m_Dir = normalize(front);
+    front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+    front.y = sin(glm::radians(pitch));
+    front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+    lookDir = normalize(front);
 }
 
 Camera::operator std::string() const
 {
     std::ostringstream lStream;
-    lStream << "Yaw: " << m_Yaw << " Pitch: " << m_Pitch << " Position: " << m_Position.x << " " << m_Position.y << " " << m_Position.z << " LookAt: " << m_Dir.x << " " << m_Dir.y << " " << m_Dir.z;
+    lStream << "Yaw: " << yaw << " Pitch: " << pitch << " Position: " << position.x << " " << position.y << " " << position.z << " LookAt: " << lookDir.x << " " << lookDir.y << " " << lookDir.z;
     return lStream.str();
 }

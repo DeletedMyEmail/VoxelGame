@@ -1,41 +1,48 @@
 #pragma once
 
+#include "Block.h"
 #include "VertexArray.h"
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "FastNoiseLite.h"
 
-enum class BLOCK_TYPE : unsigned char {
-    AIR,
-    TEST,
-    GRASS,
-    STONE,
-};
-
-class Chunk
+enum BIOME
 {
-public:
-    Chunk();
-    Chunk(glm::uvec2 chunkPosition, unsigned char** heightMap);
-    ~Chunk() = default;
-
-    void generateMesh();
-    static bool inBounds(const glm::uvec3 pos) { return pos.x < CHUNK_SIZE && pos.y < MAX_HEIGHT && pos.z < CHUNK_SIZE; };
-
-    const VertexArray& getMesh() { return m_VAO; }
-    BLOCK_TYPE getBlock(const glm::uvec3 pos) const { return m_Blocks[getBlockIndex(pos)]; }
-    const glm::uvec2& getPosition() const { return m_ChunkPosition; }
-private:
-    void createBlocks(unsigned char** heightMap);
-    void selectFaces(std::vector<GLuint>& buffer);
-    unsigned int getUncoveredFaces(glm::uvec3 pos) const;
-    static unsigned int getBlockIndex(const glm::uvec3 pos) { return pos.x + CHUNK_SIZE * (pos.y + MAX_HEIGHT * pos.z);}
-public:
-    static constexpr unsigned int CHUNK_SIZE = 16;
-    static constexpr unsigned int MAX_HEIGHT = 16;
-    static constexpr unsigned int BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
-private:
-    VertexArray m_VAO;
-    glm::uvec2 m_ChunkPosition;
-    BLOCK_TYPE m_Blocks[BLOCKS_PER_CHUNK];
+    PLAINS = 0,
+    DESERT,
+    FOREST,
+    MOUNTAIN,
+    HILLS
 };
 
-glm::uvec2 getAtlasOffset(BLOCK_TYPE block);
-glm::uvec2 getChunkPos(const glm::vec3& pos);
+FastNoiseLite createBiomeNoise(BIOME b, int32_t seed);
+BLOCK_TYPE defaultBiomeBlock(BIOME b);
+
+struct Chunk
+{
+    Chunk();
+    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);
+    void bake(Chunk* neighborChunks[3][3]);
+    BLOCK_TYPE getBlockUnsafe(const glm::uvec3& pos) const;
+    BLOCK_TYPE getBlockSafe(const glm::uvec3& pos) const;
+    void setBlockUnsafe(const glm::uvec3& pos, BLOCK_TYPE block);
+    void setBlockSafe(const glm::uvec3& pos, BLOCK_TYPE block);
+
+
+    static constexpr uint32_t CHUNK_SIZE = 16;
+    static constexpr uint32_t MAX_HEIGHT = 256;
+    static constexpr uint32_t MAX_GEN_HEIGHT = 128;
+    static constexpr uint32_t MIN_GEN_HEIGHT = 32;
+    static constexpr uint32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * MAX_HEIGHT;
+
+    VertexArray vao;
+    glm::uvec2 chunkPosition;
+    BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
+    bool isDirty = true;
+};
+
+inline glm::uvec3 chunkPosToWorldBlockPos(const glm::uvec2& chunkPos) { return glm::uvec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
+inline glm::uvec3 worldPosToChunkBlockPos(const glm::uvec3& worldPos) { return glm::uvec3{worldPos.x % Chunk::CHUNK_SIZE, worldPos.y,worldPos.z % Chunk::CHUNK_SIZE};}
+inline glm::uvec2 worldPosToChunkPos(const glm::uvec3& worldPos) { return glm::uvec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
+inline bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; }
+Chunk* getChunk(std::vector<Chunk>& chunks, const glm::uvec2& chunkPos);

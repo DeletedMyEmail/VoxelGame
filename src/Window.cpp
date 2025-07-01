@@ -1,6 +1,7 @@
 #include "Window.h"
-#include "Log.h"
-#include "Renderer.h"
+#include "cstmlib/Log.h"
+#include "OpenGLHelper.h"
+#include "../cmake-build-release/_deps/imgui-src/imgui.h"
 
 bool Window::s_glfwInitialized = false;
 
@@ -175,17 +176,10 @@ auto Window::onFocus(const focusCallback& callback)
     {
         auto* win = static_cast<Window*>(glfwGetWindowUserPointer(window));
 
-        if (focused && win->m_DisableCursor)
-        {
-            GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED))
-        }
-        else
-        {
-            GLCall(glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL))
-        }
+        win->setCursorDisabled(focused && win->m_DisableCursor);
 
         win->m_FocusFunc(win, focused);
-    }))
+    }));
 }
 
 void Window::bind() const

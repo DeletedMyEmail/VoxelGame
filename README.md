@@ -1,24 +1,38 @@
 # Hi, I'm a readme file
 
-![image](https://github.com/user-attachments/assets/02378292-1344-40cd-a975-9492c1e2fa94)
-(seed: 42)
-
 ### Build Process
-Install cmake and run ```bash build_debian.sh``` in your terminal. 
+Install cmake and run ```bash build.sh``` in your terminal. 
 This will create a build directory and compile the project.
 
 ### Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle debug mode
 - `ESC` to quit
+- `V` disable mouse cursor
+- `b` enable mouse cursor
+- `x` refresh (drop all chunks)
 
-### Features
-- procedural world generation (perlin noise)
-- face culling (backface culling, hollow chunks)
-- swept AABB collisions (well.. pls don't test)
-- upcoming features
-  - placing and breaking blocks
-  - frustum culling
+### Roadmap
+- [ ] graphics & optimizations
+  - [x] 1 int -> 1 vertex
+  - [x] 1 int -> whole face
+  - [x] imgui debug menu
+  - [x] face culling
+  - [ ] frustum culling
+    - [x] 
+    - [ ] more complex version
+  - [ ] particle system
+
+
+- [ ] game mechanics
+  - [ ] collisions
+  - [ ] infinite world
+    - [x] chunk system
+    - [ ] chunk loading and unloading
+  - [x] placing and breaking blocks
+  - [ ] procedural world generation
+    - [x] noise maps for terrain height (for each biome)
+    - [ ] noise maps for biome distribution
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 
@@ -27,9 +41,4 @@ This will create a build directory and compile the project.
 - [glm](https://github.com/g-truc/glm) - Quick math library, because I'm not a psychopath
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Loading texture atlas
 - [glText](https://github.com/vallentin/glText) - Text rendering
-
-### Learning Resources / Credits
-- [Ray Casting](http://www.cse.yorku.ca/~amana/research/grid.pdf)
-- [OpenGL](https://youtube.com/playlist?list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&si=crdBuV5tGpnvQw_7)
-- [Swept AABB collisions](https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/)
-- [Perlin noise](https://www.youtube.com/watch?v=kCIaHqb60Cw)
+- [FastNoiseLite](https://github.com/Auburn/FastNoiseLite) - Noise generation
