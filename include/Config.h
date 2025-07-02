@@ -5,8 +5,8 @@ namespace config
 {
     const uint32_t RENDER_DISTANCE = 32;
     const uint32_t LOAD_DISTANCE = RENDER_DISTANCE * 2;
-    const uint32_t MAX_BAKES_PER_FRAME = 6;
-    const uint32_t MAX_LOADS_PER_FRAME = 12;
+    const uint32_t MAX_BAKES_PER_FRAME = 12;
+    const uint32_t MAX_LOADS_PER_FRAME = 24;
 
     const BIOME WORLD_BIOME = HILLS;
     const uint32_t WORLD_SEED = 1337;

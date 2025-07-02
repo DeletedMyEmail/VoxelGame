@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{10,Chunk::MAX_GEN_HEIGHT,10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 10);
+    Camera cam(glm::vec3{10,Chunk::MAX_GEN_HEIGHT,10}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 10);
     float camSpeed = 70.0f;
 
 
@@ -210,9 +210,9 @@ int main(int argc, char* argv[])
 
         drawChunks(chunks, blockShader, cam.position, noise);
 
-        //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunks);
-        //if (res.hit)
-          //  drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunks);
+        if (res.hit)
+            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {
@@ -282,6 +282,20 @@ void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader
 
     const glm::uvec2 currChunkPos = worldPosToChunkPos(cameraPosition);
 
+    for (auto it = chunks.begin(); it != chunks.end();)
+    {
+        const auto& chunk = it->second;
+        const auto dist = glm::abs(glm::ivec2(chunk.chunkPosition) - glm::ivec2(currChunkPos));
+        if (dist.x > config::LOAD_DISTANCE || dist.y > config::LOAD_DISTANCE)
+        {
+            it = chunks.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
     uint32_t maxLoadX = currChunkPos.x + config::LOAD_DISTANCE;
     uint32_t minLoadX = currChunkPos.x - config::LOAD_DISTANCE;
     if (minLoadX > maxLoadX)
@@ -342,6 +356,7 @@ void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader
             GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk.vao.vertexCount));
         }
     }
+
 }
 
 VertexArray createAxesVAO()
