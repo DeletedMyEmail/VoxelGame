@@ -23,7 +23,7 @@ BLOCK_TYPE defaultBiomeBlock(BIOME b);
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);
+    Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);;
     void bake(Chunk* neighborChunks[3][3]);
     BLOCK_TYPE getBlockUnsafe(const glm::uvec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::uvec3& pos) const;
@@ -39,7 +39,7 @@ struct Chunk
     VertexArray vao;
     glm::uvec2 chunkPosition;
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
-    bool isDirty = true;
+    bool isDirty = true, isLoaded = false;
 };
 
 inline glm::uvec3 chunkPosToWorldBlockPos(const glm::uvec2& chunkPos) { return glm::uvec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
@@ -47,5 +47,5 @@ inline glm::uvec3 worldPosToChunkBlockPos(const glm::uvec3& worldPos) { return g
 inline glm::uvec2 worldPosToChunkPos(const glm::uvec3& worldPos) { return glm::uvec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
 inline bool inBounds(const glm::uvec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.y < Chunk::MAX_HEIGHT && pos.z < Chunk::CHUNK_SIZE; }
 uint64_t packChunkPos(uint32_t x, uint32_t y);
-void getNeighbors(std::unordered_map<uint64_t, Chunk>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3]);
+void getNeighbors(std::unordered_map<uint64_t, Chunk*>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3]);
 

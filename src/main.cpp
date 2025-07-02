@@ -20,12 +20,13 @@
 #include "OpenGLHelper.h"
 #include "Raycast.h"
 #include "Texture.h"
+#include "ThreadPool.h"
 #include "VertexArray.h"
 
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window);
 void drawText(const std::string& txt);
-void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise);
+void drawChunks(std::unordered_map<uint64_t, Chunk*>& chunks, GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise);
 void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
@@ -41,7 +42,7 @@ int main(int argc, char* argv[])
     float camSpeed = 70.0f;
 
 
-    std::unordered_map<uint64_t, Chunk> chunks;
+    std::unordered_map<uint64_t, Chunk*> chunks;
     FastNoiseLite noise = createBiomeNoise(config::WORLD_BIOME, config::WORLD_SEED);
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
         }
         else if (key == GLFW_KEY_X)
             for (auto& [_, chunk] : chunks)
-                chunk.isDirty = true;
+                chunk->isDirty = true;
 
     });
     window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
@@ -130,29 +131,29 @@ int main(int argc, char* argv[])
                     return;
 
                 assert(neighborChunk->second.getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                neighborChunk->second.setBlockUnsafe(blockPosInOtherChunk, blockType);
+                neighborChunk->second->setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
         if (positionInChunk.x == 0)
         {
             auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y));
-            if (it != chunks.end()) it->second.isDirty = true;
+            if (it != chunks.end()) it->second->isDirty = true;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
             auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y));
-            if (it != chunks.end()) it->second.isDirty = true;
+            if (it != chunks.end()) it->second->isDirty = true;
         }
         if (positionInChunk.z == 0)
         {
             auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1));
-            if (it != chunks.end()) it->second.isDirty = true;
+            if (it != chunks.end()) it->second->isDirty = true;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
             auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1));
-            if (it != chunks.end()) it->second.isDirty = true;
+            if (it != chunks.end()) it->second->isDirty = true;
         }
     });
 
@@ -275,25 +276,27 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     glDepthFunc(GL_LESS);
 }
 
-void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise)
+static ThreadPool threadPool();
+
+void drawChunks(std::unordered_map<uint64_t, Chunk*>& chunks, const GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise)
 {
     uint32_t chunksBaked = 0;
     uint32_t chunksLoaded = 0;
 
     const glm::uvec2 currChunkPos = worldPosToChunkPos(cameraPosition);
 
+    // unload chunks
     for (auto it = chunks.begin(); it != chunks.end();)
     {
-        const auto& chunk = it->second;
-        const auto dist = glm::abs(glm::ivec2(chunk.chunkPosition) - glm::ivec2(currChunkPos));
+        const Chunk* chunk = it->second;
+        const glm::ivec2 dist = glm::abs(glm::ivec2(chunk->chunkPosition) - glm::ivec2(currChunkPos));
         if (dist.x > config::LOAD_DISTANCE || dist.y > config::LOAD_DISTANCE)
         {
+            delete chunk;
             it = chunks.erase(it);
         }
         else
-        {
             ++it;
-        }
     }
 
     uint32_t maxLoadX = currChunkPos.x + config::LOAD_DISTANCE;
@@ -318,13 +321,13 @@ void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader
                 if (chunksLoaded >= config::MAX_LOADS_PER_FRAME)
                     continue;
 
-                auto [fst, snd] = chunks.emplace(chunkKey, Chunk{ {x, z}, noise, config::WORLD_BIOME });
+                auto [fst, snd] = chunks.emplace(chunkKey, new Chunk{ {x, z}, noise, config::WORLD_BIOME });
+
                 it = snd ? fst : chunks.end();
                 chunksLoaded++;
             }
 
             // draw chunks
-
             uint32_t minRenderX = currChunkPos.x - config::RENDER_DISTANCE;
             uint32_t maxRenderX = currChunkPos.x + config::RENDER_DISTANCE;
             if (minRenderX > maxRenderX)
@@ -334,26 +337,25 @@ void drawChunks(std::unordered_map<uint64_t, Chunk>& chunks, const GLuint shader
             if (minRenderZ > maxRenderZ)
                 minRenderZ = 0;
 
-            Chunk& chunk = it->second;
+            Chunk* chunk = it->second;
             if (x < minRenderX || x > maxRenderX || z < minRenderZ || z > maxRenderZ)
                 continue;
 
-            if (chunk.isDirty)
+            if (chunk->isDirty)
             {
                 if (chunksBaked >= config::MAX_BAKES_PER_FRAME)
                     continue;
 
                 Chunk* neighbors[3][3] = {};
-                getNeighbors(chunks, chunk.chunkPosition, neighbors);
+                getNeighbors(chunks, chunk->chunkPosition, neighbors);
 
-                chunk.bake(neighbors);
+                chunk->bake(neighbors);
                 chunksBaked++;
             }
 
-            chunk.vao.bind();
-            setUniform3f(shader, "u_chunkOffset", chunkPosToWorldBlockPos(chunk.chunkPosition));
-
-            GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk.vao.vertexCount));
+            chunk->vao.bind();
+            setUniform3f(shader, "u_chunkOffset", chunkPosToWorldBlockPos(chunk->chunkPosition));
+            GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk->vao.vertexCount));
         }
     }
 

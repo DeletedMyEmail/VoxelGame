@@ -18,7 +18,7 @@ Chunk::Chunk()
 Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const BIOME biome)
     : chunkPosition(chunkPosition), blocks{}
 {
-    BLOCK_TYPE defaultBlock = defaultBiomeBlock(biome);
+    const BLOCK_TYPE defaultBlock = defaultBiomeBlock(biome);
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
@@ -37,6 +37,7 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const 
             }
         }
     }
+    isLoaded = true;
 }
 
 void Chunk::bake(Chunk* neighborChunks[3][3])
@@ -206,7 +207,7 @@ uint64_t packChunkPos(uint32_t x, uint32_t y)
     return (uint64_t(x) << 32) | y;
 }
 
-void getNeighbors(std::unordered_map<uint64_t, Chunk>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3])
+void getNeighbors(std::unordered_map<uint64_t, Chunk*>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3])
 {
     static constexpr glm::ivec2 offs[8] = {
         {-1,-1},{0,-1},{1,-1},
@@ -222,7 +223,7 @@ void getNeighbors(std::unordered_map<uint64_t, Chunk>& chunks, const glm::uvec2&
 
         auto it = chunks.find(packChunkPos(p.x, p.y));
         neighbors[d.x + 1][d.y + 1] = (it != chunks.end())
-                          ? &it->second
+                          ? it->second
                           : nullptr;
     }
 }
