@@ -19,7 +19,7 @@ static float intbound(float s, float ds)
 
 static int signum(const float x) { return (x > 0) - (x < 0); }
 
-RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::unordered_map<uint64_t, Chunk>& chunks)
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, std::unordered_map<uint64_t, Chunk>& chunks)
 {
     glm::ivec3 blockPos{std::floor(origin.x), std::floor(origin.y), std::floor(origin.z)};
     int stepX = signum(dir.x), stepY = signum(dir.y), stepZ = signum(dir.z);
@@ -36,11 +36,9 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
     float maxT = radius / length;
 
-    while ((stepX > 0 ? blockPos.x < worldSize.x : blockPos.x >= 0) &&
-           (stepY > 0 ? blockPos.y < worldSize.y : blockPos.y >= 0) &&
-           (stepZ > 0 ? blockPos.z < worldSize.z : blockPos.z >= 0))
+    while (blockPos.y < Chunk::MAX_HEIGHT)
     {
-        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.x >= worldSize.x || blockPos.y >= worldSize.y || blockPos.z >= worldSize.z))
+        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.y >= Chunk::MAX_HEIGHT))
         {
             glm::uvec2 chunkPos = worldPosToChunkPos(blockPos);
             auto it = chunks.find(packChunkPos(chunkPos.x, chunkPos.y));

@@ -29,7 +29,8 @@ This will create a build directory and compile the project.
   - [ ] collisions
   - [ ] infinite world
     - [x] chunk system
-    - [ ] chunk loading and unloading
+    - [x] chunk loading
+    - [ ] chunk unloading
   - [x] placing and breaking blocks
   - [ ] procedural world generation
     - [x] noise maps for terrain height (for each biome)
