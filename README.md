@@ -22,15 +22,19 @@ This will create a build directory and compile the project.
   - [ ] frustum culling
     - [x] simple circular frustum culling 
     - [ ] more complex version
+  - [ ] multithreading
+    - [ ] chunk loading
+    - [ ] baking
+  - [ ] less mem fragmentation in the chunk manager
   - [ ] particle system
 
 
 - [ ] game mechanics
   - [ ] collisions
-  - [ ] infinite world
+  - [x] infinite world
     - [x] chunk system
     - [x] chunk loading
-    - [ ] chunk unloading
+    - [x] chunk unloading
   - [x] placing and breaking blocks
   - [ ] procedural world generation
     - [x] noise maps for terrain height (for each biome)

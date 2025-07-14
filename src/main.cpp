@@ -1,49 +1,35 @@
 #define GLM_ENABLE_EXPERIMENTAL
-#define GLT_IMPLEMENTATION
-#define GLT_MANUAL_VIEWPORT
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glText/gltext.h>
-#include "glm/gtx/dual_quaternion.hpp"
+#include <iostream>
 #include <cstmlib/Profiling.h>
-
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
-
 #include "Camera.h"
 #include "Chunk.h"
-#include "Config.h"
-#include "FastNoiseLite.h"
 #include "Shader.h"
 #include "Window.h"
 #include "OpenGLHelper.h"
 #include "Raycast.h"
 #include "Texture.h"
 #include "ThreadPool.h"
-#include "VertexArray.h"
 
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window);
-void drawText(const std::string& txt);
-void drawChunks(std::unordered_map<uint64_t, Chunk*>& chunks, GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise);
 void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
 {
     LOG_INIT();
-    PROFILER_INIT(10);
+    PROFILER_INIT(1000);
 
     bool debugMode = true;
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{10,Chunk::MAX_GEN_HEIGHT,10}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 10);
+    Camera cam(glm::vec3{10,Chunk::MAX_GEN_HEIGHT,10}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 2);
     float camSpeed = 70.0f;
 
-
-    std::unordered_map<uint64_t, Chunk*> chunks;
-    FastNoiseLite noise = createBiomeNoise(config::WORLD_BIOME, config::WORLD_SEED);
+    ChunkManager chunkManager;
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
@@ -51,7 +37,7 @@ int main(int argc, char* argv[])
 #pragma region window
     glm::dvec2 prevCursorPos = window.getMousePosition();
 
-    window.onKey([&chunks, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
+    window.onKey([&chunkManager, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
@@ -65,8 +51,7 @@ int main(int argc, char* argv[])
             win->setCursorDisabled(cursorLocked);
         }
         else if (key == GLFW_KEY_X)
-            for (auto& [_, chunk] : chunks)
-                chunk->isDirty = true;
+            chunkManager.dropChunkMeshes();
 
     });
     window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
@@ -77,12 +62,12 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    window.onMouseButton([&cam, &chunks, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
         if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunks);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
         if (!res.hit)
             return;
 
@@ -125,35 +110,34 @@ int main(int argc, char* argv[])
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
                 else if (neighbourBlockPos.z > Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                const glm::uvec2 chunkPos = res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z};
-                auto neighborChunk = chunks.find(packChunkPos(chunkPos.x, chunkPos.y));
-                if (neighborChunk == chunks.end())
-                    return;
+                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z});
 
-                assert(neighborChunk->second.getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                neighborChunk->second->setBlockUnsafe(blockPosInOtherChunk, blockType);
+                assert(neighbourChunk != nullptr);
+                assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+
+                neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
         if (positionInChunk.x == 0)
         {
-            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y));
-            if (it != chunks.end()) it->second->isDirty = true;
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y});
+            if (chunk) chunk->isDirty = true;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
-            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y));
-            if (it != chunks.end()) it->second->isDirty = true;
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y});
+            if (chunk) chunk->isDirty = true;
         }
         if (positionInChunk.z == 0)
         {
-            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1));
-            if (it != chunks.end()) it->second->isDirty = true;
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1});
+            if (chunk) chunk->isDirty = true;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
-            auto it = chunks.find(packChunkPos(res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1));
-            if (it != chunks.end()) it->second->isDirty = true;
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
+            if (chunk) chunk->isDirty = true;
         }
     });
 
@@ -201,7 +185,6 @@ int main(int argc, char* argv[])
             cam.move(glm::normalize(vel) * deltaTime * camSpeed);
         cam.updateView();
 
-
 #pragma region draw
         textureAtlas.bind(0);
         bind(blockShader);
@@ -209,11 +192,13 @@ int main(int argc, char* argv[])
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        drawChunks(chunks, blockShader, cam.position, noise);
+        chunkManager.unloadChunks(worldPosToChunkPos(cam.position));
+        chunkManager.drawChunks(blockShader, cam.position);
+        chunkManager.loadChunks();
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunks);
-        if (res.hit)
-            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
+        //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+        //if (res.hit)
+        //    drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {
@@ -225,6 +210,7 @@ int main(int argc, char* argv[])
             ImGui::Begin("Debug");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cam.position.x, cam.position.y, cam.position.z);
+            ImGui::Text("Chunks loaded: %d", chunkManager.getChunkCount());
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
             ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
             ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
@@ -274,91 +260,6 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     setUniform3f(shader, "u_chunkOffset", {chunkPos.x * Chunk::CHUNK_SIZE, 0, chunkPos.y * Chunk::CHUNK_SIZE});
     glDrawArrays(GL_TRIANGLES, 0, highlightVao.vertexCount);
     glDepthFunc(GL_LESS);
-}
-
-static ThreadPool threadPool();
-
-void drawChunks(std::unordered_map<uint64_t, Chunk*>& chunks, const GLuint shader, const glm::vec3& cameraPosition, const FastNoiseLite& noise)
-{
-    uint32_t chunksBaked = 0;
-    uint32_t chunksLoaded = 0;
-
-    const glm::uvec2 currChunkPos = worldPosToChunkPos(cameraPosition);
-
-    // unload chunks
-    for (auto it = chunks.begin(); it != chunks.end();)
-    {
-        const Chunk* chunk = it->second;
-        const glm::ivec2 dist = glm::abs(glm::ivec2(chunk->chunkPosition) - glm::ivec2(currChunkPos));
-        if (dist.x > config::LOAD_DISTANCE || dist.y > config::LOAD_DISTANCE)
-        {
-            delete chunk;
-            it = chunks.erase(it);
-        }
-        else
-            ++it;
-    }
-
-    uint32_t maxLoadX = currChunkPos.x + config::LOAD_DISTANCE;
-    uint32_t minLoadX = currChunkPos.x - config::LOAD_DISTANCE;
-    if (minLoadX > maxLoadX)
-        minLoadX = 0;
-
-    for (uint32_t x = minLoadX ; x < maxLoadX; x++)
-    {
-        uint32_t minLoadZ = currChunkPos.y - config::LOAD_DISTANCE;
-        uint32_t maxLoadZ = currChunkPos.y + config::LOAD_DISTANCE;
-        if (minLoadZ > maxLoadZ)
-            minLoadZ = 0;
-
-        for (uint32_t z = minLoadZ ; z < maxLoadZ; z++)
-        {
-            // load chunks
-            uint64_t chunkKey = packChunkPos(x, z);
-            auto it = chunks.find(chunkKey);
-            if (it == chunks.end())
-            {
-                if (chunksLoaded >= config::MAX_LOADS_PER_FRAME)
-                    continue;
-
-                auto [fst, snd] = chunks.emplace(chunkKey, new Chunk{ {x, z}, noise, config::WORLD_BIOME });
-
-                it = snd ? fst : chunks.end();
-                chunksLoaded++;
-            }
-
-            // draw chunks
-            uint32_t minRenderX = currChunkPos.x - config::RENDER_DISTANCE;
-            uint32_t maxRenderX = currChunkPos.x + config::RENDER_DISTANCE;
-            if (minRenderX > maxRenderX)
-                minRenderX = 0;
-            uint32_t minRenderZ = currChunkPos.y - config::RENDER_DISTANCE;
-            uint32_t maxRenderZ = currChunkPos.y + config::RENDER_DISTANCE;
-            if (minRenderZ > maxRenderZ)
-                minRenderZ = 0;
-
-            Chunk* chunk = it->second;
-            if (x < minRenderX || x > maxRenderX || z < minRenderZ || z > maxRenderZ)
-                continue;
-
-            if (chunk->isDirty)
-            {
-                if (chunksBaked >= config::MAX_BAKES_PER_FRAME)
-                    continue;
-
-                Chunk* neighbors[3][3] = {};
-                getNeighbors(chunks, chunk->chunkPosition, neighbors);
-
-                chunk->bake(neighbors);
-                chunksBaked++;
-            }
-
-            chunk->vao.bind();
-            setUniform3f(shader, "u_chunkOffset", chunkPosToWorldBlockPos(chunk->chunkPosition));
-            GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk->vao.vertexCount));
-        }
-    }
-
 }
 
 VertexArray createAxesVAO()

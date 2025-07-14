@@ -1,6 +1,188 @@
 #include "Chunk.h"
-#include "OpenGLHelper.h"
 
+#include <latch>
+
+#include "OpenGLHelper.h"
+#include "Shader.h"
+#include "cstmlib/Profiling.h"
+#include "glm/common.hpp"
+
+// CHUNK MANAGER ---------------------------------------
+
+ChunkManager::ChunkManager()
+    : threadPool(config::LOADING_THREADS), chunks(config::RENDER_DISTANCE * config::RENDER_DISTANCE), chunksToLoad{}, noise(config::WORLD_SEED)
+{
+}
+
+void ChunkManager::unloadChunks(const glm::uvec2& currChunkPos)
+{
+    uint32_t unloads = 0;
+    for (auto it = chunks.begin(); it != chunks.end() && unloads < config::MAX_UNLOADS_PER_FRAME;)
+    {
+        const Chunk* chunk = it->second;
+        assert(chunk != nullptr && "Chunk pointer should not be null");
+
+        const glm::ivec2 dist = glm::abs(glm::ivec2(chunk->chunkPosition) - glm::ivec2(currChunkPos));
+        if (dist.x > config::LOAD_DISTANCE || dist.y > config::LOAD_DISTANCE)
+        {
+            delete chunk;
+            it = chunks.erase(it);
+            unloads++;
+        }
+        else
+            ++it;
+    }
+}
+
+static uint64_t packChunkPos(const glm::uvec2& chunkPos) { return (uint64_t(chunkPos.x) << 32) | chunkPos.y; }
+static glm::uvec2 unpackChunkPos(const uint64_t packedPos) { return {packedPos >> 32, packedPos & 0xFFFF'FFFF}; }
+
+void ChunkManager::drawChunks(const GLuint shader, const glm::vec3& cameraPosition)
+{
+    uint32_t chunksBaked = 0;
+    numChunksToLoad = 0;
+
+    const glm::uvec2 currChunkPos = worldPosToChunkPos(cameraPosition);
+
+    uint32_t maxLoadX = currChunkPos.x + config::LOAD_DISTANCE;
+    uint32_t minLoadX = currChunkPos.x - config::LOAD_DISTANCE;
+    if (minLoadX > maxLoadX)
+        minLoadX = 0;
+
+    uint32_t minLoadZ = currChunkPos.y - config::LOAD_DISTANCE;
+    uint32_t maxLoadZ = currChunkPos.y + config::LOAD_DISTANCE;
+    if (minLoadZ > maxLoadZ)
+        minLoadZ = 0;
+
+    for (uint32_t x = minLoadX ; x < maxLoadX; x++)
+    {
+        for (uint32_t z = minLoadZ ; z < maxLoadZ; z++)
+        {
+            // add chunk for load
+            glm::uvec2 chunkPos = {x, z};
+            Chunk* chunk = getChunk(chunkPos);
+            if (chunk == nullptr)
+            {
+                if (numChunksToLoad < config::MAX_LOADS_PER_FRAME)
+                    chunksToLoad[numChunksToLoad++] = packChunkPos(chunkPos);
+                continue;
+            }
+
+            if (chunk->chunkPosition != chunkPos)
+            {
+                LOG_WARN("key {} {}, val {} {}, cam {} {}", chunkPos.x, chunkPos.y, chunk->chunkPosition.x, chunk->chunkPosition.y, currChunkPos.x, currChunkPos.y);
+                assert(chunk->chunkPosition == chunkPos);
+            }
+
+            // draw chunk
+            uint32_t minRenderX = currChunkPos.x - config::RENDER_DISTANCE;
+            uint32_t maxRenderX = currChunkPos.x + config::RENDER_DISTANCE;
+            if (minRenderX > maxRenderX)
+                minRenderX = 0;
+            uint32_t minRenderZ = currChunkPos.y - config::RENDER_DISTANCE;
+            uint32_t maxRenderZ = currChunkPos.y + config::RENDER_DISTANCE;
+            if (minRenderZ > maxRenderZ)
+                minRenderZ = 0;
+
+            if (x < minRenderX || x > maxRenderX || z < minRenderZ || z > maxRenderZ)
+                continue;
+
+            if (chunk->isDirty)
+            {
+                if (chunksBaked >= config::MAX_BAKES_PER_FRAME)
+                    continue;
+
+                chunk->bake(*this);
+                chunksBaked++;
+            }
+
+            chunk->vao.bind();
+            setUniform3f(shader, "u_chunkOffset", chunkPosToWorldBlockPos(chunk->chunkPosition));
+            GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk->vao.vertexCount));
+        }
+    }
+}
+
+void loadWorker(uint64_t chunkPositions[], const uint32_t numChunks, ChunkManager& chunkManager)
+{
+    const FastNoiseLite localNoise = createBiomeNoise(config::WORLD_BIOME, config::WORLD_SEED);
+    Chunk* newChunks[numChunks];
+
+    for (uint32_t i = 0; i < numChunks; i++)
+        newChunks[i] = new Chunk(unpackChunkPos(chunkPositions[i]), localNoise, config::WORLD_BIOME);
+
+    std::lock_guard<std::mutex> guard(chunkManager.chunksMutex);
+    for (uint32_t i = 0; i < numChunks; i++)
+    {
+        const uint64_t key = chunkPositions[i];
+        assert(!chunkManager.chunks.contains(key) && "Duplicate chunk key");
+        chunkManager.chunks[key] = newChunks[i];
+    }
+}
+
+void ChunkManager::loadChunks()
+{
+    if (numChunksToLoad == 0) return;
+
+    const uint32_t chunksPerThread = std::max(1u, numChunksToLoad / threadPool.getThreadCount());
+
+    Chunk* newChunks[numChunksToLoad] = {nullptr};
+    std::latch loadLatch(numChunksToLoad);
+
+    for (uint32_t i = 0; i < numChunksToLoad; i += chunksPerThread)
+    {
+        const uint32_t batchSize = (i + chunksPerThread) > numChunksToLoad ? numChunksToLoad - i : chunksPerThread;
+        threadPool.queueJob([baseIndex = i, batchSize, this, &newChunks, &loadLatch]()
+        {
+            const FastNoiseLite localNoise = createBiomeNoise(config::WORLD_BIOME, config::WORLD_SEED);
+
+            for (uint32_t j = 0; j < batchSize; j++)
+            {
+                const uint32_t chunkIndex = baseIndex + j;
+                const glm::uvec2 chunkPos = unpackChunkPos(chunksToLoad[chunkIndex]);
+                newChunks[chunkIndex] = new Chunk(chunkPos, localNoise, config::WORLD_BIOME);
+                loadLatch.count_down();
+            }
+        });
+    }
+
+    loadLatch.wait();
+
+    for (uint32_t i = 0; i < numChunksToLoad; i++)
+    {
+        const uint64_t key = chunksToLoad[i];
+        if (!chunks.contains(key))
+            chunks[key] = newChunks[i];
+        else
+            LOG_WARN("Attempted to load a chunk that already exists at key: {}", key);
+    }
+
+    numChunksToLoad = 0;
+}
+
+Chunk* ChunkManager::getChunk(const glm::uvec2 pos)
+{
+    const auto key = packChunkPos(pos);
+    std::lock_guard<std::mutex> guard(chunksMutex);
+    const auto it = chunks.find(key);
+    if (it == chunks.end())
+        return nullptr;
+    return it->second;
+}
+
+void ChunkManager::dropChunkMeshes()
+{
+    std::lock_guard<std::mutex> guard(chunksMutex);
+    for (auto& [_, chunk] : chunks)
+        chunk->isDirty = true;
+}
+
+uint32_t ChunkManager::getChunkCount() const
+{
+    return chunks.size();
+}
+
+// CHUNK ---------------------------------------
 
 static uint32_t getBlockIndex(const glm::uvec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::MAX_HEIGHT; }
 
@@ -37,10 +219,9 @@ Chunk::Chunk(const glm::uvec2& chunkPosition, const FastNoiseLite& noise, const 
             }
         }
     }
-    isLoaded = true;
 }
 
-void Chunk::bake(Chunk* neighborChunks[3][3])
+void Chunk::bake(ChunkManager& chunkManager)
 {
     std::vector<blockdata> buffer;
     uint32_t faceCount = 0;
@@ -81,18 +262,17 @@ void Chunk::bake(Chunk* neighborChunks[3][3])
                     if (neighbourBlock == BLOCK_TYPE::INVALID && neighbourBlockPos.y < MAX_HEIGHT)
                     {
                         // check if a neighboring chunk has a covering block
-                        int dx = 1, dz = 1;
                         glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
+                        glm::uvec2 neighbourChunkPos = chunkPosition;
+                        if (neighbourBlockPos.x == CHUNK_SIZE) { neighbourChunkPos.x += 1; blockPosInOtherChunk.x = 0; }
+                        else if (neighbourBlockPos.x > CHUNK_SIZE) { neighbourChunkPos.x -= 1; blockPosInOtherChunk.x = CHUNK_SIZE - 1; }
 
-                        if (neighbourBlockPos.x == CHUNK_SIZE) { dx = 2; blockPosInOtherChunk.x = 0; }
-                        else if (neighbourBlockPos.x > CHUNK_SIZE) { dx = 0; blockPosInOtherChunk.x = CHUNK_SIZE - 1; }
+                        if (neighbourBlockPos.z == CHUNK_SIZE) { neighbourChunkPos.y += 1; blockPosInOtherChunk.z = 0; }
+                        else if (neighbourBlockPos.z > CHUNK_SIZE) { neighbourChunkPos.y -= 1; blockPosInOtherChunk.z = CHUNK_SIZE - 1; }
 
-                        if (neighbourBlockPos.z == CHUNK_SIZE) { dz = 2; blockPosInOtherChunk.z = 0; }
-                        else if (neighbourBlockPos.z > CHUNK_SIZE) { dz = 0; blockPosInOtherChunk.z = CHUNK_SIZE - 1; }
+                        assert(neighbourChunkPos != chunkPosition);
 
-                        assert(dx != 1 || dz != 1);
-
-                        const Chunk* neighborChunk = neighborChunks[dx][dz];
+                        const Chunk* neighborChunk = chunkManager.getChunk(neighbourChunkPos);
                         assert(!neighborChunk || neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
                         if (neighborChunk && neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::AIR)
                             continue;
@@ -145,85 +325,4 @@ void Chunk::setBlockSafe(const glm::uvec3& pos, BLOCK_TYPE block)
     }
     else
         LOG_WARN("BLock not found in chunk: ({}, {}, {})", pos.x, pos.y, pos.z);
-}
-
-FastNoiseLite createBiomeNoise(const BIOME b, const int32_t seed)
-{
-    FastNoiseLite noise(seed);
-    switch (b)
-    {
-    case PLAINS:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_ValueCubic);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.007f);
-        break;
-    case DESERT:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Value);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.005f);
-        break;
-    case FOREST:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-        noise.SetFractalType(FastNoiseLite::FractalType_None);
-        noise.SetFrequency(0.002f);
-        break;
-    case MOUNTAIN:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.008f);
-        break;
-    case HILLS:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-        noise.SetFractalType(FastNoiseLite::FractalType_Ridged);
-        noise.SetFrequency(0.007f);
-        break;
-    }
-
-    return noise;
-}
-
-BLOCK_TYPE defaultBiomeBlock(const BIOME b)
-{
-    switch (b)
-    {
-        case PLAINS:
-            return BLOCK_TYPE::GRASS;
-        case DESERT:
-            return BLOCK_TYPE::SAND;
-        case FOREST:
-            return BLOCK_TYPE::WOOD;
-        case MOUNTAIN:
-            return BLOCK_TYPE::STONE;
-        case HILLS:
-            return BLOCK_TYPE::GRASS;
-        default:
-            return BLOCK_TYPE::INVALID;
-    }
-
-}
-
-uint64_t packChunkPos(uint32_t x, uint32_t y)
-{
-    return (uint64_t(x) << 32) | y;
-}
-
-void getNeighbors(std::unordered_map<uint64_t, Chunk*>& chunks, const glm::uvec2& chunkPos, Chunk* neighbors[3][3])
-{
-    static constexpr glm::ivec2 offs[8] = {
-        {-1,-1},{0,-1},{1,-1},
-        {-1, 0},        {1, 0},
-        {-1, 1},{0, 1},{1, 1}
-    };
-
-    for (auto& d : offs)
-    {
-        const glm::ivec2 p = glm::ivec2(chunkPos) + d;
-        if (p.x < 0 || p.y < 0)
-            continue;
-
-        auto it = chunks.find(packChunkPos(p.x, p.y));
-        neighbors[d.x + 1][d.y + 1] = (it != chunks.end())
-                          ? it->second
-                          : nullptr;
-    }
 }
