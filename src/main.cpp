@@ -1,51 +1,38 @@
 #define GLM_ENABLE_EXPERIMENTAL
-#define GLT_IMPLEMENTATION
-#define GLT_MANUAL_VIEWPORT
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glText/gltext.h>
-#include "glm/gtx/dual_quaternion.hpp"
+#include <iostream>
 #include <cstmlib/Profiling.h>
-
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
-
 #include "Camera.h"
 #include "Chunk.h"
-#include "Config.h"
-#include "FastNoiseLite.h"
 #include "Shader.h"
 #include "Window.h"
 #include "OpenGLHelper.h"
 #include "Raycast.h"
 #include "Texture.h"
-#include "VertexArray.h"
+#include "ThreadPool.h"
+#include <deque>
+#include <numeric>
+#include <algorithm>
 
 VertexArray createAxesVAO();
-glm::vec3 rawInput(const Window& window, const glm::vec3& dir);
-void drawText(const std::string& txt);
-void drawChunks(std::vector<Chunk>& chunks, GLuint shader, uint32_t maxChunkBakes, const glm::vec3& cameraPosition, float maxDistance);
+glm::vec3 rawInput(const Window& window);
 void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
 {
     LOG_INIT();
-    PROFILER_INIT(0);
+    PROFILER_INIT(100);
 
     bool debugMode = true;
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{0,0,-10}, 60.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE);
+    Camera cam(glm::vec3{1000,Chunk::MAX_GEN_HEIGHT, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
     float camSpeed = 70.0f;
 
-    std::vector<Chunk> chunks;
-
-    FastNoiseLite noise = createBiomeNoise(config::WORLD_BIOME, 1337);
-    for (uint32_t x = 0; x < config::WORLD_CHUNK_SIZE; x++)
-        for (uint32_t z = 0; z < config::WORLD_CHUNK_SIZE; z++)
-            chunks.emplace_back(glm::uvec2{x, z}, noise, config::WORLD_BIOME);
+    ChunkManager chunkManager;
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
@@ -53,7 +40,7 @@ int main(int argc, char* argv[])
 #pragma region window
     glm::dvec2 prevCursorPos = window.getMousePosition();
 
-    window.onKey([&chunks, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
+    window.onKey([&chunkManager, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
@@ -67,8 +54,7 @@ int main(int argc, char* argv[])
             win->setCursorDisabled(cursorLocked);
         }
         else if (key == GLFW_KEY_X)
-            for (auto& chunk : chunks)
-                chunk.isDirty = true;
+            chunkManager.dropChunkMeshes();
 
     });
     window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
@@ -79,12 +65,12 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    window.onMouseButton([&cam, &chunks, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
         if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, 15.0f, glm::ivec3{config::WORLD_CHUNK_SIZE * Chunk::CHUNK_SIZE, Chunk::MAX_HEIGHT, config::WORLD_CHUNK_SIZE * Chunk::CHUNK_SIZE}, chunks);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
         if (!res.hit)
             return;
 
@@ -104,18 +90,18 @@ int main(int argc, char* argv[])
                 blockType = BLOCK_TYPE::WOOD;
             assert(blockType != BLOCK_TYPE::INVALID);
 
-            glm::uvec3 offset;
+            glm::ivec3 offset;
             switch (res.face)
             {
                 case BACK: offset = {0,0,-1}; break;
-                case FRONT: offset = {0,1,1}; break;
+                case FRONT: offset = {0,0,1}; break;
                 case LEFT: offset = {-1,0,0}; break;
                 case RIGHT: offset = {1,0,0}; break;
                 case TOP: offset = {0, 1, 0}; break;
                 case BOTTOM: offset = {0, -1, 0}; break;
                 default: assert(false);
             }
-            glm::uvec3 neighbourBlockPos = positionInChunk + offset;
+            glm::ivec3 neighbourBlockPos = positionInChunk + offset;
 
             if (inBounds(neighbourBlockPos))
                 res.chunk->setBlockUnsafe(neighbourBlockPos, blockType);
@@ -123,38 +109,46 @@ int main(int argc, char* argv[])
             {
                 glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
                 if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
-                else if (neighbourBlockPos.x > Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
+                else if (neighbourBlockPos.x == -1) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
-                else if (neighbourBlockPos.z > Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
+                else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighborChunk = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z});
-                if (!neighborChunk)
-                    return;
+                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + glm::ivec2{offset.x, offset.z});
 
-                assert(neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                neighborChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
+                assert(neighbourChunk != nullptr);
+                assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+
+                neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
-        Chunk* c = nullptr;
-        if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{1, 0});
-        else if (positionInChunk.x == 0)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{-1, 0});
-        if (c != nullptr)
-            c->isDirty = true;
-        if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, 1});
-        else if (positionInChunk.z == 0)
-            c = getChunk(chunks, res.chunk->chunkPosition + glm::uvec2{0, -1});
-        if (c != nullptr)
-            c->isDirty = true;
-
+        if (positionInChunk.x == 0)
+        {
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y});
+            if (chunk) chunk->isMeshBaked = false;
+        }
+        else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
+        {
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y});
+            if (chunk) chunk->isMeshBaked = false;
+        }
+        if (positionInChunk.z == 0)
+        {
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1});
+            if (chunk) chunk->isMeshBaked = false;
+        }
+        else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
+        {
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
+            if (chunk) chunk->isMeshBaked = false;
+        }
     });
 
     window.setCursorDisabled(cursorLocked);
 #pragma endregion
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -174,6 +168,11 @@ int main(int argc, char* argv[])
 
     float exposure = 1;
     float lastTime = glfwGetTime();
+
+    std::deque<float> frameTimes;
+    float frameTimeAccumulator = 0.0f;
+    const float frameTimeWindow = 5.0f;
+
     while (window.isRunning())
     {
         if (debugMode)
@@ -191,11 +190,18 @@ int main(int argc, char* argv[])
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        const auto vel = rawInput(window, cam.lookDir);
+        frameTimes.push_back(deltaTime);
+        frameTimeAccumulator += deltaTime;
+        while (frameTimeAccumulator > frameTimeWindow)
+        {
+            frameTimeAccumulator -= frameTimes.front();
+            frameTimes.pop_front();
+        }
+
+        const auto vel = rawInput(window);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * deltaTime * camSpeed);
         cam.updateView();
-
 
 #pragma region draw
         textureAtlas.bind(0);
@@ -204,9 +210,12 @@ int main(int argc, char* argv[])
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        drawChunks(chunks, blockShader, config::MAX_BAKES_PER_FRAME, cam.position, config::RENDER_DISTANCE);
+        auto chunkPos = worldPosToChunkPos(cam.position);
+        chunkManager.unloadChunks(chunkPos);
+        chunkManager.loadChunks(chunkPos);
+        chunkManager.drawChunks(blockShader, chunkPos);
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, config::WORLD_SIZE, chunks);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
         if (res.hit)
             drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
@@ -217,9 +226,23 @@ int main(int argc, char* argv[])
             setUniformMat4(basicShader, "u_VP", cam.viewProjection);
             setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
             GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
+
             ImGui::Begin("Debug");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cam.position.x, cam.position.y, cam.position.z);
+
+            ImGui::Text("Frame data for last %.1f seconds:", frameTimeWindow);
+            const float sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0f);
+            const float avgFrameTime = sum / frameTimes.size();
+            ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
+            float maxFrameTime = *std::ranges::max_element(frameTimes.begin(), frameTimes.end());
+            ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
+            ImGui::Spacing();ImGui::Spacing();
+
+            ImGui::Text("Camera Position: %.2f, %.2f, %.2f", cam.position.x, cam.position.y, cam.position.z);
+            ImGui::Spacing();ImGui::Spacing();
+
+            ImGui::Text("Seed: %d", config::WORLD_SEED);
+            ImGui::Spacing();ImGui::Spacing();
+
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
             ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
             ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
@@ -253,12 +276,15 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     uint32_t index = 0;
     for (uint32_t i = 0; i < 6; i++)
     {
-        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, 0);
-        blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
+        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
+        const blockdata packedData = ((i & 0xF) << 28) |
+              ((positionInChunk.x & 0x1F) << 23) |
+              ((positionInChunk.y & 0x1F) << 18) |
+              ((positionInChunk.z & 0x1F) << 13) |
+              ((atlasOffset.x & 0xF) << 9) |
+              ((atlasOffset.y & 0xF) << 5);
         for (uint32_t j = 0; j < 6; j++)
-        {
             buffer[index++] = packedData;
-        }
     }
     VertexArray highlightVao;
     VertexBufferLayout highlightLayout;
@@ -271,55 +297,9 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     glDepthFunc(GL_LESS);
 }
 
-void drawChunks(std::vector<Chunk>& chunks, const GLuint shader, const uint32_t maxChunkBakes, const glm::vec3& cameraPosition, const float maxDistance)
-{
-    glm::vec2 camPosXZ{ cameraPosition.x, cameraPosition.z };
-
-    uint32_t chunksBaked = 0;
-    for (auto& chunk : chunks)
-    {
-        glm::vec2 chunkPosWorld = glm::vec2(chunk.chunkPosition) * (float) Chunk::CHUNK_SIZE;
-
-        if (glm::distance(chunkPosWorld, camPosXZ) > maxDistance)
-            continue;
-
-        if (chunk.isDirty)
-        {
-            if (chunksBaked >= maxChunkBakes)
-                continue;
-
-            Chunk* neighbors[3][3];
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                for (int dz = -1; dz <= 1; dz++)
-                {
-                    if (dx == 0 && dz == 0) // skip self
-                        continue;
-
-                    glm::uvec2 neighbourPos = glm::uvec2{dx, dz} + chunk.chunkPosition;
-                    Chunk* neighbour = getChunk(chunks, neighbourPos);
-
-                    if (!neighbour)
-                        neighbors[dx + 1][dz + 1] = nullptr;
-                    else
-                        neighbors[dx + 1][dz + 1] = &(*neighbour);
-                }
-            }
-
-            chunk.bake(neighbors);
-            chunksBaked++;
-        }
-
-        chunk.vao.bind();
-        setUniform3f(shader, "u_chunkOffset", {chunk.chunkPosition.x * Chunk::CHUNK_SIZE, 0, chunk.chunkPosition.y * Chunk::CHUNK_SIZE});
-
-        GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk.vao.vertexCount));
-    }
-}
-
 VertexArray createAxesVAO()
 {
-    float axisVertices[] =
+    const float axisVertices[] =
     {
         // X axis
         0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0,
@@ -344,7 +324,7 @@ VertexArray createAxesVAO()
     return vao;
 }
 
-glm::vec3 rawInput(const Window& window, const glm::vec3& dir)
+glm::vec3 rawInput(const Window& window)
 {
     glm::vec3 input(0.0f);
     input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);

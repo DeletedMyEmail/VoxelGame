@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cstmlib/Log.h"
 #include "glad/glad.h"
 #include "glm/vec2.hpp"
 
@@ -26,17 +27,17 @@ enum class BLOCK_TYPE
     SAND,
     WOOD,
     PUMPKIN,
-    MELONE
+    MELON
 };
 
 typedef GLuint blockdata;
 
-inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
+inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
 {
     switch (block)
     {
         case BLOCK_TYPE::TEST:
-                return {0+face,0};
+            return {0+face,0};
         case BLOCK_TYPE::GRASS:
             return {0+face,1};
         case BLOCK_TYPE::GRASS_FULL:
@@ -49,11 +50,12 @@ inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
             return {0+face,3};
         case BLOCK_TYPE::PUMPKIN:
             return {6+face,3};
-        case BLOCK_TYPE::MELONE:
+        case BLOCK_TYPE::MELON:
             return {6+face,4};
         case BLOCK_TYPE::HIGHLIGHTED:
             return {15,0};
         default:
-            return {0,0};
+            LOG_ERROR("Invalid block type for atlas offset");
+            exit(1);
     }
 }

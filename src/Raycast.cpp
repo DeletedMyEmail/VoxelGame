@@ -4,7 +4,6 @@
 #include <limits>
 #include "Block.h"
 #include "Raycast.h"
-#include <stdexcept>
 
 static float mod(float value, float modulus) { return std::fmod(std::fmod(value, modulus) + modulus, modulus); }
 
@@ -19,7 +18,7 @@ static float intbound(float s, float ds)
 
 static int signum(const float x) { return (x > 0) - (x < 0); }
 
-RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, const glm::ivec3& worldSize, std::vector<Chunk>& chunks)
+RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float radius, ChunkManager& chunkManager)
 {
     glm::ivec3 blockPos{std::floor(origin.x), std::floor(origin.y), std::floor(origin.z)};
     int stepX = signum(dir.x), stepY = signum(dir.y), stepZ = signum(dir.z);
@@ -36,15 +35,19 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
     float maxT = radius / length;
 
-    while ((stepX > 0 ? blockPos.x < worldSize.x : blockPos.x >= 0) &&
-           (stepY > 0 ? blockPos.y < worldSize.y : blockPos.y >= 0) &&
-           (stepZ > 0 ? blockPos.z < worldSize.z : blockPos.z >= 0))
+    while (blockPos.y < Chunk::CHUNK_SIZE)
     {
-        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.x >= worldSize.x || blockPos.y >= worldSize.y || blockPos.z >= worldSize.z))
+        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.y >= Chunk::CHUNK_SIZE))
         {
-            Chunk* chunk = getChunk(chunks, worldPosToChunkPos(blockPos));
-            assert(chunk != nullptr);
-            const BLOCK_TYPE block = chunk->getBlockUnsafe(worldPosToChunkBlockPos(blockPos));
+            const glm::uvec2 chunkPos = worldPosToChunkPos(blockPos);
+            Chunk* chunk = chunkManager.getChunk(chunkPos);
+            if (chunk == nullptr)
+            {
+                LOG_WARN("chunk null, raycast aborted");
+                break;
+            }
+
+            const BLOCK_TYPE block = chunk->getBlockSafe(worldPosToChunkBlockPos(blockPos));
             assert(block != BLOCK_TYPE::INVALID);
             if (block != BLOCK_TYPE::AIR)
                return {blockPos, chunk, block, face, face != INVALID};

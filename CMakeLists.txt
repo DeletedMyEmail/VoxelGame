@@ -8,7 +8,7 @@ add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 # add_compile_definitions(NOLOG)
 
 # uncomment to remove performance profiling at compile time
-add_compile_definitions(NOPROFILE)
+#add_compile_definitions(NOPROFILE)
 
 include(FetchContent)
 
