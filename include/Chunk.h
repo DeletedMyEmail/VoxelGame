@@ -48,7 +48,6 @@ struct Chunk
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
     VertexArray vao;
     glm::ivec2 chunkPosition;
-    //std::bitset<CHUNK_SIZE> bitmap[CHUNK_SIZE][CHUNK_SIZE];
     bool isBaked;
     bool isLoaded;
 };

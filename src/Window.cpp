@@ -1,7 +1,6 @@
 #include "Window.h"
 #include "cstmlib/Log.h"
 #include "OpenGLHelper.h"
-#include "../cmake-build-release/_deps/imgui-src/imgui.h"
 
 bool Window::s_glfwInitialized = false;
 

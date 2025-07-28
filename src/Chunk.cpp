@@ -1,11 +1,9 @@
 #include "Chunk.h"
 #include <algorithm>
-#include <latch>
 #include <ranges>
 #include "Camera.h"
 #include "OpenGLHelper.h"
 #include "Shader.h"
-#include "cstmlib/Profiling.h"
 #include "glm/common.hpp"
 
 // CHUNK MANAGER ---------------------------------------
@@ -60,7 +58,7 @@ void ChunkManager::drawChunks(const GLuint shader, const glm::ivec2& currChunkPo
 
             if (chunk->isBaked)
             {
-                if (chunk->vao.vertexCount > 0)
+                if (chunk->vao.vertexCount == 0)
                     continue;
 
                 chunk->vao.bind();
@@ -267,6 +265,7 @@ void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* 
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(i));
+                    LOG_INFO("{} {} ", atlasOffset.x, atlasOffset.y);
                     blockdata packedData = ((i & 0xF) << 28) |
                                           ((x & 0x1F) << 23) |
                                           ((y & 0x1F) << 18) |
