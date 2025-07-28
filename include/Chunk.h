@@ -34,7 +34,7 @@ struct Chunk
 {
     Chunk();
     Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);;
-    void bake(ChunkManager& chunkManager);
+    void bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
     void setBlockUnsafe(const glm::ivec3& pos, BLOCK_TYPE block);

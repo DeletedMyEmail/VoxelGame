@@ -33,14 +33,6 @@ int main(int argc, char* argv[])
     float camSpeed = 70.0f;
 
     ChunkManager chunkManager;
-    chunkManager.loadChunks({0,0});
-    Chunk c({0, 0}, chunkManager.noise, config::WORLD_BIOME);;
-
-    auto res = REP_TEST([&]() {c.bake(chunkManager);}, Chunk::BLOCKS_PER_CHUNK, 1000, 1000);
-    LOG_INFO("\n\n{}\n",std::string(res));
-
-    PROFILER_END();
-    exit(1);
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;

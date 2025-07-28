@@ -60,16 +60,24 @@ void ChunkManager::drawChunks(const GLuint shader, const glm::ivec2& currChunkPo
 
             if (chunk->isBaked)
             {
+                if (chunk->vao.vertexCount > 0)
+                    continue;
+
                 chunk->vao.bind();
                 setUniform3f(shader, "u_chunkOffset", glm::vec3(chunkPosToWorldBlockPos(chunk->chunkPosition)));
                 GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk->vao.vertexCount));
             }
             else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
             {
-                // TODO: race condition ????? idk it breaks lol
+                // TODO: race condition ?
                 //threadPool.queueJob([chunk, this]()
                 //{
-                    chunk->bake(*this);
+                auto pos = chunk->chunkPosition;
+                Chunk* leftChunk = getChunk({pos.x - 1, pos.y});
+                Chunk* rightChunk = getChunk({pos.x + 1, pos.y});
+                Chunk* frontChunk = getChunk({pos.x, pos.y + 1});
+                Chunk* backChunk = getChunk({pos.x, pos.y - 1});
+                chunk->bake(leftChunk, rightChunk, frontChunk, backChunk);
                 //});
                 chunksBaked++;
             }
@@ -185,7 +193,7 @@ Chunk::Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, const 
     }
 }
 
-void Chunk::bake(ChunkManager& chunkManager)
+void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk)
 {
     std::vector<blockdata> buffer;
     buffer.reserve(BLOCKS_PER_CHUNK / 2);
@@ -229,23 +237,36 @@ void Chunk::bake(ChunkManager& chunkManager)
                     {
                         // check if a neighboring chunk has a covering block
                         glm::ivec3 blockPosInOtherChunk = neighbourBlockPos;
-                        glm::ivec2 neighbourChunkPos = chunkPosition;
-                        if (neighbourBlockPos.x == CHUNK_SIZE) { neighbourChunkPos.x += 1; blockPosInOtherChunk.x = 0; }
-                        else if (neighbourBlockPos.x == -1) { neighbourChunkPos.x -= 1; blockPosInOtherChunk.x = CHUNK_SIZE - 1; }
+                        Chunk* neighborChunk = nullptr;
 
-                        if (neighbourBlockPos.z == CHUNK_SIZE) { neighbourChunkPos.y += 1; blockPosInOtherChunk.z = 0; }
-                        else if (neighbourBlockPos.z == -1) { neighbourChunkPos.y -= 1; blockPosInOtherChunk.z = CHUNK_SIZE - 1; }
+                        if (neighbourBlockPos.x == CHUNK_SIZE)
+                        {
+                            neighborChunk = rightChunk;
+                            blockPosInOtherChunk.x = 0;
+                        }
+                        else if (neighbourBlockPos.x == -1)
+                        {
+                            neighborChunk = leftChunk;
+                            blockPosInOtherChunk.x = CHUNK_SIZE - 1;
+                        }
 
-                        assert(neighbourChunkPos != chunkPosition);
+                        if (neighbourBlockPos.z == CHUNK_SIZE)
+                        {
+                            neighborChunk = frontChunk;
+                            blockPosInOtherChunk.z = 0;
+                        }
+                        else if (neighbourBlockPos.z == -1)
+                        {
+                            neighborChunk = backChunk;
+                            blockPosInOtherChunk.z = CHUNK_SIZE - 1;
+                        }
 
-                        const Chunk* neighborChunk = chunkManager.getChunk(neighbourChunkPos);
                         assert(!neighborChunk || neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
                         if (neighborChunk && neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::AIR)
                             continue;
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(i));
-
                     blockdata packedData = ((i & 0xF) << 28) |
                                           ((x & 0x1F) << 23) |
                                           ((y & 0x1F) << 18) |
