@@ -1,6 +1,6 @@
 # Hi, I'm a readme file
 
-![image](https://github.com/user-attachments/assets/c086933c-c18a-4289-9ee4-a8d35243db03)
+![demo.png](resources/images/demo.png)
 
 ### Build Process
 Install cmake and run ```bash build.sh``` in your terminal. 
@@ -13,7 +13,7 @@ This will create a build directory and compile the project.
 - `V` toggle mouse cursor
 - `X` refresh (drop all chunks)
 
-### Roadmap
+### Roadmap / Features
 - [ ] graphics & optimizations
   - [x] 1 int -> 1 vertex
   - [x] 1 int -> whole face
@@ -22,15 +22,14 @@ This will create a build directory and compile the project.
   - [ ] frustum culling
     - [x] simple circular frustum culling 
     - [ ] more complex version
-  - [ ] multithreading
+  - [x] multithreading
     - [x] chunk loading
-    - [ ] baking
-  - [ ] less mem fragmentation in the chunk manager
-  - [ ] 32^3 chunks
+    - [x] chunk unloading
+    - [x] mesh generation
+  - [x] less mem fragmentation in the chunk manager
+  - [x] 32^3 chunks
   - [ ] binary meshing
   - [ ] chunk empty flag
-  - [ ] particle system
-
 
 - [ ] game mechanics
   - [ ] collisions
@@ -40,6 +39,7 @@ This will create a build directory and compile the project.
     - [x] chunk unloading
   - [ ] biome distribution
   - [x] placing and breaking blocks
+  - [ ] particle system
   - [ ] procedural world generation
     - [x] noise maps for terrain height (for each biome)
     - [ ] noise maps for biome distribution

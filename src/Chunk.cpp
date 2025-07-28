@@ -11,7 +11,7 @@
 constexpr uint32_t getChunkCount() { return config::LOAD_DISTANCE * config::LOAD_DISTANCE;}
 
 ChunkManager::ChunkManager()
-    : threadPool(config::LOADING_THREADS), chunksToLoad{}, noise(config::WORLD_SEED)
+    : threadPool(config::THREAD_COUNT), chunksToLoad{}, noise(config::WORLD_SEED)
 {
     chunks.resize((1 + 2 * config::LOAD_DISTANCE) * (1 + 2 * config::LOAD_DISTANCE));
 }
@@ -28,7 +28,8 @@ void ChunkManager::unloadChunks(const glm::ivec2& currChunkPos)
             glm::abs(chunk.chunkPosition.y - currChunkPos.y) > config::LOAD_DISTANCE)
         {
             chunk.isLoaded = false;
-            chunk.isBaked = false;
+            chunk.isMeshBaked = false;
+            chunk.isMeshDataReady = false;
             unloads++;
         }
 
@@ -56,7 +57,7 @@ void ChunkManager::drawChunks(const GLuint shader, const glm::ivec2& currChunkPo
             if (chunk == nullptr)
                 continue;
 
-            if (chunk->isBaked)
+            if (chunk->isMeshBaked)
             {
                 if (chunk->vao.vertexCount == 0)
                     continue;
@@ -67,23 +68,26 @@ void ChunkManager::drawChunks(const GLuint shader, const glm::ivec2& currChunkPo
             }
             else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
             {
-                // TODO: race condition ?
-                //threadPool.queueJob([chunk, this]()
-                //{
-                auto pos = chunk->chunkPosition;
-                Chunk* leftChunk = getChunk({pos.x - 1, pos.y});
-                Chunk* rightChunk = getChunk({pos.x + 1, pos.y});
-                Chunk* frontChunk = getChunk({pos.x, pos.y + 1});
-                Chunk* backChunk = getChunk({pos.x, pos.y - 1});
-                chunk->bake(leftChunk, rightChunk, frontChunk, backChunk);
-                //});
-                chunksBaked++;
+                ++chunksBaked;
+                threadPool.queueJob([this, chunk, chunkPos]()
+                {
+                    chunk->generateMeshData(getChunk({chunkPos.x - 1, chunkPos.y}),
+                        getChunk({chunkPos.x + 1, chunkPos.y}),
+                        getChunk({chunkPos.x, chunkPos.y + 1}),
+                        getChunk({chunkPos.x, chunkPos.y - 1}));
+                });
             }
         }
     }
 
     while (threadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+    for (auto& chunk : chunks)
+    {
+        if (chunk.isMeshDataReady && !chunk.isMeshBaked)
+            chunk.bakeMesh();
+    }
 }
 
 void ChunkManager::loadChunks(const glm::ivec2& currChunkPos)
@@ -150,7 +154,10 @@ Chunk* ChunkManager::getChunk(const glm::ivec2 pos)
 void ChunkManager::dropChunkMeshes()
 {
     for (auto& chunk : chunks)
-        chunk.isBaked = false;
+    {
+        chunk.isMeshBaked = false;
+        chunk.isMeshDataReady = false;
+    }
 }
 
 // CHUNK ---------------------------------------
@@ -164,13 +171,14 @@ uint32_t noiseToHeight(const float value)
 }
 
 Chunk::Chunk()
-    : blocks{}, chunkPosition({0}), isBaked(false), isLoaded(false)
+    : blocks{}, chunkPosition({0}), isLoaded(false), isMeshBaked(false), isMeshDataReady(false)
 {
 }
 
 Chunk::Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, const BIOME biome)
-    : blocks{}, chunkPosition(chunkPosition), isBaked(false), isLoaded(true)
+    : blocks{}, chunkPosition(chunkPosition), isLoaded(true), isMeshBaked(false), isMeshDataReady(false)
 {
+    meshData.reserve(BLOCKS_PER_CHUNK / 2);
     const BLOCK_TYPE defaultBlock = defaultBiomeBlock(biome);
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
@@ -190,13 +198,9 @@ Chunk::Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, const 
         }
     }
 }
-
-void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk)
+void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk)
 {
-    std::vector<blockdata> buffer;
-    buffer.reserve(BLOCKS_PER_CHUNK / 2);
-    uint32_t faceCount = 0;
-
+    meshData.clear();
     for (uint32_t z = 0; z < CHUNK_SIZE; z++)
     {
         for (uint32_t y = 0; y < CHUNK_SIZE; y++)
@@ -209,15 +213,13 @@ void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* 
                 if (block == BLOCK_TYPE::AIR)
                     continue;
 
-                for (uint32_t i = 0; i < 6; i++)
+                for (uint32_t face = 0; face < 6; face++)
                 {
-                    if (i == BOTTOM && y == 0)
-                        continue;
-                    if (i == TOP && y == CHUNK_SIZE - 1)
+                    if (face == BOTTOM && y == 0)
                         continue;
 
                     glm::ivec3 neighbourBlockPos;
-                    switch (i)
+                    switch (face)
                     {
                         case BACK: neighbourBlockPos = {x, y, z - 1}; break;
                         case FRONT: neighbourBlockPos = {x, y, z + 1}; break;
@@ -228,7 +230,7 @@ void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* 
                         default: assert(false);
                     }
 
-                    BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
+                    const BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
                     if (neighbourBlock != BLOCK_TYPE::AIR && neighbourBlock != BLOCK_TYPE::INVALID)
                         continue;
                     if (neighbourBlock == BLOCK_TYPE::INVALID && neighbourBlockPos.y < CHUNK_SIZE)
@@ -264,28 +266,30 @@ void Chunk::bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* 
                             continue;
                     }
 
-                    auto atlasOffset = getAtlasOffset(block, FACE(i));
-                    LOG_INFO("{} {} ", atlasOffset.x, atlasOffset.y);
-                    blockdata packedData = ((i & 0xF) << 28) |
+                    auto atlasOffset = getAtlasOffset(block, FACE(face));
+                    blockdata packedData = ((face & 0xF) << 28) |
                                           ((x & 0x1F) << 23) |
                                           ((y & 0x1F) << 18) |
                                           ((z & 0x1F) << 13) |
                                           ((atlasOffset.x & 0xF) << 9) |
                                           ((atlasOffset.y & 0xF) << 5);
-                    buffer.push_back(packedData);
-                    faceCount++;
+                    meshData.push_back(packedData);
                 }
             }
         }
     }
-    
+    isMeshDataReady = true;
+    isMeshBaked = false;
+}
+void Chunk::bakeMesh()
+{
     vao.clear();
-    const GLuint instanceVbo = createBuffer(buffer.data(), buffer.size() * sizeof(blockdata));
+    const GLuint instanceVbo = createBuffer(meshData.data(), meshData.size() * sizeof(blockdata));
     VertexBufferLayout layout;
     layout.pushUInt(1, false, 1);
     vao.addBuffer(instanceVbo, layout);
-    vao.vertexCount = faceCount;
-    isBaked = true;
+    vao.vertexCount = meshData.size();
+    isMeshBaked = true;
 }
 
 BLOCK_TYPE Chunk::getBlockUnsafe(const glm::ivec3& pos) const
@@ -304,10 +308,11 @@ BLOCK_TYPE Chunk::getBlockSafe(const glm::ivec3& pos) const
 void Chunk::setBlockUnsafe(const glm::ivec3& pos, const BLOCK_TYPE block)
 {
     blocks[getBlockIndex(pos)] = block;
-    isBaked = false;
+    isMeshBaked = false;
+    isMeshDataReady = false;
 }
 
-void Chunk::setBlockSafe(const glm::ivec3& pos, BLOCK_TYPE block)
+void Chunk::setBlockSafe(const glm::ivec3& pos, const BLOCK_TYPE block)
 {
     if (inBounds(pos))
         setBlockUnsafe(pos, block);

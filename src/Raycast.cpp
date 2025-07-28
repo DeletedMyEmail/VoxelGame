@@ -4,9 +4,6 @@
 #include <limits>
 #include "Block.h"
 #include "Raycast.h"
-#include <stdexcept>
-
-#include "../cmake-build-debug/_deps/cstmlib-src/include/cstmlib/Log.h"
 
 static float mod(float value, float modulus) { return std::fmod(std::fmod(value, modulus) + modulus, modulus); }
 

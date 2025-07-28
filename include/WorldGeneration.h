@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Block.h"
 #include "FastNoiseLite.h"
 

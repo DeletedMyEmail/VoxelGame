@@ -44,7 +44,7 @@ BLOCK_TYPE defaultBiomeBlock(const BIOME b)
     case DESERT:
         return BLOCK_TYPE::SAND;
     case FOREST:
-        return BLOCK_TYPE::WOOD;
+        return BLOCK_TYPE::MELON;
     case MOUNTAIN:
         return BLOCK_TYPE::STONE;
     case HILLS:

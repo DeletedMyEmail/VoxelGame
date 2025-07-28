@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
             switch (res.face)
             {
                 case BACK: offset = {0,0,-1}; break;
-                case FRONT: offset = {0,1,1}; break;
+                case FRONT: offset = {0,0,1}; break;
                 case LEFT: offset = {-1,0,0}; break;
                 case RIGHT: offset = {1,0,0}; break;
                 case TOP: offset = {0, 1, 0}; break;
@@ -125,22 +125,22 @@ int main(int argc, char* argv[])
         if (positionInChunk.x == 0)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y});
-            if (chunk) chunk->isBaked = false;
+            if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y});
-            if (chunk) chunk->isBaked = false;
+            if (chunk) chunk->isMeshBaked = false;
         }
         if (positionInChunk.z == 0)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1});
-            if (chunk) chunk->isBaked = false;
+            if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
-            if (chunk) chunk->isBaked = false;
+            if (chunk) chunk->isMeshBaked = false;
         }
     });
 
@@ -215,9 +215,9 @@ int main(int argc, char* argv[])
         chunkManager.loadChunks(chunkPos);
         chunkManager.drawChunks(blockShader, chunkPos);
 
-        //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        //if (res.hit)
-        //    drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+        if (res.hit)
+            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {
@@ -237,7 +237,10 @@ int main(int argc, char* argv[])
             ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
             ImGui::Spacing();ImGui::Spacing();
 
-            ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cam.position.x, cam.position.y, cam.position.z);
+            ImGui::Text("Camera Position: %.2f, %.2f, %.2f", cam.position.x, cam.position.y, cam.position.z);
+            ImGui::Spacing();ImGui::Spacing();
+
+            ImGui::Text("Seed: %d", config::WORLD_SEED);
             ImGui::Spacing();ImGui::Spacing();
 
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
@@ -274,7 +277,12 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     for (uint32_t i = 0; i < 6; i++)
     {
         const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
-        const blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
+        const blockdata packedData = ((i & 0xF) << 28) |
+              ((positionInChunk.x & 0x1F) << 23) |
+              ((positionInChunk.y & 0x1F) << 18) |
+              ((positionInChunk.z & 0x1F) << 13) |
+              ((atlasOffset.x & 0xF) << 9) |
+              ((atlasOffset.y & 0xF) << 5);
         for (uint32_t j = 0; j < 6; j++)
             buffer[index++] = packedData;
     }

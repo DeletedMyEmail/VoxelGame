@@ -34,7 +34,8 @@ struct Chunk
 {
     Chunk();
     Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);;
-    void bake(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
+    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
+    void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
     void setBlockUnsafe(const glm::ivec3& pos, BLOCK_TYPE block);
@@ -46,10 +47,10 @@ struct Chunk
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
+    std::vector<blockdata> meshData;
     VertexArray vao;
     glm::ivec2 chunkPosition;
-    bool isBaked;
-    bool isLoaded;
+    bool isLoaded, isMeshBaked, isMeshDataReady;
 };
 
 inline glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec2& chunkPos) { return glm::ivec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
