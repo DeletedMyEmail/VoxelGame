@@ -31,7 +31,7 @@ enum class BLOCK_TYPE
 
 typedef GLuint blockdata;
 
-inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
+inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
 {
     switch (block)
     {
@@ -54,6 +54,6 @@ inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const uint32_t face)
         case BLOCK_TYPE::HIGHLIGHTED:
             return {15,0};
         default:
-            return {0,0};
+            assert(false && "Invalid block type for atlas offset");
     }
 }

@@ -23,9 +23,12 @@ This will create a build directory and compile the project.
     - [x] simple circular frustum culling 
     - [ ] more complex version
   - [ ] multithreading
-    - [ ] chunk loading
+    - [x] chunk loading
     - [ ] baking
   - [ ] less mem fragmentation in the chunk manager
+  - [ ] 32^3 chunks
+  - [ ] binary meshing
+  - [ ] chunk empty flag
   - [ ] particle system
 
 
@@ -35,6 +38,7 @@ This will create a build directory and compile the project.
     - [x] chunk system
     - [x] chunk loading
     - [x] chunk unloading
+  - [ ] biome distribution
   - [x] placing and breaking blocks
   - [ ] procedural world generation
     - [x] noise maps for terrain height (for each biome)

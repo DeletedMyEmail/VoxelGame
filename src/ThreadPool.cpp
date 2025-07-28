@@ -1,12 +1,17 @@
 #include "ThreadPool.h"
 
+#include <mutex>
+
 ThreadPool::ThreadPool(const uint32_t numThreads)
 {
     for (uint32_t i = 0; i < numThreads; ++i)
         threads.emplace_back(&ThreadPool::threadLoop, this);
 }
 
-ThreadPool::~ThreadPool() = default;
+ThreadPool::~ThreadPool()
+{
+    stop();
+}
 
 void ThreadPool::queueJob(const std::function<void()>& job)
 {
@@ -21,11 +26,13 @@ void ThreadPool::stop()
 {
     for (auto& thread : threads)
         thread.request_stop();
+    mutexCondition.notify_all();
 }
 
-bool ThreadPool::busy() const
+bool ThreadPool::busy()
 {
-    return busyThreads.load() > 0;
+    std::lock_guard<std::mutex> lock(queueMutex);
+    return !jobs.empty() || busyThreads.load() > 0;
 }
 
 void ThreadPool::threadLoop(const std::stop_token& st)

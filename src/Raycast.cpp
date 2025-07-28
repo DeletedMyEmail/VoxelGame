@@ -38,9 +38,9 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
     float maxT = radius / length;
 
-    while (blockPos.y < Chunk::MAX_HEIGHT)
+    while (blockPos.y < Chunk::CHUNK_SIZE)
     {
-        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.y >= Chunk::MAX_HEIGHT))
+        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.y >= Chunk::CHUNK_SIZE))
         {
             const glm::uvec2 chunkPos = worldPosToChunkPos(blockPos);
             Chunk* chunk = chunkManager.getChunk(chunkPos);

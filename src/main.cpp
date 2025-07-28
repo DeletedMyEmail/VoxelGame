@@ -12,6 +12,9 @@
 #include "Raycast.h"
 #include "Texture.h"
 #include "ThreadPool.h"
+#include <deque>
+#include <numeric>
+#include <algorithm>
 
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window);
@@ -20,16 +23,24 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, G
 int main(int argc, char* argv[])
 {
     LOG_INIT();
-    PROFILER_INIT(1000);
+    PROFILER_INIT(100);
 
     bool debugMode = true;
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{10,Chunk::MAX_GEN_HEIGHT,10}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 2);
+    Camera cam(glm::vec3{1000,Chunk::MAX_GEN_HEIGHT, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
     float camSpeed = 70.0f;
 
     ChunkManager chunkManager;
+    chunkManager.loadChunks({0,0});
+    Chunk c({0, 0}, chunkManager.noise, config::WORLD_BIOME);;
+
+    auto res = REP_TEST([&]() {c.bake(chunkManager);}, Chunk::BLOCKS_PER_CHUNK, 1000, 1000);
+    LOG_INFO("\n\n{}\n",std::string(res));
+
+    PROFILER_END();
+    exit(1);
 
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
@@ -87,7 +98,7 @@ int main(int argc, char* argv[])
                 blockType = BLOCK_TYPE::WOOD;
             assert(blockType != BLOCK_TYPE::INVALID);
 
-            glm::uvec3 offset;
+            glm::ivec3 offset;
             switch (res.face)
             {
                 case BACK: offset = {0,0,-1}; break;
@@ -98,7 +109,7 @@ int main(int argc, char* argv[])
                 case BOTTOM: offset = {0, -1, 0}; break;
                 default: assert(false);
             }
-            glm::uvec3 neighbourBlockPos = positionInChunk + offset;
+            glm::ivec3 neighbourBlockPos = positionInChunk + offset;
 
             if (inBounds(neighbourBlockPos))
                 res.chunk->setBlockUnsafe(neighbourBlockPos, blockType);
@@ -106,11 +117,11 @@ int main(int argc, char* argv[])
             {
                 glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
                 if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
-                else if (neighbourBlockPos.x > Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
+                else if (neighbourBlockPos.x == -1) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
-                else if (neighbourBlockPos.z > Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
+                else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + glm::uvec2{offset.x, offset.z});
+                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + glm::ivec2{offset.x, offset.z});
 
                 assert(neighbourChunk != nullptr);
                 assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
@@ -122,28 +133,30 @@ int main(int argc, char* argv[])
         if (positionInChunk.x == 0)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y});
-            if (chunk) chunk->isDirty = true;
+            if (chunk) chunk->isBaked = false;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y});
-            if (chunk) chunk->isDirty = true;
+            if (chunk) chunk->isBaked = false;
         }
         if (positionInChunk.z == 0)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1});
-            if (chunk) chunk->isDirty = true;
+            if (chunk) chunk->isBaked = false;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
-            if (chunk) chunk->isDirty = true;
+            if (chunk) chunk->isBaked = false;
         }
     });
 
     window.setCursorDisabled(cursorLocked);
 #pragma endregion
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -163,6 +176,11 @@ int main(int argc, char* argv[])
 
     float exposure = 1;
     float lastTime = glfwGetTime();
+
+    std::deque<float> frameTimes;
+    float frameTimeAccumulator = 0.0f;
+    const float frameTimeWindow = 5.0f;
+
     while (window.isRunning())
     {
         if (debugMode)
@@ -180,6 +198,14 @@ int main(int argc, char* argv[])
         const float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
+        frameTimes.push_back(deltaTime);
+        frameTimeAccumulator += deltaTime;
+        while (frameTimeAccumulator > frameTimeWindow)
+        {
+            frameTimeAccumulator -= frameTimes.front();
+            frameTimes.pop_front();
+        }
+
         const auto vel = rawInput(window);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * deltaTime * camSpeed);
@@ -192,9 +218,10 @@ int main(int argc, char* argv[])
         setUniform1i(blockShader, "u_textureSlot", 0);
         setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
 
-        chunkManager.unloadChunks(worldPosToChunkPos(cam.position));
-        chunkManager.drawChunks(blockShader, cam.position);
-        chunkManager.loadChunks();
+        auto chunkPos = worldPosToChunkPos(cam.position);
+        chunkManager.unloadChunks(chunkPos);
+        chunkManager.loadChunks(chunkPos);
+        chunkManager.drawChunks(blockShader, chunkPos);
 
         //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
         //if (res.hit)
@@ -207,10 +234,20 @@ int main(int argc, char* argv[])
             setUniformMat4(basicShader, "u_VP", cam.viewProjection);
             setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
             GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
+
             ImGui::Begin("Debug");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+            ImGui::Text("Frame data for last %.1f seconds:", frameTimeWindow);
+            const float sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0f);
+            const float avgFrameTime = sum / frameTimes.size();
+            ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
+            float maxFrameTime = *std::ranges::max_element(frameTimes.begin(), frameTimes.end());
+            ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
+            ImGui::Spacing();ImGui::Spacing();
+
             ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cam.position.x, cam.position.y, cam.position.z);
-            ImGui::Text("Chunks loaded: %d", chunkManager.getChunkCount());
+            ImGui::Spacing();ImGui::Spacing();
+
             ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
             ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
             ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
@@ -244,12 +281,10 @@ void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, c
     uint32_t index = 0;
     for (uint32_t i = 0; i < 6; i++)
     {
-        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, 0);
-        blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
+        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
+        const blockdata packedData = (i << 28) | (positionInChunk.x << 24) | (positionInChunk.y << 16) | (positionInChunk.z << 12) | (atlasOffset.x << 8) | (atlasOffset.y << 4);
         for (uint32_t j = 0; j < 6; j++)
-        {
             buffer[index++] = packedData;
-        }
     }
     VertexArray highlightVao;
     VertexBufferLayout highlightLayout;
