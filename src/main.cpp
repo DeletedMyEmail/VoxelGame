@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{1000,Chunk::MAX_GEN_HEIGHT, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
+    Camera cam(glm::vec3{1000, Chunk::CHUNK_SIZE, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
     float camSpeed = 70.0f;
 
     ChunkManager chunkManager;

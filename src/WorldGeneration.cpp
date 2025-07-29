@@ -1,56 +1,57 @@
 #include "WorldGeneration.h"
 
-FastNoiseLite createBiomeNoise(const BIOME b, const int32_t seed)
+#include "Chunk.h"
+#include "Config.h"
+#include "glm/common.hpp"
+#include "glm/exponential.hpp"
+#include "FastNoiseLite.h"
+
+FastNoiseLite genTerrainNoise()
 {
-    FastNoiseLite noise(seed);
-    switch (b)
-    {
-    case PLAINS:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_ValueCubic);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.007f);
-        break;
-    case DESERT:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Value);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.005f);
-        break;
-    case FOREST:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-        noise.SetFractalType(FastNoiseLite::FractalType_None);
-        noise.SetFrequency(0.002f);
-        break;
-    case MOUNTAIN:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noise.SetFrequency(0.008f);
-        break;
-    case HILLS:
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-        noise.SetFractalType(FastNoiseLite::FractalType_Ridged);
-        noise.SetFrequency(0.007f);
-        break;
-    }
+    FastNoiseLite noise;
+    noise.SetSeed(config::WORLD_SEED);
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    noise.SetFrequency(0.01f);        // Controls terrain scale
+    noise.SetFractalOctaves(4);       // Number of noise layers
+    noise.SetFractalLacunarity(2.0f); // Frequency multiplier between octaves
+    noise.SetFractalGain(0.5f);       // Amplitude multiplier between octaves
 
     return noise;
 }
 
-BLOCK_TYPE defaultBiomeBlock(const BIOME b)
+FastNoiseLite genTreeNoise()
 {
-    switch (b)
-    {
-    case PLAINS:
-        return BLOCK_TYPE::GRASS;
-    case DESERT:
-        return BLOCK_TYPE::SAND;
-    case FOREST:
-        return BLOCK_TYPE::MELON;
-    case MOUNTAIN:
-        return BLOCK_TYPE::STONE;
-    case HILLS:
-        return BLOCK_TYPE::GRASS;
-    default:
-        return BLOCK_TYPE::INVALID;
-    }
+    FastNoiseLite noise;
+    noise.SetSeed(config::WORLD_SEED);
 
+    return noise;
+}
+
+inline static float AMP = 2000.0f;
+inline static constexpr uint32_t MAX_GEN_HEIGHT = 30;// Chunk::CHUNK_SIZE - Chunk::CHUNK_SIZE / 4;
+inline static constexpr uint32_t MIN_GEN_HEIGHT = 1;//Chunk::CHUNK_SIZE / 4;
+
+uint32_t mapToHeightRange(const float value)
+{
+    assert(value == glm::clamp(value, -AMP, AMP));
+
+    const float normalized = (value + AMP) / (2.0f * AMP);
+    return uint32_t(MIN_GEN_HEIGHT + normalized * (MAX_GEN_HEIGHT - MIN_GEN_HEIGHT));
+}
+
+uint32_t noiseToHeight(const float value)
+{
+    const float normalized = (value + 1.0f) * 0.5f;
+    return MIN_GEN_HEIGHT + normalized * (MAX_GEN_HEIGHT - MIN_GEN_HEIGHT);
+}
+
+uint32_t getHeightAt(const glm::ivec2& pos)
+{
+    static FastNoiseLite terrainNoise = genTerrainNoise();
+
+    float val = terrainNoise.GetNoise((float) pos.x, (float) pos.y);
+    //val = glm::pow(val,4.0f) * AMP;
+
+    return noiseToHeight(val);
 }

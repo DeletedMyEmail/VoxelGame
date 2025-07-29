@@ -1,16 +1,5 @@
 #pragma once
 
-#include "Block.h"
-#include "FastNoiseLite.h"
+#include "glm/vec2.hpp"
 
-enum BIOME
-{
-    PLAINS = 0,
-    DESERT,
-    FOREST,
-    MOUNTAIN,
-    HILLS
-};
-
-FastNoiseLite createBiomeNoise(BIOME b, int32_t seed);
-BLOCK_TYPE defaultBiomeBlock(BIOME b);
+uint32_t getHeightAt(const glm::ivec2& pos);

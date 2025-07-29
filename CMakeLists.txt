@@ -66,7 +66,6 @@ target_sources(${PROJECT_NAME} PRIVATE
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
         glfw
@@ -97,7 +96,11 @@ target_link_libraries(${PROJECT_NAME}_tests
         pthread
         glfw
         OpenGL::GL
-        spdlog::spdlog_header_only
+        cstmlib
+)
+
+target_include_directories(${PROJECT_NAME}_tests PRIVATE
+        ${fastnoise_SOURCE_DIR}/Cpp
 )
 
 # Add test command

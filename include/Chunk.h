@@ -1,15 +1,11 @@
 #pragma once
 
-#include <bitset>
-#include <unordered_map>
 #include "Block.h"
 #include "Config.h"
 #include "VertexArray.h"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
-#include "FastNoiseLite.h"
 #include "ThreadPool.h"
-#include "WorldGeneration.h"
 
 struct Chunk;
 
@@ -27,13 +23,12 @@ struct ChunkManager
     std::mutex chunksMutex;
     uint64_t chunksToLoad[config::MAX_LOADS_PER_FRAME];
     uint32_t numChunksToLoad = 0;
-    FastNoiseLite noise;
 };
 
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);;
+    Chunk(const glm::ivec2& chunkPosition);;
     void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
@@ -42,8 +37,6 @@ struct Chunk
     void setBlockSafe(const glm::ivec3& pos, BLOCK_TYPE block);
 
     static constexpr int32_t CHUNK_SIZE = 32;
-    static constexpr int32_t MAX_GEN_HEIGHT = 32;
-    static constexpr int32_t MIN_GEN_HEIGHT = 4;
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];

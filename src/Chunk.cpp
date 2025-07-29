@@ -1,9 +1,9 @@
 #include "Chunk.h"
 #include <algorithm>
-#include <ranges>
 #include "Camera.h"
 #include "OpenGLHelper.h"
 #include "Shader.h"
+#include "WorldGeneration.h"
 #include "glm/common.hpp"
 
 // CHUNK MANAGER ---------------------------------------
@@ -11,7 +11,7 @@
 constexpr uint32_t getChunkCount() { return config::LOAD_DISTANCE * config::LOAD_DISTANCE;}
 
 ChunkManager::ChunkManager()
-    : threadPool(config::THREAD_COUNT), chunksToLoad{}, noise(config::WORLD_SEED)
+    : threadPool(config::THREAD_COUNT), chunksToLoad{}
 {
     chunks.resize((1 + 2 * config::LOAD_DISTANCE) * (1 + 2 * config::LOAD_DISTANCE));
 }
@@ -128,7 +128,7 @@ void ChunkManager::loadChunks(const glm::ivec2& currChunkPos)
                 chunksLoaded++;
                 threadPool.queueJob([chunk, chunkPos, this]()
                 {
-                    *chunk = Chunk(chunkPos, noise, config::WORLD_BIOME);
+                    *chunk = Chunk(chunkPos);
                 });
             }
         }
@@ -164,28 +164,21 @@ void ChunkManager::dropChunkMeshes()
 
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
 
-uint32_t noiseToHeight(const float value)
-{
-    const float normalized = (value + 1.0f) * 0.5f;
-    return Chunk::MIN_GEN_HEIGHT + normalized * (Chunk::MAX_GEN_HEIGHT - Chunk::MIN_GEN_HEIGHT);
-}
-
 Chunk::Chunk()
     : blocks{}, chunkPosition({0}), isLoaded(false), isMeshBaked(false), isMeshDataReady(false)
 {
 }
 
-Chunk::Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, const BIOME biome)
+Chunk::Chunk(const glm::ivec2& chunkPosition)
     : blocks{}, chunkPosition(chunkPosition), isLoaded(true), isMeshBaked(false), isMeshDataReady(false)
 {
     meshData.reserve(BLOCKS_PER_CHUNK / 2);
-    const BLOCK_TYPE defaultBlock = defaultBiomeBlock(biome);
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
         {
             const glm::ivec3 worldPos = chunkPosToWorldBlockPos(chunkPosition) + glm::ivec3{x, 0, z};
-            const uint32_t localHeight = noiseToHeight(noise.GetNoise((float) worldPos.x, (float) worldPos.z));
+            const uint32_t localHeight = getHeightAt({worldPos.x, worldPos.z});
 
             for (uint32_t y = 0; y < CHUNK_SIZE; y++)
             {
@@ -193,11 +186,20 @@ Chunk::Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, const 
                 if (y >= localHeight)
                     blocks[index] = BLOCK_TYPE::AIR;
                 else
-                    blocks[index] = y > localHeight-5 ? defaultBlock : BLOCK_TYPE::STONE;
+                    blocks[index] = y > localHeight-5 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
             }
         }
     }
 }
+
+static constexpr uint32_t
+    FACE_MASK = 0xFu, FACE_OFFSET = 28u,
+    XPOS_MASK = 0x1Fu, XPOS_OFFSET = 23u,
+    YPOS_MASK = 0x1Fu, YPOS_OFFSET = 18u,
+    ZPOS_MASK = 0x1Fu, ZPOS_OFFSET = 13u,
+    ATLASX_MASK = 0xFu, ATLASX_OFFSET = 9u,
+    ATLASY_MASK = 0xFu, ATLASY_OFFSET = 5u;
+
 void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk)
 {
     meshData.clear();
@@ -267,12 +269,12 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(face));
-                    blockdata packedData = ((face & 0xF) << 28) |
-                                          ((x & 0x1F) << 23) |
-                                          ((y & 0x1F) << 18) |
-                                          ((z & 0x1F) << 13) |
-                                          ((atlasOffset.x & 0xF) << 9) |
-                                          ((atlasOffset.y & 0xF) << 5);
+                    blockdata packedData = ((face & FACE_MASK) << FACE_OFFSET) |
+                                          ((x & XPOS_MASK) << XPOS_OFFSET) |
+                                          ((y & YPOS_MASK) << YPOS_OFFSET) |
+                                          ((z & ZPOS_MASK) << ZPOS_OFFSET) |
+                                          ((atlasOffset.x & ATLASX_MASK) << ATLASX_OFFSET) |
+                                          ((atlasOffset.y & ATLASY_MASK) << ATLASY_OFFSET);
                     meshData.push_back(packedData);
                 }
             }
@@ -281,6 +283,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
     isMeshDataReady = true;
     isMeshBaked = false;
 }
+
 void Chunk::bakeMesh()
 {
     vao.clear();
