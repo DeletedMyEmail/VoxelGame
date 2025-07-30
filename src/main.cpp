@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 
     ChunkManager chunkManager;
     glm::dvec2 prevCursorPos = window.getMousePosition();
-    window.onKey([&chunkManager, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
+    window.onKey([&chunkManager, &debugMode, &cursorLocked, &prevCursorPos] (Window* win, const int key, const int scancode, const int action, const int mods)
     {
         if (action != GLFW_PRESS)
             return;
@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     
     window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
         {
+            ImGui::GetIO().MousePos = ImVec2(float(pos.x), float(pos.y));
             const glm::dvec2 offset = pos - prevCursorPos;
             if (cursorLocked)
                 cam.rotate({offset.x, offset.y});
@@ -63,14 +64,15 @@ int main(int argc, char* argv[])
     int32_t comboIndex = 0;
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
-        if (action != GLFW_PRESS || !cursorLocked)
+        ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
+        if (action != GLFW_PRESS || !cursorLocked || ImGui::GetIO().WantCaptureMouse)
             return;
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
             placeBlock(chunkManager, cam, comboSelection[comboIndex]);
     });
-
     float exposure = 1;
+
     Metrics metrics;
     while (window.isRunning())
     {

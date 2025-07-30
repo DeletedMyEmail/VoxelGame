@@ -99,7 +99,7 @@ void clearFrame(const float skyExposure, const bool debugMode)
     }
 }
 
-void drawDebugMenu(Metrics& metrics, float& exposure, float& camSpeed, const Camera& cam, const std::array<const char*, 5>& comboSelection, int32_t& comboIndex)
+void drawDebugMenu(const Metrics& metrics, float& exposure, float& camSpeed, const Camera& cam, const std::array<const char*, 5>& comboSelection, int32_t& comboIndex)
 {
     ImGui::Begin("Debug");
 

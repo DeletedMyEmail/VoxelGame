@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.25)
-project(VoxelGame VERSION 0.2.0)
+project(VoxelGame VERSION 0.3.0)
 cmake_policy(SET CMP0072 NEW)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
-# uncomment to remove logging at compile time
-# add_compile_definitions(NOLOG)
-
-# uncomment to remove performance profiling at compile time
-#add_compile_definitions(NOPROFILE)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    message(STATUS "Building in Release mode - logging and profiling disabled")
+    add_compile_definitions(NOLOG)
+    add_compile_definitions(NOPROFILE)
+    add_compile_definitions(RELEASE_BUILD)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Building in Debug mode")
+    add_compile_definitions(DEBUG_BUILD)
+else()
+    message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+endif()
 
 include(FetchContent)
 
@@ -39,7 +45,7 @@ FetchContent_MakeAvailable(fastnoise)
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.89.7  # Adjust version/tag as needed
+        GIT_TAG v1.92.1
 )
 FetchContent_MakeAvailable(imgui)
 
