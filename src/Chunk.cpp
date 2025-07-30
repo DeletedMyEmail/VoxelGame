@@ -201,10 +201,20 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
             for (uint32_t y = 0; y < CHUNK_SIZE; y++)
             {
                 const auto index = getBlockIndex({x,y,z});
-                if (y + chunkHeight >= localHeight)
-                    blocks[index] = BLOCK_TYPE::AIR;
+                const uint32_t worldY = y + chunkHeight;
+
+                if (worldY >= localHeight) // Above terrain height
+                {
+                    if (worldY <= SEA_LEVEL && localHeight < SEA_LEVEL)
+                        blocks[index] = BLOCK_TYPE::WATER;
+                    else
+                        blocks[index] = BLOCK_TYPE::AIR;
+                }
                 else
-                    blocks[index] = y + chunkHeight > localHeight-5 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
+                {
+                    // Below terrain height - place terrain blocks
+                    blocks[index] = worldY > localHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
+                }
             }
         }
     }
@@ -250,10 +260,11 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                         default: assert(false);
                     }
 
-                    const BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
-                    if (neighbourBlock != BLOCK_TYPE::AIR && neighbourBlock != BLOCK_TYPE::INVALID)
+                    BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
+                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR) // neighbour is solid
                         continue;
-                    if (neighbourBlock == BLOCK_TYPE::INVALID)
+
+                    if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
                     {
                         // check if a neighboring chunk has a covering block
                         glm::ivec3 blockPosInOtherChunk = neighbourBlockPos;
@@ -290,9 +301,12 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                             blockPosInOtherChunk.z = CHUNK_SIZE - 1;
                         }
 
-                        assert(!neighborChunk || neighborChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                        if (neighborChunk && neighborChunk->getBlockUnsafe(blockPosInOtherChunk) != BLOCK_TYPE::AIR)
-                            continue;
+                        if (neighborChunk)
+                        {
+                            neighbourBlock = neighborChunk->getBlockUnsafe(blockPosInOtherChunk);
+                            if (neighbourBlock != BLOCK_TYPE::AIR)
+                                continue;
+                        }
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(face));

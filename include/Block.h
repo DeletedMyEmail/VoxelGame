@@ -27,7 +27,8 @@ enum class BLOCK_TYPE
     SAND,
     WOOD,
     PUMPKIN,
-    MELON
+    MELON,
+    WATER
 };
 
 typedef GLuint blockdata;
@@ -54,6 +55,8 @@ inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
             return {6+face,4};
         case BLOCK_TYPE::HIGHLIGHTED:
             return {15,0};
+        case BLOCK_TYPE::WATER:
+            return {0+face,15};
         default:
             LOG_ERROR("Invalid block type for atlas offset");
             exit(1);
