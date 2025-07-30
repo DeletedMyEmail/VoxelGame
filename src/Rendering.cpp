@@ -53,17 +53,7 @@ void drawHighlightBlock(const glm::uvec3& positionInChunk, const glm::ivec3& glo
     const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
 
     for (uint32_t i = 0; i < buffer.size(); i++)
-    {
-        const blockdata packedData =
-            ((i & FACE_MASK) << FACE_OFFSET) |
-            ((positionInChunk.x & XPOS_MASK) << XPOS_OFFSET) |
-            ((positionInChunk.y & YPOS_MASK) << YPOS_OFFSET) |
-            ((positionInChunk.z & ZPOS_MASK) << ZPOS_OFFSET) |
-            ((atlasOffset.x & ATLASX_MASK) << ATLASX_OFFSET) |
-            ((atlasOffset.y & ATLASY_MASK) << ATLASY_OFFSET);
-
-        buffer[i] = packedData;
-    }
+        buffer[i] = packBlockData(positionInChunk, atlasOffset, FACE(i));
 
     VertexArray highlightVao;
     VertexBufferLayout highlightLayout;

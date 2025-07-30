@@ -225,7 +225,8 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
         {
             for (uint32_t x = 0; x < CHUNK_SIZE; x++)
             {
-                const auto& block = getBlockUnsafe({x,y,z});
+                glm::uvec3 blockPos = {x, y, z};
+                const auto& block = getBlockUnsafe(blockPos);
 
                 assert(block != BLOCK_TYPE::INVALID);
                 if (block == BLOCK_TYPE::AIR)
@@ -298,17 +299,12 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(face));
-                    blockdata packedData = ((face & FACE_MASK) << FACE_OFFSET) |
-                                          ((x & XPOS_MASK) << XPOS_OFFSET) |
-                                          ((y & YPOS_MASK) << YPOS_OFFSET) |
-                                          ((z & ZPOS_MASK) << ZPOS_OFFSET) |
-                                          ((atlasOffset.x & ATLASX_MASK) << ATLASX_OFFSET) |
-                                          ((atlasOffset.y & ATLASY_MASK) << ATLASY_OFFSET);
-                    meshData.push_back(packedData);
+                    meshData.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
                 }
             }
         }
     }
+
     isMeshDataReady = true;
     isMeshBaked = false;
 }

@@ -33,23 +33,23 @@ int main(int argc, char* argv[])
 
     ChunkManager chunkManager;
     glm::dvec2 prevCursorPos = window.getMousePosition();
-    window.onKey([&chunkManager, &debugMode, &cursorLocked, &prevCursorPos] (Window* win, const int key, const int scancode, const int action, const int mods)
-    {
-        if (action != GLFW_PRESS)
-            return;
-        if (key == GLFW_KEY_ESCAPE)
-            win->stop();
-        else if (key == GLFW_KEY_TAB)
-            debugMode = !debugMode;
-        else if (key == GLFW_KEY_V)
+    window.onKey([&chunkManager, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
         {
-            cursorLocked = !cursorLocked;
-            win->setCursorDisabled(cursorLocked);
-        }
-        else if (key == GLFW_KEY_X)
-            chunkManager.dropChunkMeshes();
+            if (action != GLFW_PRESS)
+                return;
+            if (key == GLFW_KEY_ESCAPE)
+                win->stop();
+            else if (key == GLFW_KEY_TAB)
+                debugMode = !debugMode;
+            else if (key == GLFW_KEY_V)
+            {
+                cursorLocked = !cursorLocked;
+                win->setCursorDisabled(cursorLocked);
+            }
+            else if (key == GLFW_KEY_X)
+                chunkManager.dropChunkMeshes();
 
-    });
+        });
     
     window.onCursorMove([&cam, &prevCursorPos, &cursorLocked](Window* win, const glm::dvec2 pos)
         {
@@ -63,14 +63,14 @@ int main(int argc, char* argv[])
     std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
     int32_t comboIndex = 0;
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
-    {
-        ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
-        if (action != GLFW_PRESS || !cursorLocked || ImGui::GetIO().WantCaptureMouse)
-            return;
+        {
+            ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
+            if (action != GLFW_PRESS || !cursorLocked || ImGui::GetIO().WantCaptureMouse)
+                return;
 
-        if (button == GLFW_MOUSE_BUTTON_LEFT)
-            placeBlock(chunkManager, cam, comboSelection[comboIndex]);
-    });
+            if (button == GLFW_MOUSE_BUTTON_LEFT)
+                placeBlock(chunkManager, cam, comboSelection[comboIndex]);
+        });
     float exposure = 1;
 
     Metrics metrics;
