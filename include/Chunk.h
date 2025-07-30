@@ -15,8 +15,20 @@ struct ChunkManager
     void unloadChunks(const glm::ivec3& currChunkPos);
     void drawChunks(GLuint shader, const glm::ivec3& currChunkPos);
     void loadChunks(const glm::ivec3& currChunkPos);
-    Chunk* getChunk(const glm::ivec3& pos);
+    Chunk* getLoadedChunk(const glm::ivec3& pos);
     void dropChunkMeshes();
+    struct ChunkLoadRequest;
+
+    struct ChunkLoadRequest
+    {
+        glm::ivec3 position;
+        float priority;
+
+        bool operator<(const ChunkLoadRequest& other) const { return priority > other.priority; }
+    };
+
+    static std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChunkPos, int32_t maxDist);
+    Chunk* getChunkOrUnloaded(const glm::ivec3& chunkPos);
 
     ThreadPool threadPool;
     std::vector<Chunk> chunks;
