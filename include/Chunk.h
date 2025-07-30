@@ -6,6 +6,7 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "ThreadPool.h"
+#include "glm/fwd.hpp"
 
 struct Chunk;
 
@@ -13,7 +14,7 @@ struct ChunkManager
 {
     ChunkManager();
     void unloadChunks(const glm::ivec3& currChunkPos);
-    void drawChunks(GLuint shader, const glm::ivec3& currChunkPos);
+    void drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& viewProjection, float exposure);
     void loadChunks(const glm::ivec3& currChunkPos);
     Chunk* getLoadedChunk(const glm::ivec3& pos);
     void dropChunkMeshes();

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "Camera.h"
 #include "OpenGLHelper.h"
+#include "Rendering.h"
 #include "Shader.h"
 #include "WorldGeneration.h"
 #include "glm/common.hpp"
@@ -39,7 +40,7 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
     }
 }
 
-void ChunkManager::drawChunks(const GLuint shader, const glm::ivec3& currChunkPos)
+void ChunkManager::drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& viewProjection, const float exposure)
 {
     uint32_t chunksBaked = 0;
     auto chunkQueue = getChunksSorted(currChunkPos, config::RENDER_DISTANCE);
@@ -57,9 +58,7 @@ void ChunkManager::drawChunks(const GLuint shader, const glm::ivec3& currChunkPo
             if (chunk->vao.vertexCount == 0)
                 continue;
 
-            chunk->vao.bind();
-            setUniform3f(shader, "u_chunkOffset", glm::vec3(chunkPosToWorldBlockPos(chunk->chunkPosition)));
-            GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, chunk->vao.vertexCount));
+            drawChunk(chunk->vao, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
         }
         else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
         {
@@ -321,7 +320,7 @@ void Chunk::bakeMesh()
     VertexBufferLayout layout;
     layout.pushUInt(1, false, 1);
     vao.addBuffer(instanceVbo, layout);
-    vao.vertexCount = meshData.size();
+    vao.vertexCount = meshData.size() * 6;
     isMeshBaked = true;
 }
 
