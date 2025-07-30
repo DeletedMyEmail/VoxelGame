@@ -1,5 +1,4 @@
 #include "WorldGeneration.h"
-
 #include "Chunk.h"
 #include "Config.h"
 #include "glm/common.hpp"
@@ -12,10 +11,21 @@ FastNoiseLite genTerrainNoise()
     noise.SetSeed(config::WORLD_SEED);
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    noise.SetFrequency(0.01f);        // Controls terrain scale
-    noise.SetFractalOctaves(4);       // Number of noise layers
-    noise.SetFractalLacunarity(2.0f); // Frequency multiplier between octaves
-    noise.SetFractalGain(0.5f);       // Amplitude multiplier between octaves
+    noise.SetFractalOctaves(3);
+    noise.SetFrequency(0.005f);
+    noise.SetFractalGain(0.7f);
+    noise.SetFractalWeightedStrength(-0.5f);
+
+    return noise;
+}
+
+FastNoiseLite genTerrainNoise2()
+{
+    FastNoiseLite noise;
+    noise.SetSeed(config::WORLD_SEED);
+    noise.SetNoiseType(FastNoiseLite::NoiseType_ValueCubic);
+    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    noise.SetFrequency(0.08f);
 
     return noise;
 }
@@ -28,30 +38,27 @@ FastNoiseLite genTreeNoise()
     return noise;
 }
 
-inline static float AMP = 2000.0f;
-inline static constexpr uint32_t MAX_GEN_HEIGHT = 30;// Chunk::CHUNK_SIZE - Chunk::CHUNK_SIZE / 4;
-inline static constexpr uint32_t MIN_GEN_HEIGHT = 1;//Chunk::CHUNK_SIZE / 4;
-
-uint32_t mapToHeightRange(const float value)
+uint32_t noiseToHeight(float value)
 {
-    assert(value == glm::clamp(value, -AMP, AMP));
+    constexpr uint32_t MAX_GEN_HEIGHT = Chunk::CHUNK_SIZE * WORLD_HEIGHT;
+    constexpr uint32_t MIN_GEN_HEIGHT = MAX_GEN_HEIGHT / 3;
 
-    const float normalized = (value + AMP) / (2.0f * AMP);
-    return uint32_t(MIN_GEN_HEIGHT + normalized * (MAX_GEN_HEIGHT - MIN_GEN_HEIGHT));
-}
-
-uint32_t noiseToHeight(const float value)
-{
-    const float normalized = (value + 1.0f) * 0.5f;
-    return MIN_GEN_HEIGHT + normalized * (MAX_GEN_HEIGHT - MIN_GEN_HEIGHT);
+    value = (value + 1.0f) / 2.0f;
+    value = glm::pow(value, 4.8f);
+    assert(value < 1.0f);
+    return value * (MAX_GEN_HEIGHT - MIN_GEN_HEIGHT) + MIN_GEN_HEIGHT;
 }
 
 uint32_t getHeightAt(const glm::ivec2& pos)
 {
-    static FastNoiseLite terrainNoise = genTerrainNoise();
+    static FastNoiseLite terrainNoise1 = genTerrainNoise();
+    static FastNoiseLite terrainNoise2 = genTerrainNoise2();
 
-    float val = terrainNoise.GetNoise((float) pos.x, (float) pos.y);
-    //val = glm::pow(val,4.0f) * AMP;
+    float val = terrainNoise1.GetNoise((float) pos.x, (float) pos.y);
+    val += terrainNoise2.GetNoise((float) pos.x, (float) pos.y);
+    //val /= 2.0f;
 
-    return noiseToHeight(val);
+    const uint32_t height = noiseToHeight(val);
+    assert(height < MAX_GEN_HEIGHT);
+    return height;
 }

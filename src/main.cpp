@@ -15,6 +15,7 @@
 #include <deque>
 #include <numeric>
 #include <algorithm>
+#include "WorldGeneration.h"
 
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window);
@@ -29,7 +30,7 @@ int main(int argc, char* argv[])
     bool cursorLocked = true;
 
     Window window;
-    Camera cam(glm::vec3{1000, Chunk::CHUNK_SIZE, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
+    Camera cam(glm::vec3{1000, Chunk::CHUNK_SIZE * WORLD_HEIGHT + 1, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
     float camSpeed = 70.0f;
 
     ChunkManager chunkManager;
@@ -67,7 +68,7 @@ int main(int argc, char* argv[])
 
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
-        if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
+        /*if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
         RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
@@ -103,7 +104,7 @@ int main(int argc, char* argv[])
             }
             glm::ivec3 neighbourBlockPos = positionInChunk + offset;
 
-            if (inBounds(neighbourBlockPos))
+            if (isChunkCoord(neighbourBlockPos))
                 res.chunk->setBlockUnsafe(neighbourBlockPos, blockType);
             else
             {
@@ -141,7 +142,7 @@ int main(int argc, char* argv[])
         {
             Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
             if (chunk) chunk->isMeshBaked = false;
-        }
+        }*/
     });
 
     window.setCursorDisabled(cursorLocked);
@@ -215,9 +216,9 @@ int main(int argc, char* argv[])
         chunkManager.loadChunks(chunkPos);
         chunkManager.drawChunks(blockShader, chunkPos);
 
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        if (res.hit)
-            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
+        //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+        //if (res.hit)
+            //drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {

@@ -20,23 +20,25 @@ void profileChunks()
 {
     Window win;
     ChunkManager chunkManager;
-    chunkManager.loadChunks({100, 100});
+    chunkManager.loadChunks({100, 2, 100});
     Chunk c;
     auto res = REP_TEST([&]()
     {
-        c = Chunk({100, 100});
+        c = Chunk({100, 2, 100});
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Gen:\n{}\n", std::string(res));
 
-    Chunk* leftChunk = chunkManager.getChunk({99, 100});
-    Chunk* rightChunk = chunkManager.getChunk({101, 100});
-    Chunk* frontChunk = chunkManager.getChunk({100, 101});
-    Chunk* backChunk = chunkManager.getChunk({100, 99});
+    Chunk* leftChunk = chunkManager.getChunk({99, 2, 100});
+    Chunk* rightChunk = chunkManager.getChunk({101, 2, 100});
+    Chunk* frontChunk = chunkManager.getChunk({100, 2, 101});
+    Chunk* backChunk = chunkManager.getChunk({100, 2, 99});
+    Chunk* topChunk = chunkManager.getChunk({100, 3, 100});
+    Chunk* bottomChunk = chunkManager.getChunk({100, 1, 100});
 
     res = REP_TEST([&]()
     {
-        c.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk);
+        c.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Mesh:\n{}\n", std::string(res));

@@ -12,24 +12,21 @@ struct Chunk;
 struct ChunkManager
 {
     ChunkManager();
-    void unloadChunks(const glm::ivec2& currChunkPos);
-    void drawChunks(GLuint shader, const glm::ivec2& currChunkPos);
-    void loadChunks(const glm::ivec2& currChunkPos);
-    Chunk* getChunk(glm::ivec2 pos);
+    void unloadChunks(const glm::ivec3& currChunkPos);
+    void drawChunks(GLuint shader, const glm::ivec3& currChunkPos);
+    void loadChunks(const glm::ivec3& currChunkPos);
+    Chunk* getChunk(const glm::ivec3& pos);
     void dropChunkMeshes();
 
     ThreadPool threadPool;
     std::vector<Chunk> chunks;
-    std::mutex chunksMutex;
-    uint64_t chunksToLoad[config::MAX_LOADS_PER_FRAME];
-    uint32_t numChunksToLoad = 0;
 };
 
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::ivec2& chunkPosition);;
-    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
+    Chunk(const glm::ivec3& chunkPosition);;
+    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
@@ -42,11 +39,11 @@ struct Chunk
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
     std::vector<blockdata> meshData;
     VertexArray vao;
-    glm::ivec2 chunkPosition;
+    glm::ivec3 chunkPosition;
     bool isLoaded, isMeshBaked, isMeshDataReady;
 };
 
-inline glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec2& chunkPos) { return glm::ivec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
-inline glm::ivec3 worldPosToChunkBlockPos(const glm::ivec3& worldPos) { return glm::ivec3{worldPos.x % Chunk::CHUNK_SIZE, worldPos.y,worldPos.z % Chunk::CHUNK_SIZE};}
-inline glm::ivec2 worldPosToChunkPos(const glm::ivec3& worldPos) { return glm::ivec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
-inline bool inBounds(const glm::ivec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.x >= 0 && pos.y < Chunk::CHUNK_SIZE && pos.y >= 0 && pos.z < Chunk::CHUNK_SIZE && pos.z >= 0; }
+glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);
+glm::ivec3 worldPosToChunkBlockPos(const glm::ivec3& worldPos);
+glm::ivec3 worldPosToChunkPos(const glm::ivec3& worldPos);
+bool isChunkCoord(const glm::ivec3& pos);
