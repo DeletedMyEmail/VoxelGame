@@ -217,14 +217,6 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
     }
 }
 
-static constexpr uint32_t
-    FACE_MASK = 0xFu, FACE_OFFSET = 28u,
-    XPOS_MASK = 0x1Fu, XPOS_OFFSET = 23u,
-    YPOS_MASK = 0x1Fu, YPOS_OFFSET = 18u,
-    ZPOS_MASK = 0x1Fu, ZPOS_OFFSET = 13u,
-    ATLASX_MASK = 0xFu, ATLASX_OFFSET = 9u,
-    ATLASY_MASK = 0xFu, ATLASY_OFFSET = 5u;
-
 void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk)
 {
     meshData.clear();

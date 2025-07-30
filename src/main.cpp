@@ -19,7 +19,7 @@
 
 VertexArray createAxesVAO();
 glm::vec3 rawInput(const Window& window);
-void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, GLuint shader);
+void drawHighlightBlock(const glm::vec3& worldPos, const glm::ivec3& chunkPos, GLuint shader);
 
 int main(int argc, char* argv[])
 {
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
     {
-        /*if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
+        if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS || !cursorLocked)
             return;
 
         RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
                 else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + glm::ivec2{offset.x, offset.z});
+                Chunk* neighbourChunk = chunkManager.getLoadedChunk(res.chunk->chunkPosition + offset);
 
                 assert(neighbourChunk != nullptr);
                 assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
@@ -125,24 +125,35 @@ int main(int argc, char* argv[])
 
         if (positionInChunk.x == 0)
         {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y});
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y});
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
+        if (positionInChunk.y == 0)
+        {
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
+            if (chunk) chunk->isMeshBaked = false;
+        }
+        else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
+        {
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
+            if (chunk) chunk->isMeshBaked = false;
+        }
+
         if (positionInChunk.z == 0)
         {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1});
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1});
+            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
             if (chunk) chunk->isMeshBaked = false;
-        }*/
+        }
     });
 
     window.setCursorDisabled(cursorLocked);
@@ -216,9 +227,9 @@ int main(int argc, char* argv[])
         chunkManager.loadChunks(chunkPos);
         chunkManager.drawChunks(blockShader, chunkPos);
 
-        //RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        //if (res.hit)
-            //drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
+        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+        if (res.hit)
+            drawHighlightBlock(res.pos, res.chunk->chunkPosition, blockShader);
 
         if (debugMode)
         {
@@ -267,35 +278,36 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void drawHighlightBlock(const glm::vec3& worldPos, const glm::uvec2& chunkPos, const GLuint shader)
+void drawHighlightBlock(const glm::vec3& worldPos, const glm::ivec3& chunkPos, const GLuint shader)
 {
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    GLCall(glEnable(GL_DEPTH_TEST));
+    GLCall(glDepthFunc(GL_LEQUAL));
 
-    glm::uvec3 positionInChunk = worldPosToChunkBlockPos(worldPos);
-    uint32_t buffer[36];
-    uint32_t index = 0;
-    for (uint32_t i = 0; i < 6; i++)
+    std::array<blockdata, 6> buffer;
+    const auto positionInChunk = worldPosToChunkBlockPos(worldPos);
+    const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
+
+    for (uint32_t i = 0; i < buffer.size(); i++)
     {
-        const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
-        const blockdata packedData = ((i & 0xF) << 28) |
-              ((positionInChunk.x & 0x1F) << 23) |
-              ((positionInChunk.y & 0x1F) << 18) |
-              ((positionInChunk.z & 0x1F) << 13) |
-              ((atlasOffset.x & 0xF) << 9) |
-              ((atlasOffset.y & 0xF) << 5);
-        for (uint32_t j = 0; j < 6; j++)
-            buffer[index++] = packedData;
+        const blockdata packedData =
+            ((i & FACE_MASK) << FACE_OFFSET) |
+            ((positionInChunk.x & XPOS_MASK) << XPOS_OFFSET) |
+            ((positionInChunk.y & YPOS_MASK) << YPOS_OFFSET) |
+            ((positionInChunk.z & ZPOS_MASK) << ZPOS_OFFSET) |
+            ((atlasOffset.x & ATLASX_MASK) << ATLASX_OFFSET) |
+            ((atlasOffset.y & ATLASY_MASK) << ATLASY_OFFSET);
+
+        buffer[i] = packedData;
     }
+
     VertexArray highlightVao;
     VertexBufferLayout highlightLayout;
-    highlightLayout.pushUInt(1);
-    highlightVao.addBuffer(createBuffer(buffer, sizeof(buffer)), highlightLayout);
-    highlightVao.vertexCount = 36;
+    highlightLayout.pushUInt(1, false, 1);
+    highlightVao.addBuffer(createBuffer(buffer.data(), sizeof(buffer)), highlightLayout);
     highlightVao.bind();
-    setUniform3f(shader, "u_chunkOffset", {chunkPos.x * Chunk::CHUNK_SIZE, 0, chunkPos.y * Chunk::CHUNK_SIZE});
-    glDrawArrays(GL_TRIANGLES, 0, highlightVao.vertexCount);
-    glDepthFunc(GL_LESS);
+    setUniform3f(shader, "u_chunkOffset", glm::vec3(chunkPosToWorldBlockPos(chunkPos)));
+    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, buffer.size()));
+    GLCall(glDepthFunc(GL_LESS));
 }
 
 VertexArray createAxesVAO()

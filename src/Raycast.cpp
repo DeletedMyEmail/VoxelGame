@@ -35,17 +35,14 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
     float length = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
     float maxT = radius / length;
 
-    while (blockPos.y < Chunk::CHUNK_SIZE)
+    while (true)
     {
-        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0 || blockPos.y >= Chunk::CHUNK_SIZE))
+        if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0))
         {
             const glm::ivec3 chunkPos = worldPosToChunkPos(blockPos);
             Chunk* chunk = chunkManager.getLoadedChunk(chunkPos);
             if (chunk == nullptr)
-            {
-                LOG_WARN("chunk null, raycast aborted");
                 break;
-            }
 
             const BLOCK_TYPE block = chunk->getBlockSafe(worldPosToChunkBlockPos(blockPos));
             assert(block != BLOCK_TYPE::INVALID);
