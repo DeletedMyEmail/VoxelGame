@@ -1,40 +1,46 @@
 #pragma once
 
-#include <bitset>
-#include <unordered_map>
 #include "Block.h"
 #include "Config.h"
 #include "VertexArray.h"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
-#include "FastNoiseLite.h"
 #include "ThreadPool.h"
-#include "WorldGeneration.h"
+#include "glm/fwd.hpp"
 
 struct Chunk;
 
 struct ChunkManager
 {
     ChunkManager();
-    void unloadChunks(const glm::ivec2& currChunkPos);
-    void drawChunks(GLuint shader, const glm::ivec2& currChunkPos);
-    void loadChunks(const glm::ivec2& currChunkPos);
-    Chunk* getChunk(glm::ivec2 pos);
+    void unloadChunks(const glm::ivec3& currChunkPos);
+    void drawChunks(const glm::mat4& viewProjection, float exposure) const;
+    void bakeChunks(const glm::ivec3& currChunkPos);
+    void loadChunks(const glm::ivec3& currChunkPos);
+    Chunk* getLoadedChunk(const glm::ivec3& pos);
     void dropChunkMeshes();
+    struct ChunkLoadRequest;
+
+    struct ChunkLoadRequest
+    {
+        glm::ivec3 position;
+        float priority;
+
+        bool operator<(const ChunkLoadRequest& other) const { return priority > other.priority; }
+    };
+
+    static std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChunkPos, int32_t maxDist);
+    Chunk* getChunkOrUnloaded(const glm::ivec3& chunkPos);
 
     ThreadPool threadPool;
     std::vector<Chunk> chunks;
-    std::mutex chunksMutex;
-    uint64_t chunksToLoad[config::MAX_LOADS_PER_FRAME];
-    uint32_t numChunksToLoad = 0;
-    FastNoiseLite noise;
 };
 
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::ivec2& chunkPosition, const FastNoiseLite& noise, BIOME biome);;
-    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk);
+    Chunk(const glm::ivec3& chunkPosition);;
+    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
@@ -42,18 +48,16 @@ struct Chunk
     void setBlockSafe(const glm::ivec3& pos, BLOCK_TYPE block);
 
     static constexpr int32_t CHUNK_SIZE = 32;
-    static constexpr int32_t MAX_GEN_HEIGHT = 32;
-    static constexpr int32_t MIN_GEN_HEIGHT = 4;
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
-    std::vector<blockdata> meshData;
-    VertexArray vao;
-    glm::ivec2 chunkPosition;
+    std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
+    VertexArray vaoOpaque, vaoTranslucent;
+    glm::ivec3 chunkPosition;
     bool isLoaded, isMeshBaked, isMeshDataReady;
 };
 
-inline glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec2& chunkPos) { return glm::ivec3{chunkPos.x * Chunk::CHUNK_SIZE, 0.0f, chunkPos.y * Chunk::CHUNK_SIZE}; }
-inline glm::ivec3 worldPosToChunkBlockPos(const glm::ivec3& worldPos) { return glm::ivec3{worldPos.x % Chunk::CHUNK_SIZE, worldPos.y,worldPos.z % Chunk::CHUNK_SIZE};}
-inline glm::ivec2 worldPosToChunkPos(const glm::ivec3& worldPos) { return glm::ivec2{worldPos.x / Chunk::CHUNK_SIZE,worldPos.z / Chunk::CHUNK_SIZE}; }
-inline bool inBounds(const glm::ivec3& pos) { return pos.x < Chunk::CHUNK_SIZE && pos.x >= 0 && pos.y < Chunk::CHUNK_SIZE && pos.y >= 0 && pos.z < Chunk::CHUNK_SIZE && pos.z >= 0; }
+glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);
+glm::ivec3 worldPosToChunkBlockPos(const glm::ivec3& worldPos);
+glm::ivec3 worldPosToChunkPos(const glm::ivec3& worldPos);
+bool isChunkCoord(const glm::ivec3& pos);

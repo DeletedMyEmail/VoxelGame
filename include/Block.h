@@ -3,6 +3,7 @@
 #include "cstmlib/Log.h"
 #include "glad/glad.h"
 #include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 
 enum FACE
 {
@@ -27,35 +28,10 @@ enum class BLOCK_TYPE
     SAND,
     WOOD,
     PUMPKIN,
-    MELON
+    MELON,
+    WATER
 };
 
 typedef GLuint blockdata;
-
-inline glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
-{
-    switch (block)
-    {
-        case BLOCK_TYPE::TEST:
-            return {0+face,0};
-        case BLOCK_TYPE::GRASS:
-            return {0+face,1};
-        case BLOCK_TYPE::GRASS_FULL:
-            return {6+face,1};
-        case BLOCK_TYPE::STONE:
-            return {0+face,2};
-        case BLOCK_TYPE::SAND:
-            return {6+face,2};
-        case BLOCK_TYPE::WOOD:
-            return {0+face,3};
-        case BLOCK_TYPE::PUMPKIN:
-            return {6+face,3};
-        case BLOCK_TYPE::MELON:
-            return {6+face,4};
-        case BLOCK_TYPE::HIGHLIGHTED:
-            return {15,0};
-        default:
-            LOG_ERROR("Invalid block type for atlas offset");
-            exit(1);
-    }
-}
+blockdata packBlockData(const glm::uvec3& positionInChunk, const glm::uvec2& atlasOffset, FACE face);
+glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, FACE face);
