@@ -28,6 +28,7 @@ This will create a build directory and compile the project.
     - [x] mesh generation
   - [x] less mem fragmentation in the chunk manager
   - [x] 32^3 chunks
+  - [x] translucent blocks 
   - [ ] binary meshing
   - [ ] chunk empty flag
 
@@ -37,12 +38,15 @@ This will create a build directory and compile the project.
     - [x] chunk system
     - [x] chunk loading
     - [x] chunk unloading
-  - [ ] biome distribution
+  - [ ] world generation
+    - [x] terrain height 
+    - [x] biomes
+    - [ ] trees
+    - [ ] ores
+    - [ ] caves
+    - [ ] structures
   - [x] placing and breaking blocks
   - [ ] particle system
-  - [ ] procedural world generation
-    - [x] noise maps for terrain height (for each biome)
-    - [ ] noise maps for biome distribution
 
 ### Libraries
 - [spdlog](https://github.com/gabime/spdlog) - Logging 
