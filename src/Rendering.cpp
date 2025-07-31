@@ -14,8 +14,6 @@ VertexArray createAxesVAO();
 
 void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, const float exposure)
 {
-    vao.bind();
-
     static Texture textureAtlas("../resources/textures/TextureAtlas.png");
     textureAtlas.bind(0);
 
@@ -27,6 +25,7 @@ void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm
     setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
     setUniform3f(blockShader, "u_chunkOffset", glm::vec3(globalOffset));
 
+    vao.bind();
     GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount / 6));
 }
 

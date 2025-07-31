@@ -44,6 +44,8 @@ void ChunkManager::drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& v
 {
     uint32_t chunksBaked = 0;
     auto chunkQueue = getChunksSorted(currChunkPos, config::RENDER_DISTANCE);
+    auto chunkQueueTranslucent = chunkQueue;
+
     while (!chunkQueue.empty())
     {
         auto [position, priority] = chunkQueue.top();
@@ -55,10 +57,37 @@ void ChunkManager::drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& v
 
         if (chunk->isMeshBaked)
         {
-            if (chunk->vao.vertexCount == 0)
-                continue;
+            drawChunk(chunk->vaoOpaque, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
+        }
+        else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
+        {
+            chunksBaked++;
+            threadPool.queueJob([this, chunk, position]()
+            {
+                Chunk* leftChunk = getLoadedChunk({position.x - 1, position.y, position.z});
+                Chunk* rightChunk = getLoadedChunk({position.x + 1, position.y, position.z});
+                Chunk* frontChunk = getLoadedChunk({position.x, position.y, position.z + 1});
+                Chunk* backChunk = getLoadedChunk({position.x, position.y, position.z - 1});
+                Chunk* topChunk = getLoadedChunk({position.x, position.y + 1, position.z});
+                Chunk* bottomChunk = getLoadedChunk({position.x, position.y - 1, position.z});
 
-            drawChunk(chunk->vao, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
+                chunk->generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+            });
+        }
+    }
+
+    while (!chunkQueueTranslucent.empty())
+    {
+        auto [position, priority] = chunkQueueTranslucent.top();
+        chunkQueueTranslucent.pop();
+
+        Chunk* chunk = getLoadedChunk(position);
+        if (chunk == nullptr || !chunk->isLoaded)
+            continue;
+
+        if (chunk->isMeshBaked)
+        {
+            drawChunk(chunk->vaoTranslucent, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
         }
         else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
         {
@@ -185,7 +214,9 @@ Chunk::Chunk()
 Chunk::Chunk(const glm::ivec3& chunkPosition)
     : blocks{}, chunkPosition(chunkPosition), isLoaded(true), isMeshBaked(false), isMeshDataReady(false)
 {
-    meshData.reserve(BLOCKS_PER_CHUNK / 2);
+    meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
+    meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
+
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
@@ -201,7 +232,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
 
                 if (worldY >= localHeight) // Above terrain height
                 {
-                    if (worldY <= SEA_LEVEL && localHeight < SEA_LEVEL)
+                    if (worldY <= SEA_LEVEL && localHeight <= SEA_LEVEL)
                         blocks[index] = BLOCK_TYPE::WATER;
                     else
                         blocks[index] = BLOCK_TYPE::AIR;
@@ -218,7 +249,9 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
 
 void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk)
 {
-    meshData.clear();
+    meshDataOpaque.clear();
+    meshDataTranslucent.clear();
+
     for (uint32_t z = 0; z < CHUNK_SIZE; z++)
     {
         for (uint32_t y = 0; y < CHUNK_SIZE; y++)
@@ -250,7 +283,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
-                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR) // neighbour is solid
+                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(block != BLOCK_TYPE::WATER && neighbourBlock == BLOCK_TYPE::WATER)) // neighbour is solid
                         continue;
 
                     if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
@@ -293,13 +326,16 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                         if (neighborChunk)
                         {
                             neighbourBlock = neighborChunk->getBlockUnsafe(blockPosInOtherChunk);
-                            if (neighbourBlock != BLOCK_TYPE::AIR)
+                            if (neighbourBlock != BLOCK_TYPE::AIR && !(block != BLOCK_TYPE::WATER && neighbourBlock == BLOCK_TYPE::WATER))
                                 continue;
                         }
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(face));
-                    meshData.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
+                    if (block == BLOCK_TYPE::WATER)
+                        meshDataTranslucent.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
+                    else
+                        meshDataOpaque.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
                 }
             }
         }
@@ -309,14 +345,22 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
     isMeshBaked = false;
 }
 
-void Chunk::bakeMesh()
+void bake(VertexArray& vao, const std::vector<blockdata>& meshData)
 {
-    vao.clear();
-    const GLuint instanceVbo = createBuffer(meshData.data(), meshData.size() * sizeof(blockdata));
     VertexBufferLayout layout;
     layout.pushUInt(1, false, 1);
+
+    const GLuint instanceVbo = createBuffer(meshData.data(), meshData.size() * sizeof(blockdata));
+
+    vao.clear();
     vao.addBuffer(instanceVbo, layout);
     vao.vertexCount = meshData.size() * 6;
+}
+
+void Chunk::bakeMesh()
+{
+    bake(vaoOpaque, meshDataOpaque);
+    bake(vaoTranslucent, meshDataTranslucent);
     isMeshBaked = true;
 }
 

@@ -49,12 +49,25 @@ void profileNoise()
 {
     uint32_t height = getHeightAt({0,0});
     uint32_t i = 0;
-    auto res = REP_TEST([&]()
+    const auto res = REP_TEST([&]()
     {
         height = getHeightAt({i++, i + 100});
     }, 1, 200, 200);
 
     LOG_INFO("Noise:\n{}\n", std::string(res));
+}
+
+void profileQueue()
+{
+    std::priority_queue<ChunkManager::ChunkLoadRequest> queue;
+    int32_t i = 100;
+    const auto res = REP_TEST([&]()
+    {
+        queue = ChunkManager::getChunksSorted({i,i,i++}, config::LOAD_DISTANCE);
+    }, 1, 200, 200);
+
+    LOG_INFO("Queue:\n{}\n", std::string(res));
+
 }
 
 int main(int argc, char **argv)
@@ -63,6 +76,7 @@ int main(int argc, char **argv)
     PROFILER_INIT();
     profileChunks();
     profileNoise();
+    profileQueue();
     /*testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();*/
 }

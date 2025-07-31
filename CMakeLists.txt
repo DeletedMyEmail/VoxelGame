@@ -4,7 +4,7 @@ cmake_policy(SET CMP0072 NEW)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+#[[if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Building in Release mode - logging and profiling disabled")
     add_compile_definitions(NOLOG)
     add_compile_definitions(NOPROFILE)
@@ -14,7 +14,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEBUG_BUILD)
 else()
     message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-endif()
+endif()]]
 
 include(FetchContent)
 
@@ -107,7 +107,17 @@ target_link_libraries(${PROJECT_NAME}_tests
 
 target_include_directories(${PROJECT_NAME}_tests PRIVATE
         ${fastnoise_SOURCE_DIR}/Cpp
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
 )
+
+target_sources(${PROJECT_NAME}_tests PRIVATE
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
 
 # Add test command
 add_test(NAME RunTests COMMAND ${PROJECT_NAME}_tests)

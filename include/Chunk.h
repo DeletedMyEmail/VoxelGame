@@ -50,8 +50,8 @@ struct Chunk
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
     BLOCK_TYPE blocks[BLOCKS_PER_CHUNK];
-    std::vector<blockdata> meshData;
-    VertexArray vao;
+    std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
+    VertexArray vaoOpaque, vaoTranslucent;
     glm::ivec3 chunkPosition;
     bool isLoaded, isMeshBaked, isMeshDataReady;
 };
