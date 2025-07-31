@@ -89,7 +89,8 @@ int main(int argc, char* argv[])
         auto chunkPos = worldPosToChunkPos(cam.position);
         chunkManager.unloadChunks(chunkPos);
         chunkManager.loadChunks(chunkPos);
-        chunkManager.drawChunks(chunkPos, cam.viewProjection, exposure);
+        chunkManager.bakeChunks(chunkPos);
+        chunkManager.drawChunks(cam.viewProjection, exposure);
 
         RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
         if (res.hit)

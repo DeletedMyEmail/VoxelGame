@@ -14,7 +14,8 @@ struct ChunkManager
 {
     ChunkManager();
     void unloadChunks(const glm::ivec3& currChunkPos);
-    void drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& viewProjection, float exposure);
+    void drawChunks(const glm::mat4& viewProjection, float exposure) const;
+    void bakeChunks(const glm::ivec3& currChunkPos);
     void loadChunks(const glm::ivec3& currChunkPos);
     Chunk* getLoadedChunk(const glm::ivec3& pos);
     void dropChunkMeshes();

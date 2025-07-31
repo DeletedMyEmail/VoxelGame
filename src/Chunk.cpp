@@ -14,7 +14,7 @@ constexpr uint32_t getChunkCount() { return config::LOAD_DISTANCE * config::LOAD
 ChunkManager::ChunkManager()
     : threadPool(config::THREAD_COUNT)
 {
-    chunks.resize((1 + 2 * config::LOAD_DISTANCE) * (1 + 2 * config::LOAD_DISTANCE) * (1 + WORLD_HEIGHT));
+    chunks.resize((2 * config::LOAD_DISTANCE) * (2 * config::LOAD_DISTANCE) * (WORLD_HEIGHT + 1));
 }
 
 void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
@@ -40,11 +40,25 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
     }
 }
 
-void ChunkManager::drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& viewProjection, const float exposure)
+void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure) const
+{
+    for (auto& chunk : chunks)
+    {
+        if (chunk.isMeshBaked)
+            drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+    }
+
+    for (auto& chunk : chunks)
+    {
+        if (chunk.isMeshBaked)
+            drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+    }
+}
+
+void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t chunksBaked = 0;
     auto chunkQueue = getChunksSorted(currChunkPos, config::RENDER_DISTANCE);
-    auto chunkQueueTranslucent = chunkQueue;
 
     while (!chunkQueue.empty())
     {
@@ -54,56 +68,21 @@ void ChunkManager::drawChunks(const glm::ivec3& currChunkPos, const glm::mat4& v
         Chunk* chunk = getLoadedChunk(position);
         if (chunk == nullptr || !chunk->isLoaded)
             continue;
-
-        if (chunk->isMeshBaked)
-        {
-            drawChunk(chunk->vaoOpaque, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
-        }
-        else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
-        {
-            chunksBaked++;
-            threadPool.queueJob([this, chunk, position]()
-            {
-                Chunk* leftChunk = getLoadedChunk({position.x - 1, position.y, position.z});
-                Chunk* rightChunk = getLoadedChunk({position.x + 1, position.y, position.z});
-                Chunk* frontChunk = getLoadedChunk({position.x, position.y, position.z + 1});
-                Chunk* backChunk = getLoadedChunk({position.x, position.y, position.z - 1});
-                Chunk* topChunk = getLoadedChunk({position.x, position.y + 1, position.z});
-                Chunk* bottomChunk = getLoadedChunk({position.x, position.y - 1, position.z});
-
-                chunk->generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
-            });
-        }
-    }
-
-    while (!chunkQueueTranslucent.empty())
-    {
-        auto [position, priority] = chunkQueueTranslucent.top();
-        chunkQueueTranslucent.pop();
-
-        Chunk* chunk = getLoadedChunk(position);
-        if (chunk == nullptr || !chunk->isLoaded)
+        if (chunk->isMeshBaked || chunksBaked >= config::MAX_BAKES_PER_FRAME)
             continue;
 
-        if (chunk->isMeshBaked)
+        chunksBaked++;
+        threadPool.queueJob([this, chunk, position]()
         {
-            drawChunk(chunk->vaoTranslucent, chunkPosToWorldBlockPos(chunk->chunkPosition), viewProjection, exposure);
-        }
-        else if (chunksBaked < config::MAX_BAKES_PER_FRAME)
-        {
-            chunksBaked++;
-            threadPool.queueJob([this, chunk, position]()
-            {
-                Chunk* leftChunk = getLoadedChunk({position.x - 1, position.y, position.z});
-                Chunk* rightChunk = getLoadedChunk({position.x + 1, position.y, position.z});
-                Chunk* frontChunk = getLoadedChunk({position.x, position.y, position.z + 1});
-                Chunk* backChunk = getLoadedChunk({position.x, position.y, position.z - 1});
-                Chunk* topChunk = getLoadedChunk({position.x, position.y + 1, position.z});
-                Chunk* bottomChunk = getLoadedChunk({position.x, position.y - 1, position.z});
+            Chunk* leftChunk = getLoadedChunk({position.x - 1, position.y, position.z});
+            Chunk* rightChunk = getLoadedChunk({position.x + 1, position.y, position.z});
+            Chunk* frontChunk = getLoadedChunk({position.x, position.y, position.z + 1});
+            Chunk* backChunk = getLoadedChunk({position.x, position.y, position.z - 1});
+            Chunk* topChunk = getLoadedChunk({position.x, position.y + 1, position.z});
+            Chunk* bottomChunk = getLoadedChunk({position.x, position.y - 1, position.z});
 
-                chunk->generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
-            });
-        }
+            chunk->generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+        });
     }
 
     while (threadPool.busy())
