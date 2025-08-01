@@ -30,16 +30,17 @@ void profileChunks()
 
     LOG_INFO("Chunk Gen:\n{}\n", std::string(res));
 
-    Chunk* leftChunk = chunkManager.getLoadedChunk({99, 2, 100});
-    Chunk* rightChunk = chunkManager.getLoadedChunk({101, 2, 100});
-    Chunk* frontChunk = chunkManager.getLoadedChunk({100, 2, 101});
-    Chunk* backChunk = chunkManager.getLoadedChunk({100, 2, 99});
-    Chunk* topChunk = chunkManager.getLoadedChunk({100, 3, 100});
-    Chunk* bottomChunk = chunkManager.getLoadedChunk({100, 1, 100});
+    Chunk* leftChunk = chunkManager.getChunk({99, 2, 100});
+    Chunk* rightChunk = chunkManager.getChunk({101, 2, 100});
+    Chunk* frontChunk = chunkManager.getChunk({100, 2, 101});
+    Chunk* backChunk = chunkManager.getChunk({100, 2, 99});
+    Chunk* topChunk = chunkManager.getChunk({100, 3, 100});
+    Chunk* bottomChunk = chunkManager.getChunk({100, 1, 100});
 
     res = REP_TEST([&]()
     {
         c.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+        c.bakeMesh();
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Mesh:\n{}\n", std::string(res));

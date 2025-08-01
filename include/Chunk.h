@@ -26,7 +26,7 @@ struct Chunk
     std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
     VertexArray vaoOpaque, vaoTranslucent;
     glm::ivec3 chunkPosition;
-    bool isLoaded, isMeshBaked, isMeshDataReady;
+    bool isMeshBaked, isMeshDataReady;
 };
 
 glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);

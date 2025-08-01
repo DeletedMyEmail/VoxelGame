@@ -162,12 +162,12 @@ std::priority_queue<ChunkManager::ChunkLoadRequest> ChunkManager::getChunksSorte
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
 
 Chunk::Chunk()
-    : blocks{}, chunkPosition({0}), isLoaded(false), isMeshBaked(false), isMeshDataReady(false)
+    : blocks{}, chunkPosition({0}), isMeshBaked(false), isMeshDataReady(false)
 {
 }
 
 Chunk::Chunk(const glm::ivec3& chunkPosition)
-    : blocks{}, chunkPosition(chunkPosition), isLoaded(true), isMeshBaked(false), isMeshDataReady(false)
+    : blocks{}, chunkPosition(chunkPosition), isMeshBaked(false), isMeshDataReady(false)
 {
     meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
     meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
@@ -176,27 +176,27 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
         {
-            const glm::ivec3 worldPos = chunkPosToWorldBlockPos(chunkPosition) + glm::ivec3{x, 0, z};
-            const uint32_t localHeight = getHeightAt({worldPos.x, worldPos.z});
+            glm::ivec3 absPos = chunkPosToWorldBlockPos(chunkPosition) + glm::ivec3{x, 0, z};
+            const uint32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
             const uint32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
 
             for (uint32_t y = 0; y < CHUNK_SIZE; y++)
             {
                 const auto index = getBlockIndex({x,y,z});
-                const uint32_t worldY = y + chunkHeight;
+                const uint32_t absY = y + chunkHeight;
 
-                if (worldY >= localHeight) // Above terrain height
+                if (absY >= terrainHeight)
                 {
-                    if (worldY <= SEA_LEVEL && localHeight <= SEA_LEVEL)
+                    if (absY <= SEA_LEVEL && terrainHeight <= SEA_LEVEL)
                         blocks[index] = BLOCK_TYPE::WATER;
                     else
                         blocks[index] = BLOCK_TYPE::AIR;
                 }
                 else
-                {
-                    // Below terrain height - place terrain blocks
-                    blocks[index] = worldY > localHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
-                }
+                    blocks[index] = absY > terrainHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
+
+                if (absY == terrainHeight && hasTree({absPos.x, absPos.z}))
+                    blocks[index] = BLOCK_TYPE::WOOD;
             }
         }
     }
@@ -238,7 +238,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
-                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(block != BLOCK_TYPE::WATER && neighbourBlock == BLOCK_TYPE::WATER)) // neighbour is solid
+                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(block != BLOCK_TYPE::WATER && neighbourBlock == BLOCK_TYPE::WATER))
                         continue;
 
                     if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
