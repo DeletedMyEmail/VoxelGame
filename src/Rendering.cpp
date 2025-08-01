@@ -92,13 +92,6 @@ void drawDebugMenu(const Metrics& metrics, float& exposure, float& camSpeed, con
 {
     ImGui::Begin("Debug");
 
-    ImGui::Text("Frame data for last %.1f seconds:", metrics.frameTimeWindow);
-    const float avgFrameTime = metrics.getAvgFrameTime();
-    ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
-    float maxFrameTime = metrics.get1PercentLowFrameTime();
-    ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
-    ImGui::Spacing();ImGui::Spacing();
-
     ImGui::Text("Camera Position: %.2f, %.2f, %.2f", cam.position.x, cam.position.y, cam.position.z);
     ImGui::Spacing();ImGui::Spacing();
 
@@ -108,6 +101,19 @@ void drawDebugMenu(const Metrics& metrics, float& exposure, float& camSpeed, con
     ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
     ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
     ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
+    ImGui::Spacing();ImGui::Spacing();
+
+    ImGui::Text("Frame data for last %.1f seconds:", metrics.frameTimeWindow);
+    const float avgFrameTime = metrics.getAvgFrameTime();
+    ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
+    float maxFrameTime = metrics.get1PercentLowFrameTime();
+    ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
+    ImGui::Text("Current frame time: %.3f ms (%.1f FPS)", metrics.deltaTime * 1000.0f, 1.0f / metrics.deltaTime);
+    ImGui::Spacing();
+
+    for (const auto& [name, time] : metrics.timer)
+        ImGui::Text("%s: %.3f ms", name.c_str(), float(time) / 1000.0f);
+
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

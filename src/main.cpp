@@ -14,7 +14,7 @@
 #include "Rendering.h"
 #include "WorldGeneration.h"
 
-glm::vec3 rawInput(const Window& window);
+glm::vec3 moveInput(const Window& window);
 void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block);
 
 int main(int argc, char* argv[])
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
         {
             ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
-            if (action != GLFW_PRESS || !cursorLocked || ImGui::GetIO().WantCaptureMouse)
+            if (action != GLFW_PRESS || !cursorLocked)
                 return;
 
             if (button == GLFW_MOUSE_BUTTON_LEFT)
@@ -81,20 +81,21 @@ int main(int argc, char* argv[])
         float skyExposure = 0.5f + 0.5f * exposure;
         clearFrame(skyExposure, debugMode);
 
-        const auto vel = rawInput(window);
+        const auto vel = moveInput(window);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * metrics.deltaTime * camSpeed);
         cam.updateView();
 
         auto chunkPos = worldPosToChunkPos(cam.position);
-        chunkManager.unloadChunks(chunkPos);
-        chunkManager.loadChunks(chunkPos);
-        chunkManager.bakeChunks(chunkPos);
-        chunkManager.drawChunks(cam.viewProjection, exposure);
-
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        if (res.hit)
-            drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+        TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
+        TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos));
+        TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
+        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, exposure));
+        TIME(metrics, "Block Highlighting",
+            RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+            if (res.hit)
+                drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+        );
 
         if (debugMode)
         {
@@ -111,7 +112,7 @@ int main(int argc, char* argv[])
 }
 
 
-glm::vec3 rawInput(const Window& window)
+glm::vec3 moveInput(const Window& window)
 {
     glm::vec3 input(0.0f);
     input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);

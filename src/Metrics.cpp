@@ -1,4 +1,5 @@
 #include "Metrics.h"
+#include <cstmlib/Log.h>
 
 void Metrics::update()
 {
