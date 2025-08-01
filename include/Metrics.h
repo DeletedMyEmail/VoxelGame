@@ -26,9 +26,13 @@ inline int64_t currenTime()
     return duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count();
 }
 
-#define TIME(metrics, name, func) { \
-    int64_t start = currenTime(); \
-    func; \
-    int64_t end = currenTime(); \
-    metrics.timer[name] = end - start; \
-}
+#ifdef NOPROFILE
+    #define TIME(metrics, name, func) func;
+#else
+    #define TIME(metrics, name, func) { \
+        int64_t start = currenTime(); \
+        func; \
+        int64_t end = currenTime(); \
+        metrics.timer[name] = end - start; \
+    }
+#endif

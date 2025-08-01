@@ -4,7 +4,7 @@ cmake_policy(SET CMP0072 NEW)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
-#[[if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Building in Release mode - logging and profiling disabled")
     add_compile_definitions(NOLOG)
     add_compile_definitions(NOPROFILE)
@@ -14,7 +14,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEBUG_BUILD)
 else()
     message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-endif()]]
+endif()
 
 include(FetchContent)
 
