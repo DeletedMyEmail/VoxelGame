@@ -172,17 +172,20 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
     meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
     meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
 
+    const auto absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
+    const uint32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
+
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
         for (uint32_t z = 0; z < CHUNK_SIZE; z++)
         {
-            glm::ivec3 absPos = chunkPosToWorldBlockPos(chunkPosition) + glm::ivec3{x, 0, z};
+            glm::ivec3 absPos = absChunkPos + glm::ivec3{x, 0, z};
             const uint32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
-            const uint32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
+            const bool tree = hasTree({absPos.x, absPos.z});
 
             for (uint32_t y = 0; y < CHUNK_SIZE; y++)
             {
-                const auto index = getBlockIndex({x,y,z});
+                const uint32_t index = getBlockIndex({x,y,z});
                 const uint32_t absY = y + chunkHeight;
 
                 if (absY >= terrainHeight)
@@ -195,7 +198,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
                 else
                     blocks[index] = absY > terrainHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
 
-                if (absY == terrainHeight && hasTree({absPos.x, absPos.z}))
+                if (tree && terrainHeight > SEA_LEVEL && absY > SEA_LEVEL && absY >= terrainHeight && absY < terrainHeight + 6)
                     blocks[index] = BLOCK_TYPE::WOOD;
             }
         }
