@@ -40,7 +40,7 @@ RaycastResult raycast(const glm::vec3& origin, const glm::vec3& dir, const float
         if (!(blockPos.x < 0 || blockPos.y < 0 || blockPos.z < 0))
         {
             const glm::ivec3 chunkPos = worldPosToChunkPos(blockPos);
-            Chunk* chunk = chunkManager.getLoadedChunk(chunkPos);
+            Chunk* chunk = chunkManager.getChunk(chunkPos);
             if (chunk == nullptr)
                 break;
 

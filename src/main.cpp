@@ -170,44 +170,43 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block)
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
                 else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighbourChunk = chunkManager.getLoadedChunk(res.chunk->chunkPosition + offset);
+
+                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + offset);
 
                 assert(neighbourChunk != nullptr);
                 assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-
                 neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
         if (positionInChunk.x == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         if (positionInChunk.y == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
-
         if (positionInChunk.z == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
             if (chunk) chunk->isMeshBaked = false;
         }
 }
