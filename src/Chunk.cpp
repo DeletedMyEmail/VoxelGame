@@ -14,41 +14,37 @@ constexpr uint32_t getChunkCount() { return config::LOAD_DISTANCE * config::LOAD
 ChunkManager::ChunkManager()
     : threadPool(config::THREAD_COUNT)
 {
-    chunks.resize((2 * config::LOAD_DISTANCE) * (2 * config::LOAD_DISTANCE) * (WORLD_HEIGHT + 1));
+    chunks.reserve((2 * config::LOAD_DISTANCE) * (2 * config::LOAD_DISTANCE) * (WORLD_HEIGHT));
 }
 
 void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t unloads = 0;
-    for (auto& chunk : chunks)
+    for (auto it = chunks.begin(); it != chunks.end() && unloads < config::MAX_UNLOADS_PER_FRAME;)
     {
-        if (!chunk.isLoaded)
-            continue;
+        const Chunk& chunk = it->second;
 
         if (glm::abs(chunk.chunkPosition.x - currChunkPos.x) > config::LOAD_DISTANCE ||
             glm::abs(chunk.chunkPosition.y - currChunkPos.y) > config::LOAD_DISTANCE ||
             glm::abs(chunk.chunkPosition.z - currChunkPos.z) > config::LOAD_DISTANCE)
         {
-            chunk.isLoaded = false;
-            chunk.isMeshBaked = false;
-            chunk.isMeshDataReady = false;
+            it = chunks.erase(it);
             unloads++;
         }
-
-        if (unloads >= config::MAX_UNLOADS_PER_FRAME)
-            break;
+        else
+            ++it;
     }
 }
 
 void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure) const
 {
-    for (auto& chunk : chunks)
+    for (auto& [_, chunk] : chunks)
     {
         if (chunk.isMeshBaked)
             drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
     }
 
-    for (auto& chunk : chunks)
+    for (auto& [_, chunk] : chunks)
     {
         if (chunk.isMeshBaked)
             drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
@@ -65,30 +61,32 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
         auto [position, priority] = chunkQueue.top();
         chunkQueue.pop();
 
-        Chunk* chunk = getLoadedChunk(position);
-        if (chunk == nullptr || !chunk->isLoaded)
+        auto it = chunks.find(position);
+        if (it == chunks.end())
             continue;
-        if (chunk->isMeshBaked || chunksBaked >= config::MAX_BAKES_PER_FRAME)
+
+        Chunk& chunk = it->second;
+        if (chunk.isMeshBaked || chunksBaked >= config::MAX_BAKES_PER_FRAME)
             continue;
 
         chunksBaked++;
-        threadPool.queueJob([this, chunk, position]()
+        threadPool.queueJob([this, &chunk, position]()
         {
-            Chunk* leftChunk = getLoadedChunk({position.x - 1, position.y, position.z});
-            Chunk* rightChunk = getLoadedChunk({position.x + 1, position.y, position.z});
-            Chunk* frontChunk = getLoadedChunk({position.x, position.y, position.z + 1});
-            Chunk* backChunk = getLoadedChunk({position.x, position.y, position.z - 1});
-            Chunk* topChunk = getLoadedChunk({position.x, position.y + 1, position.z});
-            Chunk* bottomChunk = getLoadedChunk({position.x, position.y - 1, position.z});
+            Chunk* leftChunk = getChunk({position.x - 1, position.y, position.z});
+            Chunk* rightChunk = getChunk({position.x + 1, position.y, position.z});
+            Chunk* frontChunk = getChunk({position.x, position.y, position.z + 1});
+            Chunk* backChunk = getChunk({position.x, position.y, position.z - 1});
+            Chunk* topChunk = getChunk({position.x, position.y + 1, position.z});
+            Chunk* bottomChunk = getChunk({position.x, position.y - 1, position.z});
 
-            chunk->generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+            chunk.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
         });
     }
 
     while (threadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 
-    for (auto& chunk : chunks)
+    for (auto& [_, chunk] : chunks)
     {
         if (chunk.isMeshDataReady && !chunk.isMeshBaked)
             chunk.bakeMesh();
@@ -105,12 +103,11 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
         auto [position, priority] = chunkQueue.top();
         chunkQueue.pop();
 
-        Chunk* chunk = getChunkOrUnloaded(position);
-        assert(chunk != nullptr);
-        if (chunk->isLoaded) continue;
+        if (chunks.contains(position))
+            continue;
 
-        chunk->isLoaded = true;
         chunksLoaded++;
+        Chunk* chunk = &chunks.emplace(position, Chunk()).first->second;
         threadPool.queueJob([chunk, position, this]()
         {
             *chunk = Chunk(position);
@@ -121,44 +118,23 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 }
 
-Chunk* ChunkManager::getLoadedChunk(const glm::ivec3& pos)
-{
-    for (auto& chunk : chunks)
-        if (chunk.chunkPosition == pos)
-        {
-            if (chunk.isLoaded)
-                return &chunk;
-            return nullptr;
-        }
-
-    return nullptr;
-}
-
 void ChunkManager::dropChunkMeshes()
 {
-    for (auto& chunk : chunks)
+    for (auto& [_, chunk] : chunks)
     {
         chunk.isMeshBaked = false;
         chunk.isMeshDataReady = false;
     }
 }
 
-Chunk* ChunkManager::getChunkOrUnloaded(const glm::ivec3& chunkPos)
+Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
 {
-    Chunk* chunk = nullptr;
-    for (auto& c : chunks)
-    {
-        if (c.chunkPosition == chunkPos)
-        {
-            chunk = &c;
-            break;
-        }
-        if (!c.isLoaded)
-            chunk = &c;
-    }
-
-    return chunk;
+    const auto it = chunks.find(pos);
+    if (it != chunks.end())
+        return &it->second;
+    return nullptr;
 }
+
 
 std::priority_queue<ChunkManager::ChunkLoadRequest> ChunkManager::getChunksSorted(const glm::ivec3& currChunkPos, const int32_t maxDist)
 {

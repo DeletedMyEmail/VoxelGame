@@ -14,7 +14,7 @@
 #include "Rendering.h"
 #include "WorldGeneration.h"
 
-glm::vec3 rawInput(const Window& window);
+glm::vec3 moveInput(const Window& window);
 void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block);
 
 int main(int argc, char* argv[])
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
         {
             ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
-            if (action != GLFW_PRESS || !cursorLocked || ImGui::GetIO().WantCaptureMouse)
+            if (action != GLFW_PRESS || !cursorLocked)
                 return;
 
             if (button == GLFW_MOUSE_BUTTON_LEFT)
@@ -81,20 +81,21 @@ int main(int argc, char* argv[])
         float skyExposure = 0.5f + 0.5f * exposure;
         clearFrame(skyExposure, debugMode);
 
-        const auto vel = rawInput(window);
+        const auto vel = moveInput(window);
         if (glm::length(vel) > 0.0f)
             cam.move(glm::normalize(vel) * metrics.deltaTime * camSpeed);
         cam.updateView();
 
         auto chunkPos = worldPosToChunkPos(cam.position);
-        chunkManager.unloadChunks(chunkPos);
-        chunkManager.loadChunks(chunkPos);
-        chunkManager.bakeChunks(chunkPos);
-        chunkManager.drawChunks(cam.viewProjection, exposure);
-
-        RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        if (res.hit)
-            drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+        TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
+        TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos));
+        TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
+        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, exposure));
+        TIME(metrics, "Block Highlighting",
+            RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+            if (res.hit)
+                drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+        );
 
         if (debugMode)
         {
@@ -111,7 +112,7 @@ int main(int argc, char* argv[])
 }
 
 
-glm::vec3 rawInput(const Window& window)
+glm::vec3 moveInput(const Window& window)
 {
     glm::vec3 input(0.0f);
     input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);
@@ -169,44 +170,43 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block)
                 if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
                 else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-                Chunk* neighbourChunk = chunkManager.getLoadedChunk(res.chunk->chunkPosition + offset);
+
+                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + offset);
 
                 assert(neighbourChunk != nullptr);
                 assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-
                 neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
             }
         }
 
         if (positionInChunk.x == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         if (positionInChunk.y == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
             if (chunk) chunk->isMeshBaked = false;
         }
-
         if (positionInChunk.z == 0)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
             if (chunk) chunk->isMeshBaked = false;
         }
         else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
         {
-            Chunk* chunk = chunkManager.getLoadedChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
+            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
             if (chunk) chunk->isMeshBaked = false;
         }
 }
