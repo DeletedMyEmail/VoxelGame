@@ -174,6 +174,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
 
     const auto absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
     const uint32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
+    bool treeChunk = isTreeChunk({absChunkPos.x, absChunkPos.z});
 
     for (uint32_t x = 0; x < CHUNK_SIZE; x++)
     {
@@ -198,7 +199,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
                 else
                     blocks[index] = absY > terrainHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
 
-                if (tree && terrainHeight > SEA_LEVEL && absY > SEA_LEVEL && absY >= terrainHeight && absY < terrainHeight + 6)
+                if (treeChunk && tree && terrainHeight > SEA_LEVEL && absY > SEA_LEVEL && absY >= terrainHeight && absY < terrainHeight + 6)
                     blocks[index] = BLOCK_TYPE::WOOD;
             }
         }

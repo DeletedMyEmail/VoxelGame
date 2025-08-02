@@ -9,6 +9,7 @@ FastNoiseLite genPrimNoise();
 FastNoiseLite genSecNoise();
 FastNoiseLite genBiomeNoise();
 FastNoiseLite genTreeNoise();
+FastNoiseLite genTreeChunkNoise();
 uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValue);
 
 uint32_t getHeightAt(const glm::ivec2& pos)
@@ -19,7 +20,7 @@ uint32_t getHeightAt(const glm::ivec2& pos)
 
     const float primaryValue = primaryNoise.GetNoise(float(pos.x), float(pos.y));
     const float secondaryValue = secondaryNoise.GetNoise(float(pos.x), float(pos.y));
-    const float biomeValue = biomeNoise.GetNoise(float(pos.x), float(pos.y));
+    float biomeValue = biomeNoise.GetNoise(float(pos.x), float(pos.y));
 
     return noiseToHeight(primaryValue, secondaryValue, biomeValue);
 }
@@ -27,6 +28,15 @@ uint32_t getHeightAt(const glm::ivec2& pos)
 bool hasTree(const glm::ivec2& pos)
 {
     static FastNoiseLite treeNoise = genTreeNoise();
+
+    const float noiseValue = treeNoise.GetNoise(float(pos.x), float(pos.y));
+    return noiseValue > 0;
+}
+
+bool isTreeChunk(const glm::ivec2& pos)
+{
+    static FastNoiseLite treeNoise = genTreeChunkNoise();
+
     const float noiseValue = treeNoise.GetNoise(float(pos.x), float(pos.y));
     return noiseValue > 0;
 }
@@ -155,12 +165,28 @@ FastNoiseLite genBiomeNoise()
     return noise;
 }
 
+FastNoiseLite genTreeChunkNoise()
+{
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
+    noise.SetSeed(config::WORLD_SEED);
+    noise.SetFrequency(1.6f);
+    noise.SetFractalOctaves(3);
+    noise.SetFractalType(FastNoiseLite::FractalType_PingPong);
+
+    return noise;
+
+}
+
 FastNoiseLite genTreeNoise()
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
     noise.SetSeed(config::WORLD_SEED);
     noise.SetFrequency(0.9f);
+    noise.SetFractalOctaves(3);
+    noise.SetFractalType(FastNoiseLite::FractalType_Ridged);
 
     return noise;
+
 }
