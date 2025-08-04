@@ -9,8 +9,6 @@
 
 // CHUNK MANAGER ---------------------------------------
 
-constexpr uint32_t getChunkCount() { return config::LOAD_DISTANCE * config::LOAD_DISTANCE;}
-
 ChunkManager::ChunkManager()
     : threadPool(config::THREAD_COUNT)
 {
@@ -166,6 +164,18 @@ Chunk::Chunk()
 {
 }
 
+const int32_t TREE_HEIGHT = 6;
+
+void Chunk::spawnTree(const glm::ivec3& pos)
+{
+    for (int32_t y = 0; y < TREE_HEIGHT; y++)
+        setBlockUnsafe({pos.x, pos.y + y, pos.z}, BLOCK_TYPE::WOOD);
+
+    for (int32_t x = -1; x <= 1; x++)
+        for (int32_t z = -1; z <= 1; z++)
+            setBlockUnsafe({pos.x + x, pos.y + TREE_HEIGHT - 1, pos.z + z}, BLOCK_TYPE::LEAVES);
+}
+
 Chunk::Chunk(const glm::ivec3& chunkPosition)
     : blocks{}, chunkPosition(chunkPosition), isMeshBaked(false), isMeshDataReady(false)
 {
@@ -173,21 +183,41 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
     meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
 
     const auto absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
-    const uint32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
-    bool treeChunk = isTreeChunk({absChunkPos.x, absChunkPos.z});
+    const int32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
+    bool forestChunk = isForest({absChunkPos.x, absChunkPos.z});
+    const int32_t SURFACE_HEIGHT = 3;
 
-    for (uint32_t x = 0; x < CHUNK_SIZE; x++)
+
+    for (int32_t x = 0; x < CHUNK_SIZE; x++)
     {
-        for (uint32_t z = 0; z < CHUNK_SIZE; z++)
+        for (int32_t z = 0; z < CHUNK_SIZE; z++)
         {
             glm::ivec3 absPos = absChunkPos + glm::ivec3{x, 0, z};
-            const uint32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
-            const bool tree = hasTree({absPos.x, absPos.z});
+            const int32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
+
+            if (forestChunk &&
+                x > 0 && z > 0 &&
+                x < CHUNK_SIZE - 1 && z < CHUNK_SIZE - 1 &&
+                SEA_LEVEL < terrainHeight &&
+                terrainHeight >= chunkHeight &&
+                terrainHeight + TREE_HEIGHT < chunkHeight + CHUNK_SIZE)
+            {
+                const bool tree = hasTree({absPos.x, absPos.z});
+                if (tree)
+                {
+                    int32_t trunkY = terrainHeight - chunkHeight;
+                    spawnTree(glm::ivec3{x, trunkY, z});
+                }
+            }
 
             for (uint32_t y = 0; y < CHUNK_SIZE; y++)
             {
-                const uint32_t index = getBlockIndex({x,y,z});
-                const uint32_t absY = y + chunkHeight;
+                const int32_t index = getBlockIndex({x,y,z});
+                if (blocks[index] != BLOCK_TYPE::INVALID)
+                    continue;
+
+
+                const int32_t absY = y + chunkHeight;
 
                 if (absY >= terrainHeight)
                 {
@@ -197,10 +227,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
                         blocks[index] = BLOCK_TYPE::AIR;
                 }
                 else
-                    blocks[index] = absY > terrainHeight - 3 ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
-
-                if (treeChunk && tree && terrainHeight > SEA_LEVEL && absY > SEA_LEVEL && absY >= terrainHeight && absY < terrainHeight + 6)
-                    blocks[index] = BLOCK_TYPE::WOOD;
+                    blocks[index] = absY >= terrainHeight - SURFACE_HEIGHT ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
             }
         }
     }
@@ -348,7 +375,7 @@ void Chunk::setBlockSafe(const glm::ivec3& pos, const BLOCK_TYPE block)
     if (isChunkCoord(pos))
         setBlockUnsafe(pos, block);
     else
-        LOG_WARN("BLock not found in chunk: ({}, {}, {})", pos.x, pos.y, pos.z);
+        LOG_WARN("Set: invalid block pos ({}, {}, {})", pos.x, pos.y, pos.z);
 }
 
 glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos)

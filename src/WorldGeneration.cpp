@@ -9,7 +9,7 @@ FastNoiseLite genPrimNoise();
 FastNoiseLite genSecNoise();
 FastNoiseLite genBiomeNoise();
 FastNoiseLite genTreeNoise();
-FastNoiseLite genTreeChunkNoise();
+FastNoiseLite genForestNoise();
 uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValue);
 
 uint32_t getHeightAt(const glm::ivec2& pos)
@@ -33,9 +33,9 @@ bool hasTree(const glm::ivec2& pos)
     return noiseValue > 0;
 }
 
-bool isTreeChunk(const glm::ivec2& pos)
+bool isForest(const glm::ivec2& pos)
 {
-    static FastNoiseLite treeNoise = genTreeChunkNoise();
+    static FastNoiseLite treeNoise = genForestNoise();
 
     const float noiseValue = treeNoise.GetNoise(float(pos.x), float(pos.y));
     return noiseValue > 0;
@@ -165,7 +165,7 @@ FastNoiseLite genBiomeNoise()
     return noise;
 }
 
-FastNoiseLite genTreeChunkNoise()
+FastNoiseLite genForestNoise()
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);

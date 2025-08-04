@@ -45,10 +45,10 @@ const vec3 s_vertexPositions[36] = vec3[36](
     vec3(1.0f, 0.0f, 0.0f), // 5, right
 
     vec3(0.0f, 0.0f, 0.0f), // 0, bottom
-    vec3(1.0f, 0.0f, 0.0f), // 1, bottom
+    vec3(0.0f, 0.0f, 1.0f), // 1, bottom
     vec3(1.0f, 0.0f, 1.0f), // 2, bottom
     vec3(1.0f, 0.0f, 1.0f), // 3, bottom
-    vec3(0.0f, 0.0f, 1.0f), // 4, bottom
+    vec3(1.0f, 0.0f, 0.0f), // 4, bottom
     vec3(0.0f, 0.0f, 0.0f), // 5, bottom
 
     vec3(0.0f, 1.0f, 0.0f), // 0, top

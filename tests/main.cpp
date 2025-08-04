@@ -21,21 +21,22 @@ void profileChunks()
 {
     Window win;
     ChunkManager chunkManager;
-    chunkManager.loadChunks({100, 2, 100});
+    glm::ivec3 chunkPos{-1, 2, -2};
+    chunkManager.loadChunks(chunkPos);
     Chunk c;
     auto res = REP_TEST([&]()
     {
-        c = Chunk({100, 2, 100});
+        c = Chunk(chunkPos);
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Gen:\n{}\n", std::string(res));
 
-    Chunk* leftChunk = chunkManager.getChunk({99, 2, 100});
-    Chunk* rightChunk = chunkManager.getChunk({101, 2, 100});
-    Chunk* frontChunk = chunkManager.getChunk({100, 2, 101});
-    Chunk* backChunk = chunkManager.getChunk({100, 2, 99});
-    Chunk* topChunk = chunkManager.getChunk({100, 3, 100});
-    Chunk* bottomChunk = chunkManager.getChunk({100, 1, 100});
+    Chunk* leftChunk = chunkManager.getChunk(chunkPos + glm::ivec3{-1, 0, 0});
+    Chunk* rightChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, -1, 0});
+    Chunk* frontChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, 0, 1});
+    Chunk* backChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, 0, -1});
+    Chunk* topChunk = chunkManager.getChunk(chunkPos + glm::ivec3{-1, 0, 0});
+    Chunk* bottomChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, -1, 0});
 
     res = REP_TEST([&]()
     {

@@ -18,6 +18,7 @@ struct Chunk
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
     void setBlockUnsafe(const glm::ivec3& pos, BLOCK_TYPE block);
     void setBlockSafe(const glm::ivec3& pos, BLOCK_TYPE block);
+    void spawnTree(const glm::ivec3& pos);
 
     static constexpr int32_t CHUNK_SIZE = 32;
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
