@@ -194,6 +194,11 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
         {
             glm::ivec3 absPos = absChunkPos + glm::ivec3{x, 0, z};
             const int32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
+            BLOCK_TYPE surfaceBlock = BLOCK_TYPE::GRASS;
+            if (terrainHeight < SEA_LEVEL + 3)
+                surfaceBlock = BLOCK_TYPE::SAND;
+            else if (terrainHeight < SEA_LEVEL + 5)
+                surfaceBlock = BLOCK_TYPE::STONE;
 
             if (forestChunk &&
                 x > 0 && z > 0 &&
@@ -227,7 +232,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
                         blocks[index] = BLOCK_TYPE::AIR;
                 }
                 else
-                    blocks[index] = absY >= terrainHeight - SURFACE_HEIGHT ? BLOCK_TYPE::GRASS : BLOCK_TYPE::STONE;
+                    blocks[index] = absY >= terrainHeight - SURFACE_HEIGHT ? surfaceBlock : BLOCK_TYPE::STONE;
             }
         }
     }
@@ -269,7 +274,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
-                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(block != BLOCK_TYPE::WATER && neighbourBlock == BLOCK_TYPE::WATER))
+                    if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(!isTranslucent(block) && isTranslucent(neighbourBlock)))
                         continue;
 
                     if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
@@ -318,7 +323,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     }
 
                     auto atlasOffset = getAtlasOffset(block, FACE(face));
-                    if (block == BLOCK_TYPE::WATER)
+                    if (isTranslucent(block))
                         meshDataTranslucent.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
                     else
                         meshDataOpaque.push_back(packBlockData(blockPos, atlasOffset, FACE(face)));
