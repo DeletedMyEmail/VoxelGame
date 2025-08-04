@@ -21,53 +21,30 @@ void profileChunks()
 {
     Window win;
     ChunkManager chunkManager;
-    chunkManager.loadChunks({100, 2, 100});
+    glm::ivec3 chunkPos{-1, 2, -2};
+    chunkManager.loadChunks(chunkPos);
     Chunk c;
     auto res = REP_TEST([&]()
     {
-        c = Chunk({100, 2, 100});
+        c = Chunk(chunkPos);
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Gen:\n{}\n", std::string(res));
 
-    Chunk* leftChunk = chunkManager.getLoadedChunk({99, 2, 100});
-    Chunk* rightChunk = chunkManager.getLoadedChunk({101, 2, 100});
-    Chunk* frontChunk = chunkManager.getLoadedChunk({100, 2, 101});
-    Chunk* backChunk = chunkManager.getLoadedChunk({100, 2, 99});
-    Chunk* topChunk = chunkManager.getLoadedChunk({100, 3, 100});
-    Chunk* bottomChunk = chunkManager.getLoadedChunk({100, 1, 100});
+    Chunk* leftChunk = chunkManager.getChunk(chunkPos + glm::ivec3{-1, 0, 0});
+    Chunk* rightChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, -1, 0});
+    Chunk* frontChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, 0, 1});
+    Chunk* backChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, 0, -1});
+    Chunk* topChunk = chunkManager.getChunk(chunkPos + glm::ivec3{-1, 0, 0});
+    Chunk* bottomChunk = chunkManager.getChunk(chunkPos + glm::ivec3{0, -1, 0});
 
     res = REP_TEST([&]()
     {
         c.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+        c.bakeMesh();
     }, Chunk::BLOCKS_PER_CHUNK, 200, 200);
 
     LOG_INFO("Chunk Mesh:\n{}\n", std::string(res));
-}
-
-void profileNoise()
-{
-    uint32_t height = getHeightAt({0,0});
-    uint32_t i = 0;
-    const auto res = REP_TEST([&]()
-    {
-        height = getHeightAt({i++, i + 100});
-    }, 1, 200, 200);
-
-    LOG_INFO("Noise:\n{}\n", std::string(res));
-}
-
-void profileQueue()
-{
-    std::priority_queue<ChunkManager::ChunkLoadRequest> queue;
-    int32_t i = 100;
-    const auto res = REP_TEST([&]()
-    {
-        queue = ChunkManager::getChunksSorted({i,i,i++}, config::LOAD_DISTANCE);
-    }, 1, 200, 200);
-
-    LOG_INFO("Queue:\n{}\n", std::string(res));
-
 }
 
 int main(int argc, char **argv)
@@ -75,8 +52,6 @@ int main(int argc, char **argv)
     LOG_INIT();
     PROFILER_INIT();
     profileChunks();
-    profileNoise();
-    profileQueue();
     /*testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();*/
 }

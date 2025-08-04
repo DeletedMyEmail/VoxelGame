@@ -41,7 +41,7 @@ This will create a build directory and compile the project.
   - [ ] world generation
     - [x] terrain height 
     - [x] biomes
-    - [ ] trees
+    - [x] trees
     - [ ] ores
     - [ ] caves
     - [ ] structures

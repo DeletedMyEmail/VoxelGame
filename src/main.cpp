@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     window.setCursorDisabled(cursorLocked);
     renderConfig(window.getGLFWWindow());
 
-    Camera cam(glm::vec3{1000, Chunk::CHUNK_SIZE * WORLD_HEIGHT + 1, 1000}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
+    Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
     float camSpeed = 70.0f;
 
     ChunkManager chunkManager;

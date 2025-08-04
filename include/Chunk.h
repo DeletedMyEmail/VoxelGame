@@ -18,6 +18,7 @@ struct Chunk
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
     void setBlockUnsafe(const glm::ivec3& pos, BLOCK_TYPE block);
     void setBlockSafe(const glm::ivec3& pos, BLOCK_TYPE block);
+    void spawnTree(const glm::ivec3& pos);
 
     static constexpr int32_t CHUNK_SIZE = 32;
     static constexpr int32_t BLOCKS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
@@ -26,7 +27,7 @@ struct Chunk
     std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
     VertexArray vaoOpaque, vaoTranslucent;
     glm::ivec3 chunkPosition;
-    bool isLoaded, isMeshBaked, isMeshDataReady;
+    bool isMeshBaked, isMeshDataReady;
 };
 
 glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);

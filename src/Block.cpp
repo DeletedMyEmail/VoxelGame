@@ -34,6 +34,8 @@ glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
         return {6+face,2};
     case BLOCK_TYPE::WOOD:
         return {0+face,3};
+    case BLOCK_TYPE::LEAVES:
+        return {0+face,4};
     case BLOCK_TYPE::PUMPKIN:
         return {6+face,3};
     case BLOCK_TYPE::MELON:
@@ -46,4 +48,9 @@ glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, const FACE face)
         LOG_ERROR("Invalid block type for atlas offset");
         exit(1);
     }
+}
+
+bool isTranslucent(const BLOCK_TYPE block)
+{
+    return block == BLOCK_TYPE::LEAVES || block == BLOCK_TYPE::WATER;
 }

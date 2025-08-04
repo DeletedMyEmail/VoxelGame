@@ -18,15 +18,16 @@ enum FACE
 
 enum class BLOCK_TYPE
 {
+    INVALID = 0,
     TEST,
     HIGHLIGHTED,
-    INVALID,
     AIR,
     GRASS,
     GRASS_FULL,
     STONE,
     SAND,
     WOOD,
+    LEAVES,
     PUMPKIN,
     MELON,
     WATER
@@ -34,4 +35,5 @@ enum class BLOCK_TYPE
 
 typedef GLuint blockdata;
 blockdata packBlockData(const glm::uvec3& positionInChunk, const glm::uvec2& atlasOffset, FACE face);
-glm::uvec2 getAtlasOffset(const BLOCK_TYPE block, FACE face);
+glm::uvec2 getAtlasOffset(BLOCK_TYPE block, FACE face);
+bool isTranslucent(BLOCK_TYPE block);
