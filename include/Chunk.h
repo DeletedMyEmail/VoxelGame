@@ -27,7 +27,7 @@ struct Chunk
     std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
     VertexArray vaoOpaque, vaoTranslucent;
     glm::ivec3 chunkPosition;
-    bool isMeshBaked, isMeshDataReady;
+    bool isMeshBaked, isMeshDataReady, inRender;
 };
 
 glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);
@@ -51,7 +51,7 @@ struct ChunkManager
 {
     ChunkManager();
     void unloadChunks(const glm::ivec3& currChunkPos);
-    void drawChunks(const glm::mat4& viewProjection, float exposure) const;
+    void drawChunks(const glm::mat4& viewProjection, float exposure) ;
     void bakeChunks(const glm::ivec3& currChunkPos);
     void loadChunks(const glm::ivec3& currChunkPos);
     void dropChunkMeshes();

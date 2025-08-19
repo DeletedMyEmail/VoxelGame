@@ -1,13 +1,12 @@
 #include "Chunk.h"
 #include <algorithm>
+#include "Block.h"
 #include "Camera.h"
 #include "OpenGLHelper.h"
 #include "Rendering.h"
 #include "Shader.h"
 #include "WorldGeneration.h"
 #include "glm/common.hpp"
-
-// CHUNK MANAGER ---------------------------------------
 
 ChunkManager::ChunkManager()
     : threadPool(config::THREAD_COUNT)
@@ -18,35 +17,40 @@ ChunkManager::ChunkManager()
 void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t unloads = 0;
-    for (auto it = chunks.begin(); it != chunks.end() && unloads < config::MAX_UNLOADS_PER_FRAME;)
+    for (auto it = chunks.begin(); it != chunks.end();)
     {
-        const Chunk& chunk = it->second;
+        Chunk& chunk = it->second;
 
-        if (glm::abs(chunk.chunkPosition.x - currChunkPos.x) > config::LOAD_DISTANCE ||
-            glm::abs(chunk.chunkPosition.y - currChunkPos.y) > config::LOAD_DISTANCE ||
-            glm::abs(chunk.chunkPosition.z - currChunkPos.z) > config::LOAD_DISTANCE)
+        const int32_t xDist = glm::abs(chunk.chunkPosition.x - currChunkPos.x);
+        const int32_t yDist = glm::abs(chunk.chunkPosition.y - currChunkPos.y);
+        const int32_t zDist = glm::abs(chunk.chunkPosition.z - currChunkPos.z);
+
+        if (unloads < config::MAX_UNLOADS_PER_FRAME && (xDist > config::LOAD_DISTANCE ||
+            yDist > config::LOAD_DISTANCE ||
+            zDist > config::LOAD_DISTANCE))
         {
             it = chunks.erase(it);
             unloads++;
         }
         else
             ++it;
+
+        chunk.inRender =
+            xDist < config::RENDER_DISTANCE &&
+            yDist < config::RENDER_DISTANCE &&
+            zDist < config::RENDER_DISTANCE;
     }
 }
 
-void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure) const
+void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure)
 {
-    for (auto& [_, chunk] : chunks)
-    {
-        if (chunk.isMeshBaked)
+    for (auto& [_,chunk] : chunks)
+        if (chunk.inRender && chunk.isMeshBaked)
             drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
-    }
 
-    for (auto& [_, chunk] : chunks)
-    {
-        if (chunk.isMeshBaked)
+    for (auto& [_,chunk] : chunks)
+        if (chunk.inRender && chunk.isMeshBaked)
             drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
-    }
 }
 
 void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
