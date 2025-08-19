@@ -25,20 +25,22 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
         const int32_t yDist = glm::abs(chunk.chunkPosition.y - currChunkPos.y);
         const int32_t zDist = glm::abs(chunk.chunkPosition.z - currChunkPos.z);
 
-        if (unloads < config::MAX_UNLOADS_PER_FRAME && (xDist > config::LOAD_DISTANCE ||
-            yDist > config::LOAD_DISTANCE ||
-            zDist > config::LOAD_DISTANCE))
+        if (unloads < config::MAX_UNLOADS_PER_FRAME &&
+            !chunk.inRender &&
+            (xDist > config::LOAD_DISTANCE || yDist > config::LOAD_DISTANCE || zDist > config::LOAD_DISTANCE))
         {
             it = chunks.erase(it);
             unloads++;
         }
         else
+        {
             ++it;
 
-        chunk.inRender =
-            xDist < config::RENDER_DISTANCE &&
-            yDist < config::RENDER_DISTANCE &&
-            zDist < config::RENDER_DISTANCE;
+            chunk.inRender =
+                xDist < config::RENDER_DISTANCE &&
+                yDist < config::RENDER_DISTANCE &&
+                zDist < config::RENDER_DISTANCE;
+        }
     }
 }
 
