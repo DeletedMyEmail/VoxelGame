@@ -54,3 +54,8 @@ bool isTranslucent(const BLOCK_TYPE block)
 {
     return block == BLOCK_TYPE::LEAVES || block == BLOCK_TYPE::WATER;
 }
+
+bool isSolid(const BLOCK_TYPE block)
+{
+    return block != BLOCK_TYPE::AIR && block != BLOCK_TYPE::WATER;
+}

@@ -11,10 +11,13 @@
 #include <deque>
 #include <numeric>
 #include <algorithm>
+
+#include "Physics.h"
 #include "Rendering.h"
 #include "WorldGeneration.h"
+#include "stb/stb_image.h"
 
-glm::vec3 moveInput(const Window& window);
+glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block);
 
 int main(int argc, char* argv[])
@@ -81,20 +84,76 @@ int main(int argc, char* argv[])
         float skyExposure = 0.5f + 0.5f * exposure;
         clearFrame(skyExposure, debugMode);
 
-        const auto vel = moveInput(window);
-        if (glm::length(vel) > 0.0f)
-            cam.move(glm::normalize(vel) * metrics.deltaTime * camSpeed);
-        cam.updateView();
+        const glm::vec3 dir = moveInput(window, cam.lookDir);
+        const glm::vec3 vel = dir * metrics.deltaTime * camSpeed;
 
         auto chunkPos = worldPosToChunkPos(cam.position);
+        //TIME(metrics, "Collision Detection", ({
+            if (vel != glm::vec3(0))
+            {
+                PhysicsObject playerPhysics{};
+                playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
+                playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
+                playerPhysics.velocity = vel;
+                auto [broadPos, broadSize] = getBroadphaseBox(playerPhysics);
+
+                CollisionData collisionData{glm::vec3(0), std::numeric_limits<float>::max()};
+                BoundingBox collidingBlock{glm::vec3(0), glm::vec3(1.0f)};
+
+                for (int32_t x = glm::floor(broadPos.x); x < glm::ceil(broadPos.x + broadSize.x); ++x)
+                {
+                    for (int32_t y = glm::floor(broadPos.y); y < glm::ceil(broadPos.y + broadSize.y); ++y)
+                    {
+                        for (int32_t z = glm::floor(broadPos.z); z < glm::ceil(broadPos.z + broadSize.z); ++z)
+                        {
+                            glm::ivec3 worldPos{x, y, z};
+                            Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
+                            if (!chunk)
+                                continue;
+                            glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
+                            BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
+                            if (block == BLOCK_TYPE::INVALID || !isSolid(block))
+                                continue;
+
+                            BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
+                            CollisionData c = getCollision(playerPhysics, blockBox);
+
+                            if (c.entryTime < collisionData.entryTime)
+                            {
+                                collisionData = c;
+                                collidingBlock.pos = worldPos;
+                                LOG_WARN("{} {} {} {}", x, y, z, int(block));
+                            }
+                        }
+                    }
+                }
+
+                if (collisionData.entryTime < std::numeric_limits<float>::max())
+                {
+
+                    LOG_INFO("\n block {} {} {} \n player {} {} {}",
+                        collidingBlock.pos.x, collidingBlock.pos.y, collidingBlock.pos.z,
+                        playerPhysics.box.pos.x, playerPhysics.box.pos.y, playerPhysics.box.pos.z);
+
+                    resolveCollision(playerPhysics, collidingBlock, collisionData);
+                    glm::vec3 collisionOffset = cam.position - (playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f));
+                    cam.translate(collisionOffset);
+                }
+                else
+                {
+                    cam.translate(vel);
+                }
+            }
+        //}));
+        cam.updateView();
         TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
         TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos));
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
         TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, exposure));
         TIME(metrics, "Block Highlighting",
-            RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-            if (res.hit)
-                drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+             RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+             if (res.hit)
+             drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
         );
 
         if (debugMode)
@@ -111,18 +170,26 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-
-glm::vec3 moveInput(const Window& window)
+glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
 {
     glm::vec3 input(0.0f);
-    input.z +=  1.0f * window.isKeyDown(GLFW_KEY_W);
-    input.z += -1.0f * window.isKeyDown(GLFW_KEY_S);
-    input.x += -1.0f * window.isKeyDown(GLFW_KEY_A);
-    input.x +=  1.0f * window.isKeyDown(GLFW_KEY_D);
-    input.y +=  1.0f * window.isKeyDown(GLFW_KEY_SPACE);
-    input.y += -1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
+    const float forwardInput =  1.0f * window.isKeyDown(GLFW_KEY_W) - 1.0f * window.isKeyDown(GLFW_KEY_S);
+    const float rightInput   =  1.0f * window.isKeyDown(GLFW_KEY_D) - 1.0f * window.isKeyDown(GLFW_KEY_A);
+    const float upInput      =  1.0f * window.isKeyDown(GLFW_KEY_SPACE) - 1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
-    return input;
+    if (forwardInput == 0 && rightInput == 0 && upInput == 0)
+        return glm::vec3(0.0f);
+
+    glm::vec3 forward = glm::normalize(glm::vec3(lookDir.x, 0.0f, lookDir.z));
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+    input += forward * forwardInput;
+    input += right * rightInput;
+    input.y += upInput;
+
+    assert(std::isnan(input.x) == false && std::isnan(input.y) == false && std::isnan(input.z) == false);
+
+    return glm::normalize(input);
 }
 
 void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block)

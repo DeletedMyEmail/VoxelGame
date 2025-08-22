@@ -25,7 +25,7 @@ void Camera::translate(const glm::vec3& translation)
     position += translation;
 }
 
-void Camera::move(const glm::vec3& translation)
+/*void Camera::move(const glm::vec3& translation)
 {
     const glm::vec3 right = normalize(cross(lookDir, up));
     // left / right
@@ -34,7 +34,7 @@ void Camera::move(const glm::vec3& translation)
     position.y += translation.y;
     // front / back
     position += lookDir * translation.z;
-}
+}*/
 
 void Camera::updateView()
 {

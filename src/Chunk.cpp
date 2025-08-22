@@ -112,7 +112,7 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
 
         chunksLoaded++;
         Chunk* chunk = &chunks.emplace(position, Chunk()).first->second;
-        threadPool.queueJob([chunk, position, this]()
+        threadPool.queueJob([chunk, position]()
         {
             *chunk = Chunk(position);
         });
@@ -396,12 +396,20 @@ glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos)
 
 glm::ivec3 worldPosToChunkBlockPos(const glm::ivec3& worldPos)
 {
-    return worldPos % Chunk::CHUNK_SIZE;
+    return {
+        (worldPos.x % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE,
+        (worldPos.y % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE,
+        (worldPos.z % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE
+    };
 }
 
 glm::ivec3 worldPosToChunkPos(const glm::ivec3& worldPos)
 {
-    return worldPos / Chunk::CHUNK_SIZE;
+    return {
+        int(std::floor(float(worldPos.x) / Chunk::CHUNK_SIZE)),
+        int(std::floor(float(worldPos.y) / Chunk::CHUNK_SIZE)),
+        int(std::floor(float(worldPos.z) / Chunk::CHUNK_SIZE))
+    };
 }
 
 bool isChunkCoord(const glm::ivec3& pos)

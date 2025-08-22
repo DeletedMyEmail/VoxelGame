@@ -2,6 +2,7 @@
 #include "Chunk.h"
 #include <cstmlib/Log.h>
 
+#include "Physics.h"
 #include "Window.h"
 #include "WorldGeneration.h"
 #include "cstmlib/Profiling.h"
@@ -12,9 +13,116 @@ protected:
     void SetUp() override {}
 };
 
-TEST_F(TestClass, Test1)
+TEST_F(TestClass, CollisionTestFullOverlap)
 {
-    EXPECT_TRUE(true);
+    /*PhysicsObject a;
+    a.box.pos = {0, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {0, 0, 0};
+
+    BoundingBox b;
+    b.pos = {0, 0, 0};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 0.0f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(0, 0, 0));*/
+}
+
+TEST_F(TestClass, CollisionTestNoHit)
+{
+    PhysicsObject a;
+    a.box.pos = {0, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {0.5, 0.5, -1};
+
+    BoundingBox b;
+    b.pos = {2, 2, 2};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, std::numeric_limits<float>::max());
+    EXPECT_EQ(collisionData.normal, glm::vec3(0, 0, 0));
+}
+
+TEST_F(TestClass, CollisionTestPerfectHitPositiveX)
+{
+    PhysicsObject a;
+    a.box.pos = {0, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {1, 0, 0};
+
+    BoundingBox b;
+    b.pos = {2, 0, 0};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 1.0f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(-1, 0, 0));
+}
+
+TEST_F(TestClass, CollisionTestPerfectHitNegativeX)
+{
+    PhysicsObject a;
+    a.box.pos = {2, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {-1, 0, 0};
+
+    BoundingBox b;
+    b.pos = {0, 0, 0};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 1.0f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(1, 0, 0));
+}
+
+TEST_F(TestClass, CollisionTestPerfectHitNegativeY)
+{
+    PhysicsObject a;
+    a.box.pos = {0, 2, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {0, -1, 0};
+
+    BoundingBox b;
+    b.pos = {0, 0, 0};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 1.0f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(0, 1, 0));
+}
+
+TEST_F(TestClass, CollisionTestPerfectHitPositiveY)
+{
+    PhysicsObject a;
+    a.box.pos = {0, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {0, 1, 0};
+
+    BoundingBox b;
+    b.pos = {0, 2, 0};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 1.0f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(0, -1, 0));
+}
+
+TEST_F(TestClass, CollisionTestHitOnHalfway)
+{
+    PhysicsObject a;
+    a.box.pos = {0, 0, 0};
+    a.box.size = {1, 1, 1};
+    a.velocity = {1, 1, 1};
+
+    BoundingBox b;
+    b.pos = {1.5, 1.5, 1.5};
+    b.size = {1, 1, 1};
+
+    CollisionData collisionData = getCollision(a, b);
+    EXPECT_EQ(collisionData.entryTime, 0.5f);
+    EXPECT_EQ(collisionData.normal, glm::vec3(-1, 0, 0));
 }
 
 void profileChunks()
@@ -51,7 +159,7 @@ int main(int argc, char **argv)
 {
     LOG_INIT();
     PROFILER_INIT();
-    profileChunks();
-    /*testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();*/
+    //profileChunks();
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
