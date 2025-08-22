@@ -33,7 +33,7 @@ This will create a build directory and compile the project.
   - [ ] chunk empty flag
 
 - [ ] game mechanics
-  - [ ] collisions
+  - [x] collisions
   - [x] infinite world
     - [x] chunk system
     - [x] chunk loading
