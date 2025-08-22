@@ -8,8 +8,7 @@ struct Camera
     Camera(glm::vec3 pos, float fov, float width, float height, float near, float far);
 
     void updateView();
-    //void move(const glm::vec3& translation);
-    void translate(const glm::vec3& translation);
+    void move(const glm::vec3& translation);
     void rotate(glm::dvec2 relPos);
 
     operator std::string() const;

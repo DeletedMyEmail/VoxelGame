@@ -121,9 +121,13 @@ CollisionData getCollision(PhysicsObject& a, BoundingBox& b)
     return collisionData;
 }
 
-void resolveCollision(PhysicsObject& a, BoundingBox& b, const CollisionData& collisionData)
+void resolveCollision(PhysicsObject& a, const CollisionData& collisionData)
 {
     a.box.pos += a.velocity * collisionData.entryTime;
     const float remainingTime = 1.0f - collisionData.entryTime;
-
+    if (remainingTime > 0.0f)
+    {
+        const float dot = glm::dot(a.velocity, collisionData.normal);
+        a.velocity -= collisionData.normal * dot;
+    }
 }

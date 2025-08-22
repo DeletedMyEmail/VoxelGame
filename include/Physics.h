@@ -21,4 +21,4 @@ struct CollisionData
 BoundingBox getBroadphaseBox(const PhysicsObject& obj);
 bool isColliding(const BoundingBox& a, const BoundingBox& b);
 CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
-void resolveCollision(PhysicsObject& a, BoundingBox& b, const CollisionData& collisionData);
+void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);

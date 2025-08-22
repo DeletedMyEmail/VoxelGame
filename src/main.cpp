@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
         auto chunkPos = worldPosToChunkPos(cam.position);
         TIME(metrics, "Collision Detection", ({
             if (!menuSettings.collisionsOn)
-                cam.translate(vel);
+                cam.move(vel);
             else if (vel != glm::vec3(0))
                 handleCollisions(chunkManager, cam, vel);
         }));
@@ -228,46 +228,46 @@ void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& 
     playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
     playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
     playerPhysics.velocity = vel;
-    auto [broadPos, broadSize] = getBroadphaseBox(playerPhysics);
 
-    CollisionData collisionData{glm::vec3(0), std::numeric_limits<float>::max()};
-    BoundingBox collidingBlock{glm::vec3(0), glm::vec3(1.0f)};
-
-    for (int32_t x = glm::floor(broadPos.x); x < glm::ceil(broadPos.x + broadSize.x); ++x)
+    const int MAX_ITERATIONS = 4;
+    for (int i = 0; i < MAX_ITERATIONS && glm::length(playerPhysics.velocity) > 0.001f; ++i)
     {
-        for (int32_t y = glm::floor(broadPos.y); y < glm::ceil(broadPos.y + broadSize.y); ++y)
+        auto [pos, size] = getBroadphaseBox(playerPhysics);
+
+        CollisionData nearestCollision{glm::vec3(0), std::numeric_limits<float>::max()};
+
+        for (int32_t x = glm::floor(pos.x); x < glm::ceil(pos.x + size.x); ++x)
         {
-            for (int32_t z = glm::floor(broadPos.z); z < glm::ceil(broadPos.z + broadSize.z); ++z)
+            for (int32_t y = glm::floor(pos.y); y < glm::ceil(pos.y + size.y); ++y)
             {
-                glm::ivec3 worldPos{x, y, z};
-                Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
-                if (!chunk)
-                    continue;
-                glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
-                BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
-                if (block == BLOCK_TYPE::INVALID || !isSolid(block))
-                    continue;
-
-                BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
-                CollisionData c = getCollision(playerPhysics, blockBox);
-
-                if (c.entryTime < collisionData.entryTime)
+                for (int32_t z = glm::floor(pos.z); z < glm::ceil(pos.z + size.z); ++z)
                 {
-                    collisionData = c;
-                    collidingBlock.pos = worldPos;
+                    glm::ivec3 worldPos{x, y, z};
+                    Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
+                    if (!chunk)
+                        continue;
+                    glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
+                    BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
+                    if (block == BLOCK_TYPE::INVALID || !isSolid(block))
+                        continue;
+
+                    BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
+                    CollisionData c = getCollision(playerPhysics, blockBox);
+
+                    if (c.entryTime < nearestCollision.entryTime)
+                        nearestCollision = c;
                 }
             }
         }
+
+        if (nearestCollision.entryTime > 1.0f)
+        {
+            playerPhysics.box.pos += playerPhysics.velocity;
+            break;
+        }
+
+        resolveCollision(playerPhysics, nearestCollision);
     }
 
-    if (collisionData.entryTime < std::numeric_limits<float>::max())
-    {
-        resolveCollision(playerPhysics, collidingBlock, collisionData);
-        glm::vec3 collisionOffset = cam.position - (playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f));
-        cam.translate(collisionOffset);
-    }
-    else
-    {
-        cam.translate(vel);
-    }
+    cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
 }
