@@ -1,5 +1,14 @@
 #pragma once
 
+#include "Block.h"
+
+struct MenuSettings
+{
+    BLOCK_TYPE selectedBlock;
+    float camSpeed, exposure;
+    bool collisionsOn;
+};
+
 namespace config
 {
     const int32_t RENDER_DISTANCE = 10;

@@ -18,7 +18,8 @@
 #include "stb/stb_image.h"
 
 glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
-void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block);
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block);
+void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel);
 
 int main(int argc, char* argv[])
 {
@@ -26,13 +27,18 @@ int main(int argc, char* argv[])
     PROFILER_INIT(100);
 
     bool debugMode = true, cursorLocked = true;
+    MenuSettings menuSettings{
+        BLOCK_TYPE::INVALID,
+        50.0f,
+        0.8f,
+        true
+    };
 
     Window window;
     window.setCursorDisabled(cursorLocked);
     renderConfig(window.getGLFWWindow());
 
     Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
-    float camSpeed = 70.0f;
 
     ChunkManager chunkManager;
     glm::dvec2 prevCursorPos = window.getMousePosition();
@@ -62,104 +68,50 @@ int main(int argc, char* argv[])
                 cam.rotate({offset.x, offset.y});
             prevCursorPos = pos;
         });
-    
-    std::array<const char*, 5> comboSelection{ "None", "Stone", "Grass", "Sand", "Wood"};
-    int32_t comboIndex = 0;
-    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &comboSelection, &comboIndex](Window* win, int button, int action, int mods)
+
+    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &menuSettings](Window* win, int button, int action, int mods)
         {
             ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
             if (action != GLFW_PRESS || !cursorLocked)
                 return;
 
             if (button == GLFW_MOUSE_BUTTON_LEFT)
-                placeBlock(chunkManager, cam, comboSelection[comboIndex]);
+                placeBlock(chunkManager, cam, menuSettings.selectedBlock);
         });
-    float exposure = 1;
 
     Metrics metrics;
     while (window.isRunning())
     {
         metrics.update();
 
-        float skyExposure = 0.5f + 0.5f * exposure;
+        float skyExposure = 0.5f + 0.5f * menuSettings.exposure;
         clearFrame(skyExposure, debugMode);
 
         const glm::vec3 dir = moveInput(window, cam.lookDir);
-        const glm::vec3 vel = dir * metrics.deltaTime * camSpeed;
+        const glm::vec3 vel = dir * metrics.deltaTime * menuSettings.camSpeed;
 
         auto chunkPos = worldPosToChunkPos(cam.position);
-        //TIME(metrics, "Collision Detection", ({
-            if (vel != glm::vec3(0))
-            {
-                PhysicsObject playerPhysics{};
-                playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
-                playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
-                playerPhysics.velocity = vel;
-                auto [broadPos, broadSize] = getBroadphaseBox(playerPhysics);
-
-                CollisionData collisionData{glm::vec3(0), std::numeric_limits<float>::max()};
-                BoundingBox collidingBlock{glm::vec3(0), glm::vec3(1.0f)};
-
-                for (int32_t x = glm::floor(broadPos.x); x < glm::ceil(broadPos.x + broadSize.x); ++x)
-                {
-                    for (int32_t y = glm::floor(broadPos.y); y < glm::ceil(broadPos.y + broadSize.y); ++y)
-                    {
-                        for (int32_t z = glm::floor(broadPos.z); z < glm::ceil(broadPos.z + broadSize.z); ++z)
-                        {
-                            glm::ivec3 worldPos{x, y, z};
-                            Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
-                            if (!chunk)
-                                continue;
-                            glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
-                            BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
-                            if (block == BLOCK_TYPE::INVALID || !isSolid(block))
-                                continue;
-
-                            BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
-                            CollisionData c = getCollision(playerPhysics, blockBox);
-
-                            if (c.entryTime < collisionData.entryTime)
-                            {
-                                collisionData = c;
-                                collidingBlock.pos = worldPos;
-                                LOG_WARN("{} {} {} {}", x, y, z, int(block));
-                            }
-                        }
-                    }
-                }
-
-                if (collisionData.entryTime < std::numeric_limits<float>::max())
-                {
-
-                    LOG_INFO("\n block {} {} {} \n player {} {} {}",
-                        collidingBlock.pos.x, collidingBlock.pos.y, collidingBlock.pos.z,
-                        playerPhysics.box.pos.x, playerPhysics.box.pos.y, playerPhysics.box.pos.z);
-
-                    resolveCollision(playerPhysics, collidingBlock, collisionData);
-                    glm::vec3 collisionOffset = cam.position - (playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f));
-                    cam.translate(collisionOffset);
-                }
-                else
-                {
-                    cam.translate(vel);
-                }
-            }
-        //}));
+        TIME(metrics, "Collision Detection", ({
+            if (!menuSettings.collisionsOn)
+                cam.translate(vel);
+            else if (vel != glm::vec3(0))
+                handleCollisions(chunkManager, cam, vel);
+        }));
         cam.updateView();
         TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
         TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos));
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
-        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, exposure));
+        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, menuSettings.exposure));
         TIME(metrics, "Block Highlighting",
              RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
              if (res.hit)
-             drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, exposure);
+             drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, menuSettings.exposure);
         );
 
         if (debugMode)
         {
             drawAxes(cam);
-            drawDebugMenu(metrics, exposure, camSpeed, cam, comboSelection, comboIndex);
+            drawDebugMenu(metrics, menuSettings, cam.position);
         }
 
         glfwSwapBuffers(window.getGLFWWindow());
@@ -192,88 +144,130 @@ glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
     return glm::normalize(input);
 }
 
-void placeBlock(ChunkManager& chunkManager, Camera& cam, const char* block)
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block)
 {
-    RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
-        if (!res.hit)
-            return;
+    assert(block != BLOCK_TYPE::INVALID);
 
-        const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
-        if (block == "None")
-            res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
+    RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+    if (!res.hit)
+        return;
+
+    const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
+
+    if (block == BLOCK_TYPE::AIR)
+        res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
+    else
+    {
+        glm::ivec3 offset;
+        switch (res.face)
+        {
+        case BACK: offset = {0,0,-1}; break;
+        case FRONT: offset = {0,0,1}; break;
+        case LEFT: offset = {-1,0,0}; break;
+        case RIGHT: offset = {1,0,0}; break;
+        case TOP: offset = {0, 1, 0}; break;
+        case BOTTOM: offset = {0, -1, 0}; break;
+        default: assert(false);
+        }
+        glm::ivec3 neighbourBlockPos = positionInChunk + offset;
+
+        if (isChunkCoord(neighbourBlockPos))
+            res.chunk->setBlockUnsafe(neighbourBlockPos, block);
         else
         {
-            BLOCK_TYPE blockType = BLOCK_TYPE::INVALID;
-            if (block == "Stone")
-                blockType = BLOCK_TYPE::STONE;
-            else if (block == "Grass")
-                blockType = BLOCK_TYPE::GRASS;
-            else if (block == "Sand")
-                blockType = BLOCK_TYPE::SAND;
-            else if (block == "Wood")
-                blockType = BLOCK_TYPE::WOOD;
-            assert(blockType != BLOCK_TYPE::INVALID);
+            glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
+            if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
+            else if (neighbourBlockPos.x == -1) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
+            if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
+            else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-            glm::ivec3 offset;
-            switch (res.face)
+
+            Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + offset);
+
+            assert(neighbourChunk != nullptr);
+            assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+            neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, block);
+        }
+    }
+
+    if (positionInChunk.x == 0)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+    else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+    if (positionInChunk.y == 0)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+    else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+    if (positionInChunk.z == 0)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+    else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
+    {
+        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
+        if (chunk) chunk->isMeshBaked = false;
+    }
+}
+
+void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel)
+{
+    PhysicsObject playerPhysics{};
+    playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
+    playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
+    playerPhysics.velocity = vel;
+    auto [broadPos, broadSize] = getBroadphaseBox(playerPhysics);
+
+    CollisionData collisionData{glm::vec3(0), std::numeric_limits<float>::max()};
+    BoundingBox collidingBlock{glm::vec3(0), glm::vec3(1.0f)};
+
+    for (int32_t x = glm::floor(broadPos.x); x < glm::ceil(broadPos.x + broadSize.x); ++x)
+    {
+        for (int32_t y = glm::floor(broadPos.y); y < glm::ceil(broadPos.y + broadSize.y); ++y)
+        {
+            for (int32_t z = glm::floor(broadPos.z); z < glm::ceil(broadPos.z + broadSize.z); ++z)
             {
-                case BACK: offset = {0,0,-1}; break;
-                case FRONT: offset = {0,0,1}; break;
-                case LEFT: offset = {-1,0,0}; break;
-                case RIGHT: offset = {1,0,0}; break;
-                case TOP: offset = {0, 1, 0}; break;
-                case BOTTOM: offset = {0, -1, 0}; break;
-                default: assert(false);
-            }
-            glm::ivec3 neighbourBlockPos = positionInChunk + offset;
+                glm::ivec3 worldPos{x, y, z};
+                Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
+                if (!chunk)
+                    continue;
+                glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
+                BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
+                if (block == BLOCK_TYPE::INVALID || !isSolid(block))
+                    continue;
 
-            if (isChunkCoord(neighbourBlockPos))
-                res.chunk->setBlockUnsafe(neighbourBlockPos, blockType);
-            else
-            {
-                glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
-                if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
-                else if (neighbourBlockPos.x == -1) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
-                if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
-                else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
+                BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
+                CollisionData c = getCollision(playerPhysics, blockBox);
 
-
-                Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + offset);
-
-                assert(neighbourChunk != nullptr);
-                assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
-                neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, blockType);
+                if (c.entryTime < collisionData.entryTime)
+                {
+                    collisionData = c;
+                    collidingBlock.pos = worldPos;
+                }
             }
         }
+    }
 
-        if (positionInChunk.x == 0)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
-            if (chunk) chunk->isMeshBaked = false;
-        }
-        else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
-            if (chunk) chunk->isMeshBaked = false;
-        }
-        if (positionInChunk.y == 0)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
-            if (chunk) chunk->isMeshBaked = false;
-        }
-        else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
-            if (chunk) chunk->isMeshBaked = false;
-        }
-        if (positionInChunk.z == 0)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
-            if (chunk) chunk->isMeshBaked = false;
-        }
-        else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
-        {
-            Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
-            if (chunk) chunk->isMeshBaked = false;
-        }
+    if (collisionData.entryTime < std::numeric_limits<float>::max())
+    {
+        resolveCollision(playerPhysics, collidingBlock, collisionData);
+        glm::vec3 collisionOffset = cam.position - (playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f));
+        cam.translate(collisionOffset);
+    }
+    else
+    {
+        cam.translate(vel);
+    }
 }

@@ -88,19 +88,20 @@ void clearFrame(const float skyExposure, const bool debugMode)
     }
 }
 
-void drawDebugMenu(const Metrics& metrics, float& exposure, float& camSpeed, const Camera& cam, const std::array<const char*, 5>& comboSelection, int32_t& comboIndex)
+void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos)
 {
     ImGui::Begin("Debug");
 
-    ImGui::Text("Camera Position: %.2f, %.2f, %.2f", cam.position.x, cam.position.y, cam.position.z);
+    ImGui::Text("Position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
     ImGui::Spacing();ImGui::Spacing();
 
     ImGui::Text("Seed: %d", config::WORLD_SEED);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
-    ImGui::SliderFloat("Camera Speed", &camSpeed, 10.0f, 1000.0f);
-    ImGui::Combo("Block", &comboIndex, comboSelection.data(), comboSelection.size());
+    ImGui::Checkbox("Collisions enabled ", &settings.collisionsOn);
+    ImGui::SliderFloat("Exposure", &settings.exposure, 0.0f, 1.0f);
+    ImGui::SliderFloat("Camera Speed", &settings.camSpeed, 1.0f, 200.0f);
+    ImGui::Combo("Block Type", (int*) &settings.selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());
     ImGui::Spacing();ImGui::Spacing();
 
     ImGui::Text("Frame data for last %.1f seconds:", metrics.frameTimeWindow);

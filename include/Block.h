@@ -33,6 +33,22 @@ enum class BLOCK_TYPE
     WATER
 };
 
+inline std::array<const char*, 13> BLOCK_NAMES = {
+    "Invalid",
+    "Test",
+    "Highlighted",
+    "Air",
+    "Grass",
+    "Full Grass",
+    "Stone",
+    "Sand",
+    "Wood",
+    "Leaves",
+    "Pumpkin",
+    "Melon",
+    "Water"
+};
+
 typedef GLuint blockdata;
 blockdata packBlockData(const glm::uvec3& positionInChunk, const glm::uvec2& atlasOffset, FACE face);
 glm::uvec2 getAtlasOffset(BLOCK_TYPE block, FACE face);
