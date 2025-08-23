@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(VoxelGame VERSION 0.4.0)
+project(VoxelGame VERSION 0.5.0)
 cmake_policy(SET CMP0072 NEW)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")

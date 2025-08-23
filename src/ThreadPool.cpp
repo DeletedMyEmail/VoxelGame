@@ -27,6 +27,9 @@ void ThreadPool::stop()
     for (auto& thread : threads)
         thread.request_stop();
     mutexCondition.notify_all();
+
+    for (auto& thread : threads)
+        thread.join();
 }
 
 bool ThreadPool::busy()

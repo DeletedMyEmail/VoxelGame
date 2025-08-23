@@ -1,19 +1,22 @@
 # Hi, I'm a readme file
 
-![demo.png](resources/images/demo.png)
+![thumbnail.png](resources/images/thumbnail.png)
 
-### Build Process
+## About
+This voxel game is my graphics programming playground. The main focus is on performance optimizations and learning opengl.
+
+## Build Process
 Install cmake and run ```bash build.sh``` in your terminal. 
 This will create a build directory and compile the project.
 
-### Controls
+## Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
 - `TAB` to toggle debug mode
 - `ESC` to quit
 - `V` toggle mouse cursor
 - `X` refresh (drop all chunks)
 
-### Roadmap / Features
+## Roadmap / Features
 - [ ] graphics & optimizations
   - [x] 1 int -> 1 vertex
   - [x] 1 int -> whole face
@@ -48,7 +51,7 @@ This will create a build directory and compile the project.
   - [ ] particle system
   - [x] save game & config file
 
-### Libraries
+## Libraries
 - [glad](https://github.com/Dav1dde/glad) - OpenGL loading
 - [glfw](https://github.com/glfw/glfw) - Window managing
 - [glm](https://github.com/g-truc/glm) - Quick math library, because I'm not a psychopath
