@@ -30,7 +30,6 @@ This will create a build directory and compile the project.
   - [x] 32^3 chunks
   - [x] translucent blocks 
   - [ ] binary meshing
-  - [ ] chunk empty flag
 
 - [ ] game mechanics
   - [x] collisions
@@ -47,12 +46,15 @@ This will create a build directory and compile the project.
     - [ ] structures
   - [x] placing and breaking blocks
   - [ ] particle system
+  - [x] save game & config file
 
 ### Libraries
-- [spdlog](https://github.com/gabime/spdlog) - Logging 
 - [glad](https://github.com/Dav1dde/glad) - OpenGL loading
 - [glfw](https://github.com/glfw/glfw) - Window managing
 - [glm](https://github.com/g-truc/glm) - Quick math library, because I'm not a psychopath
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Loading texture atlas
-- [glText](https://github.com/vallentin/glText) - Text rendering
+- [cstmlib](https://github.com/DeletedMyEmail/CustomLibs) - Logging and profiling
 - [FastNoiseLite](https://github.com/Auburn/FastNoiseLite) - Noise generation
+- [libconfig](https://github.com/hyperrealm/libconfig) - Config file parsing
+- [SQLiteCpp](https://github.com/SRombauts/SQLiteCpp) - Database for save games
+- [imgui](https://github.com/ocornut/imgui) - Rendering debug menu

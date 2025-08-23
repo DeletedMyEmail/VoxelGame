@@ -5,15 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
 include(FetchContent)
-
-# Fetch GLFW
 FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
 )
 FetchContent_MakeAvailable(glfw)
 
-# Fetch Custom Libraries
 FetchContent_Declare(
         cstmlib
         GIT_REPOSITORY https://github.com/DeletedMyEmail/CustomLibs.git
@@ -21,7 +18,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cstmlib)
 
-# Fetch FastNoiseLite
 FetchContent_Declare(
         fastnoise
         GIT_REPOSITORY https://github.com/Auburn/FastNoiseLite.git
@@ -29,7 +25,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fastnoise)
 
-# Fetch ImGui
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
