@@ -37,6 +37,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+FetchContent_Declare(
+        SQLiteCpp
+        GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
+        GIT_TAG 3.3.3
+)
+FetchContent_MakeAvailable(SQLiteCpp)
+
 find_package(OpenGL REQUIRED)
 
 FILE(GLOB_RECURSE SOURCE "src/*.cpp" "libs/*.cpp" "libs/*.c")
@@ -78,6 +85,7 @@ target_link_libraries(${PROJECT_NAME}
         glfw
         OpenGL::GL
         cstmlib
+        SQLiteCpp
 )
 
 # Add testing ---------------------------------------------------------------

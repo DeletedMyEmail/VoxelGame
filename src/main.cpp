@@ -11,20 +11,22 @@
 #include <deque>
 #include <numeric>
 #include <algorithm>
-
 #include "Physics.h"
 #include "Rendering.h"
-#include "WorldGeneration.h"
+#include "GameWorld.h"
+#include "SQLiteCpp/Database.h"
 #include "stb/stb_image.h"
 
 glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
-void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block);
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db);
 void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel);
 
 int main(int argc, char* argv[])
 {
     LOG_INIT();
     PROFILER_INIT(100);
+
+    SQLite::Database db = initDB();
 
     bool debugMode = true, cursorLocked = true;
     MenuSettings menuSettings{
@@ -69,14 +71,14 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &menuSettings](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &menuSettings, &db](Window* win, int button, int action, int mods)
         {
             ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
             if (action != GLFW_PRESS || !cursorLocked)
                 return;
 
             if (button == GLFW_MOUSE_BUTTON_LEFT)
-                placeBlock(chunkManager, cam, menuSettings.selectedBlock);
+                placeBlock(chunkManager, cam, menuSettings.selectedBlock, db);
         });
 
     Metrics metrics;
@@ -144,7 +146,7 @@ glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
     return glm::normalize(input);
 }
 
-void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block)
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db)
 {
     assert(block != BLOCK_TYPE::INVALID);
 
@@ -154,25 +156,35 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block)
 
     const auto positionInChunk = worldPosToChunkBlockPos(res.pos);
 
+    const glm::ivec3& chunkPos = res.chunk->chunkPosition;
+
+    std::string stmt;
     if (block == BLOCK_TYPE::AIR)
+    {
         res.chunk->setBlockUnsafe(positionInChunk, BLOCK_TYPE::AIR);
+        saveBlockChanges(db, chunkPos, positionInChunk, BLOCK_TYPE::AIR);
+    }
     else
     {
         glm::ivec3 offset;
         switch (res.face)
         {
-        case BACK: offset = {0,0,-1}; break;
-        case FRONT: offset = {0,0,1}; break;
-        case LEFT: offset = {-1,0,0}; break;
-        case RIGHT: offset = {1,0,0}; break;
-        case TOP: offset = {0, 1, 0}; break;
-        case BOTTOM: offset = {0, -1, 0}; break;
-        default: assert(false);
+            case BACK: offset = {0,0,-1}; break;
+            case FRONT: offset = {0,0,1}; break;
+            case LEFT: offset = {-1,0,0}; break;
+            case RIGHT: offset = {1,0,0}; break;
+            case TOP: offset = {0, 1, 0}; break;
+            case BOTTOM: offset = {0, -1, 0}; break;
+            default: assert(false);
         }
+
         glm::ivec3 neighbourBlockPos = positionInChunk + offset;
 
         if (isChunkCoord(neighbourBlockPos))
+        {
             res.chunk->setBlockUnsafe(neighbourBlockPos, block);
+            saveBlockChanges(db, chunkPos, neighbourBlockPos, block);
+        }
         else
         {
             glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
@@ -181,43 +193,45 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block)
             if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
             else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
 
-
-            Chunk* neighbourChunk = chunkManager.getChunk(res.chunk->chunkPosition + offset);
-
+            Chunk* neighbourChunk = chunkManager.getChunk(chunkPos + offset);
             assert(neighbourChunk != nullptr);
             assert(neighbourChunk->getBlockSafe(blockPosInOtherChunk) != BLOCK_TYPE::INVALID);
+
             neighbourChunk->setBlockUnsafe(blockPosInOtherChunk, block);
+            saveBlockChanges(db, neighbourChunk->chunkPosition, neighbourBlockPos, block);
         }
     }
 
+    db.exec(stmt);
+
     if (positionInChunk.x == 0)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x - 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x - 1, chunkPos.y, chunkPos.z});
         if (chunk) chunk->isMeshBaked = false;
     }
     else if (positionInChunk.x == Chunk::CHUNK_SIZE - 1)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x + 1, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x + 1, chunkPos.y, chunkPos.z});
         if (chunk) chunk->isMeshBaked = false;
     }
     if (positionInChunk.y == 0)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y - 1, res.chunk->chunkPosition.z});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x, chunkPos.y - 1, chunkPos.z});
         if (chunk) chunk->isMeshBaked = false;
     }
     else if (positionInChunk.y == Chunk::CHUNK_SIZE - 1)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y + 1, res.chunk->chunkPosition.z});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x, chunkPos.y + 1, chunkPos.z});
         if (chunk) chunk->isMeshBaked = false;
     }
     if (positionInChunk.z == 0)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z - 1});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x, chunkPos.y, chunkPos.z - 1});
         if (chunk) chunk->isMeshBaked = false;
     }
     else if (positionInChunk.z == Chunk::CHUNK_SIZE - 1)
     {
-        Chunk* chunk = chunkManager.getChunk({res.chunk->chunkPosition.x, res.chunk->chunkPosition.y, res.chunk->chunkPosition.z + 1});
+        Chunk* chunk = chunkManager.getChunk({chunkPos.x, chunkPos.y, chunkPos.z + 1});
         if (chunk) chunk->isMeshBaked = false;
     }
 }

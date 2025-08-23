@@ -1,4 +1,4 @@
-#include "WorldGeneration.h"
+#include "GameWorld.h"
 #include "Chunk.h"
 #include "glm/common.hpp"
 #include "glm/exponential.hpp"
@@ -11,6 +11,23 @@ FastNoiseLite genBiomeNoise();
 FastNoiseLite genTreeNoise();
 FastNoiseLite genForestNoise();
 uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValue);
+
+SQLite::Database initDB()
+{
+    const std::string DB_TABLE = "BlockChange (chunkX INTEGER, chunkY INTEGER, chunkZ INTEGER, x INTEGER, y INTEGER, z INTEGER, blocktype INTEGER)";
+
+    SQLite::Database db("voxel_world.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+    db.exec("CREATE TABLE IF NOT EXISTS " + DB_TABLE);
+    return db;
+}
+
+void saveBlockChanges(SQLite::Database& db, const glm::ivec3& chunkPos, const glm::ivec3& positionInChunk, BLOCK_TYPE blockType)
+{
+    const std::string stmt = std::format("INSERT INTO BlockChange(chunkX, chunkY, chunkZ, x, y, z, blocktype) VALUES({}, {}, {}, {}, {}, {}, {})",
+        chunkPos.x, chunkPos.y, chunkPos.z, positionInChunk.x, positionInChunk.y, positionInChunk.z, (int) blockType);
+
+    db.exec(stmt);
+}
 
 uint32_t getHeightAt(const glm::ivec2& pos)
 {

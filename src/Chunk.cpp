@@ -5,7 +5,7 @@
 #include "OpenGLHelper.h"
 #include "Rendering.h"
 #include "Shader.h"
-#include "WorldGeneration.h"
+#include "GameWorld.h"
 #include "glm/common.hpp"
 
 ChunkManager::ChunkManager()

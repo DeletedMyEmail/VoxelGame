@@ -4,7 +4,7 @@
 
 #include "Physics.h"
 #include "Window.h"
-#include "WorldGeneration.h"
+#include "GameWorld.h"
 #include "cstmlib/Profiling.h"
 
 class TestClass : public testing::Test
