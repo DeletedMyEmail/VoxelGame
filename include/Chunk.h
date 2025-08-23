@@ -8,6 +8,11 @@
 #include "ThreadPool.h"
 #include "glm/fwd.hpp"
 
+namespace SQLite
+{
+    class Database;
+}
+
 struct Chunk
 {
     Chunk();
@@ -53,7 +58,7 @@ struct ChunkManager
     void unloadChunks(const glm::ivec3& currChunkPos);
     void drawChunks(const glm::mat4& viewProjection, float exposure) ;
     void bakeChunks(const glm::ivec3& currChunkPos);
-    void loadChunks(const glm::ivec3& currChunkPos);
+    void loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db);
     void dropChunkMeshes();
     Chunk* getChunk(const glm::ivec3& pos);
 

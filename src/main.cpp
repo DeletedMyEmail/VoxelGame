@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
         }));
         cam.updateView();
         TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
-        TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos));
+        TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos, db));
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
         TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, menuSettings.exposure));
         TIME(metrics, "Block Highlighting",

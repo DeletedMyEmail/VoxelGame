@@ -14,7 +14,16 @@ uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValu
 
 SQLite::Database initDB()
 {
-    const std::string DB_TABLE = "BlockChange (chunkX INTEGER, chunkY INTEGER, chunkZ INTEGER, x INTEGER, y INTEGER, z INTEGER, blocktype INTEGER)";
+    const std::string DB_TABLE =
+        "BlockChange("
+        "chunkX INTEGER,"
+        "chunkY INTEGER,"
+        "chunkZ INTEGER,"
+        "x INTEGER,"
+        "y INTEGER,"
+        "z INTEGER,"
+        "blockType INTEGER,"
+        "PRIMARY KEY (chunkX, chunkY, chunkZ, x, y, z))";
 
     SQLite::Database db("voxel_world.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
     db.exec("CREATE TABLE IF NOT EXISTS " + DB_TABLE);
@@ -23,10 +32,32 @@ SQLite::Database initDB()
 
 void saveBlockChanges(SQLite::Database& db, const glm::ivec3& chunkPos, const glm::ivec3& positionInChunk, BLOCK_TYPE blockType)
 {
-    const std::string stmt = std::format("INSERT INTO BlockChange(chunkX, chunkY, chunkZ, x, y, z, blocktype) VALUES({}, {}, {}, {}, {}, {}, {})",
+    const std::string stmt = std::format("INSERT OR REPLACE INTO BlockChange VALUES({}, {}, {}, {}, {}, {}, {})",
         chunkPos.x, chunkPos.y, chunkPos.z, positionInChunk.x, positionInChunk.y, positionInChunk.z, (int) blockType);
 
     db.exec(stmt);
+}
+
+std::vector<BlockChange> getBlockChangesForChunk(SQLite::Database& db, const glm::ivec3& chunkPos)
+{
+    SQLite::Statement query(db, "SELECT x, y, z, blockType FROM BlockChange WHERE chunkX = ? AND chunkY = ? AND chunkZ = ?");
+
+    query.bind(1, chunkPos.x);
+    query.bind(2, chunkPos.y);
+    query.bind(3, chunkPos.z);
+
+    std::vector<BlockChange> changes;
+    while (query.executeStep())
+    {
+        int x = query.getColumn(0).getInt();
+        int y = query.getColumn(1).getInt();
+        int z = query.getColumn(2).getInt();
+        BLOCK_TYPE blockType = (BLOCK_TYPE) query.getColumn(3).getInt();
+
+        changes.emplace_back(glm::ivec3{x,y,z}, blockType);
+    }
+
+    return changes;
 }
 
 uint32_t getHeightAt(const glm::ivec2& pos)

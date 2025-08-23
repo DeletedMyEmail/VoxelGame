@@ -97,10 +97,10 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
     }
 }
 
-void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
+void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db)
 {
     auto chunkQueue = getChunksSorted(currChunkPos, config::LOAD_DISTANCE);
-
+    glm::ivec3 chunkPositionsOfLoaded[config::MAX_LOADS_PER_FRAME];
     uint32_t chunksLoaded = 0;
     while (!chunkQueue.empty() && chunksLoaded < config::MAX_LOADS_PER_FRAME)
     {
@@ -110,7 +110,7 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
         if (chunks.contains(position))
             continue;
 
-        chunksLoaded++;
+        chunkPositionsOfLoaded[chunksLoaded++] = position;
         Chunk* chunk = &chunks.emplace(position, Chunk()).first->second;
         threadPool.queueJob([chunk, position]()
         {
@@ -120,6 +120,14 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos)
 
     while (threadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+    for (uint32_t i = 0; i < chunksLoaded; i++)
+    {
+        auto changes = getBlockChangesForChunk(db, chunkPositionsOfLoaded[i]);
+        Chunk* chunk = getChunk(chunkPositionsOfLoaded[i]);
+        for (const auto& change : changes)
+            chunk->setBlockUnsafe(change.positionInChunk, change.blockType);
+    }
 }
 
 void ChunkManager::dropChunkMeshes()

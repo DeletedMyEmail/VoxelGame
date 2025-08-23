@@ -8,6 +8,13 @@
 SQLite::Database initDB();
 void saveBlockChanges(SQLite::Database& db, const glm::ivec3& chunkPos, const glm::ivec3& positionInChunk, BLOCK_TYPE blockType);
 
+struct BlockChange
+{
+    glm::ivec3 positionInChunk;
+    BLOCK_TYPE blockType;
+};
+std::vector<BlockChange> getBlockChangesForChunk(SQLite::Database& db, const glm::ivec3& chunkPos);
+
 uint32_t getHeightAt(const glm::ivec2& pos);
 bool hasTree(const glm::ivec2& pos);
 bool isForest(const glm::ivec2& pos);
