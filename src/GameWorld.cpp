@@ -5,14 +5,14 @@
 #include "glm/trigonometric.hpp"
 #include "FastNoiseLite.h"
 
-FastNoiseLite genPrimNoise();
-FastNoiseLite genSecNoise();
-FastNoiseLite genBiomeNoise();
-FastNoiseLite genTreeNoise();
-FastNoiseLite genForestNoise();
+FastNoiseLite genPrimNoise(uint32_t seed);
+FastNoiseLite genSecNoise(uint32_t seed);
+FastNoiseLite genBiomeNoise(uint32_t seed);
+FastNoiseLite genTreeNoise(uint32_t seed);
+FastNoiseLite genForestNoise(uint32_t seed);
 uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValue);
 
-SQLite::Database initDB()
+SQLite::Database initDB(const std::string& dbPath)
 {
     const std::string DB_TABLE =
         "BlockChange("
@@ -25,7 +25,7 @@ SQLite::Database initDB()
         "blockType INTEGER,"
         "PRIMARY KEY (chunkX, chunkY, chunkZ, x, y, z))";
 
-    SQLite::Database db("voxel_world.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
     db.exec("CREATE TABLE IF NOT EXISTS " + DB_TABLE);
     return db;
 }
@@ -60,12 +60,16 @@ std::vector<BlockChange> getBlockChangesForChunk(SQLite::Database& db, const glm
     return changes;
 }
 
-uint32_t getHeightAt(const glm::ivec2& pos)
-{
-    static FastNoiseLite primaryNoise = genPrimNoise();
-    static FastNoiseLite secondaryNoise = genSecNoise();
-    static FastNoiseLite biomeNoise = genBiomeNoise();
+WorldGenerationData::WorldGenerationData(uint32_t seed)
+        :   treeNoise(genTreeNoise(seed)),
+            forestNoise(genForestNoise(seed)),
+            primaryNoise(genPrimNoise(seed)),
+            secondaryNoise(genSecNoise(seed)),
+            biomeNoise(genBiomeNoise(seed))
+{}
 
+uint32_t WorldGenerationData::getHeightAt(const glm::ivec2& pos) const
+{
     const float primaryValue = primaryNoise.GetNoise(float(pos.x), float(pos.y));
     const float secondaryValue = secondaryNoise.GetNoise(float(pos.x), float(pos.y));
     float biomeValue = biomeNoise.GetNoise(float(pos.x), float(pos.y));
@@ -73,19 +77,15 @@ uint32_t getHeightAt(const glm::ivec2& pos)
     return noiseToHeight(primaryValue, secondaryValue, biomeValue);
 }
 
-bool hasTree(const glm::ivec2& pos)
+bool WorldGenerationData::hasTree(const glm::ivec2& pos) const
 {
-    static FastNoiseLite treeNoise = genTreeNoise();
-
     const float noiseValue = treeNoise.GetNoise(float(pos.x), float(pos.y));
     return noiseValue > 0;
 }
 
-bool isForest(const glm::ivec2& pos)
+bool WorldGenerationData::isForest(const glm::ivec2& pos) const
 {
-    static FastNoiseLite treeNoise = genForestNoise();
-
-    const float noiseValue = treeNoise.GetNoise(float(pos.x), float(pos.y));
+    const float noiseValue = forestNoise.GetNoise(float(pos.x), float(pos.y));
     return noiseValue > 0;
 }
 
@@ -101,13 +101,13 @@ uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValu
     float valleyHeight = 20.0f + primaryValue * 15.0f + secondaryValue * 5.0f;
 
     // More interesting plains with rolling hills and small features
-    float plainsBase = float(SEA_LEVEL) + primaryValue * 12.0f;
+    float plainsBase = float(WorldGenerationData::SEA_LEVEL) + primaryValue * 12.0f;
     float plainsDetail = secondaryValue * 8.0f - 4.0f;
     float plainsVariation = glm::sin(primaryValue * 6.28f) * 3.0f + glm::cos(secondaryValue * 6.28f) * 2.0f;
     float plainsHeight = plainsBase + plainsDetail + plainsVariation;
 
     float mountainHeight = glm::pow(primaryValue, 1.5f);
-    float mountainFinal = float(SEA_LEVEL) + mountainHeight * 60.0f + secondaryValue * 15.0f;
+    float mountainFinal = float(WorldGenerationData::SEA_LEVEL) + mountainHeight * 60.0f + secondaryValue * 15.0f;
 
     // Rare very tall mountains
     if (primaryValue > 0.85f && secondaryValue > 0.8f) {
@@ -125,7 +125,7 @@ uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValu
         mesaBase - (0.3f - secondaryValue) * 20.0f;
 
     // Ocean/sea areas - flat underwater terrain
-    float oceanHeight = float(SEA_LEVEL) - 8.0f + primaryValue * 6.0f + secondaryValue * 3.0f;
+    float oceanHeight = float(WorldGenerationData::SEA_LEVEL) - 8.0f + primaryValue * 6.0f + secondaryValue * 3.0f;
 
     // Adjust biome distribution to include seas
     float finalHeight = 0.0f;
@@ -170,10 +170,10 @@ uint32_t noiseToHeight(float primaryValue, float secondaryValue, float biomeValu
         }
     }
 
-    return uint32_t(glm::clamp(finalHeight, MIN_HEIGHT, MAX_HEIGHT));
+    return uint32_t(glm::clamp(finalHeight, WorldGenerationData::MIN_HEIGHT, WorldGenerationData::MAX_HEIGHT));
 }
 
-FastNoiseLite genPrimNoise()
+FastNoiseLite genPrimNoise(uint32_t seed)
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -182,12 +182,12 @@ FastNoiseLite genPrimNoise()
     noise.SetFractalOctaves(5);
     noise.SetFractalLacunarity(2.0f);
     noise.SetFractalGain(0.5f);
-    noise.SetSeed(config::WORLD_SEED);
+    noise.SetSeed(seed);
 
     return noise;
 }
 
-FastNoiseLite genSecNoise()
+FastNoiseLite genSecNoise(uint32_t seed)
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -196,41 +196,40 @@ FastNoiseLite genSecNoise()
     noise.SetFractalOctaves(3);
     noise.SetFractalLacunarity(2.0f);
     noise.SetFractalGain(0.6f);
-    noise.SetSeed(config::WORLD_SEED);
+    noise.SetSeed(seed);
 
     return noise;
 }
 
-FastNoiseLite genBiomeNoise()
+FastNoiseLite genBiomeNoise(uint32_t seed)
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     noise.SetFrequency(0.0008f);
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     noise.SetFractalOctaves(2);
-    noise.SetSeed(config::WORLD_SEED);
+    noise.SetSeed(seed);
 
     return noise;
 }
 
-FastNoiseLite genForestNoise()
+FastNoiseLite genForestNoise(uint32_t seed)
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-    noise.SetSeed(config::WORLD_SEED);
+    noise.SetSeed(seed);
     noise.SetFrequency(1.6f);
     noise.SetFractalOctaves(3);
     noise.SetFractalType(FastNoiseLite::FractalType_PingPong);
 
     return noise;
-
 }
 
-FastNoiseLite genTreeNoise()
+FastNoiseLite genTreeNoise(uint32_t seed)
 {
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-    noise.SetSeed(config::WORLD_SEED);
+    noise.SetSeed(seed);
     noise.SetFrequency(0.9f);
     noise.SetFractalOctaves(3);
     noise.SetFractalType(FastNoiseLite::FractalType_Ridged);

@@ -44,6 +44,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SQLiteCpp)
 
+FetchContent_Declare(
+        libconfig
+        GIT_REPOSITORY https://github.com/hyperrealm/libconfig.git
+        GIT_TAG v1.8.1
+)
+FetchContent_MakeAvailable(libconfig)
+
 find_package(OpenGL REQUIRED)
 
 FILE(GLOB_RECURSE SOURCE "src/*.cpp" "libs/*.cpp" "libs/*.c")
@@ -52,8 +59,7 @@ include_directories("include/" "libs/")
 add_executable(${PROJECT_NAME} ${SOURCE})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" )
-    message(STATUS "Building in Release mode - logging and profiling disabled for main target")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE NOLOG)
+    message(STATUS "Building in Release mode - profiling disabled for main target")
     target_compile_definitions(${PROJECT_NAME} PRIVATE NOPROFILE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE RELEASE_BUILD)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -78,6 +84,7 @@ target_sources(${PROJECT_NAME} PRIVATE
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        ${libconfig_SOURCE_DIR}/lib
 )
 
 # Link libraries
@@ -86,6 +93,7 @@ target_link_libraries(${PROJECT_NAME}
         OpenGL::GL
         cstmlib
         SQLiteCpp
+        config++
 )
 
 # Add testing ---------------------------------------------------------------
@@ -112,12 +120,14 @@ target_link_libraries(${PROJECT_NAME}_tests
         glfw
         OpenGL::GL
         cstmlib
+        config++
 )
 
 target_include_directories(${PROJECT_NAME}_tests PRIVATE
         ${fastnoise_SOURCE_DIR}/Cpp
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
+        ${libconfig_SOURCE_DIR}/lib
 )
 
 target_sources(${PROJECT_NAME}_tests PRIVATE

@@ -8,25 +8,35 @@
 #include "OpenGLHelper.h"
 #include "Raycast.h"
 #include "ThreadPool.h"
-#include <deque>
 #include <numeric>
-#include <algorithm>
 #include "Physics.h"
 #include "Rendering.h"
 #include "GameWorld.h"
 #include "SQLiteCpp/Database.h"
 #include "stb/stb_image.h"
+#include <libconfig.h++>
 
 glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
-void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db);
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db, float reachDistance);
 void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel);
 
 int main(int argc, char* argv[])
 {
+#ifdef RELEASE_BUILD
+    LOG_INIT_SPECIFIC(PROJECT_NAME, spdlog::level::warn, "log.txt");
+#else
     LOG_INIT();
+#endif
     PROFILER_INIT(100);
 
-    SQLite::Database db = initDB();
+    ProgramConfig config;
+    if (argc >= 2 && !loadConfig(argv[1], config))
+    {
+        LOG_ERROR("Failed to load config file: {}", argv[1]);
+        return -1;
+    }
+
+    SQLite::Database db = initDB(config.saveGamePath);
 
     bool debugMode = true, cursorLocked = true;
     MenuSettings menuSettings{
@@ -40,9 +50,9 @@ int main(int argc, char* argv[])
     window.setCursorDisabled(cursorLocked);
     renderConfig(window.getGLFWWindow());
 
-    Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config::RENDER_DISTANCE * Chunk::CHUNK_SIZE * 4);
+    Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WorldGenerationData::WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config.renderDistance * Chunk::CHUNK_SIZE * 4);
 
-    ChunkManager chunkManager;
+    ChunkManager chunkManager(config);
     glm::dvec2 prevCursorPos = window.getMousePosition();
     window.onKey([&chunkManager, &debugMode, &cursorLocked] (Window* win, const int key, const int scancode, const int action, const int mods)
         {
@@ -71,14 +81,14 @@ int main(int argc, char* argv[])
             prevCursorPos = pos;
         });
 
-    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &menuSettings, &db](Window* win, int button, int action, int mods)
+    window.onMouseButton([&cam, &chunkManager, &cursorLocked, &menuSettings, &db, &config](Window* win, int button, int action, int mods)
         {
             ImGui::GetIO().MouseDown[button] = (action == GLFW_PRESS);
             if (action != GLFW_PRESS || !cursorLocked)
                 return;
 
             if (button == GLFW_MOUSE_BUTTON_LEFT)
-                placeBlock(chunkManager, cam, menuSettings.selectedBlock, db);
+                placeBlock(chunkManager, cam, menuSettings.selectedBlock, db, config.reachDistance);
         });
 
     Metrics metrics;
@@ -105,7 +115,7 @@ int main(int argc, char* argv[])
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
         TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, menuSettings.exposure));
         TIME(metrics, "Block Highlighting",
-             RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+             RaycastResult res = raycast(cam.position, cam.lookDir, config.reachDistance, chunkManager);
              if (res.hit)
              drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, menuSettings.exposure);
         );
@@ -113,7 +123,7 @@ int main(int argc, char* argv[])
         if (debugMode)
         {
             drawAxes(cam);
-            drawDebugMenu(metrics, menuSettings, cam.position);
+            drawDebugMenu(metrics, menuSettings, cam.position, config);
         }
 
         glfwSwapBuffers(window.getGLFWWindow());
@@ -127,15 +137,15 @@ int main(int argc, char* argv[])
 glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
 {
     glm::vec3 input(0.0f);
-    const float forwardInput =  1.0f * window.isKeyDown(GLFW_KEY_W) - 1.0f * window.isKeyDown(GLFW_KEY_S);
-    const float rightInput   =  1.0f * window.isKeyDown(GLFW_KEY_D) - 1.0f * window.isKeyDown(GLFW_KEY_A);
-    const float upInput      =  1.0f * window.isKeyDown(GLFW_KEY_SPACE) - 1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
+    const float forwardInput = 1.0f * window.isKeyDown(GLFW_KEY_W) - 1.0f * window.isKeyDown(GLFW_KEY_S);
+    const float rightInput   = 1.0f * window.isKeyDown(GLFW_KEY_D) - 1.0f * window.isKeyDown(GLFW_KEY_A);
+    const float upInput      = 1.0f * window.isKeyDown(GLFW_KEY_SPACE) - 1.0f * window.isKeyDown(GLFW_KEY_LEFT_SHIFT);
 
     if (forwardInput == 0 && rightInput == 0 && upInput == 0)
         return glm::vec3(0.0f);
 
-    glm::vec3 forward = glm::normalize(glm::vec3(lookDir.x, 0.0f, lookDir.z));
-    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 forward = glm::normalize(glm::vec3(lookDir.x, 0.0f, lookDir.z));
+    const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
 
     input += forward * forwardInput;
     input += right * rightInput;
@@ -146,11 +156,11 @@ glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
     return glm::normalize(input);
 }
 
-void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db)
+void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db, float reachDistance)
 {
     assert(block != BLOCK_TYPE::INVALID);
 
-    RaycastResult res = raycast(cam.position, cam.lookDir, config::REACH_DISTANCE, chunkManager);
+    RaycastResult res = raycast(cam.position, cam.lookDir, reachDistance, chunkManager);
     if (!res.hit)
         return;
 

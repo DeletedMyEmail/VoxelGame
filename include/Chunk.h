@@ -2,21 +2,17 @@
 
 #include "Block.h"
 #include "Config.h"
+#include "GameWorld.h"
 #include "VertexArray.h"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "ThreadPool.h"
 #include "glm/fwd.hpp"
 
-namespace SQLite
-{
-    class Database;
-}
-
 struct Chunk
 {
     Chunk();
-    Chunk(const glm::ivec3& chunkPosition);;
+    Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGenData);
     void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
@@ -54,7 +50,7 @@ struct std::hash<glm::ivec3>
 
 struct ChunkManager
 {
-    ChunkManager();
+    ChunkManager(const ProgramConfig& config);
     void unloadChunks(const glm::ivec3& currChunkPos);
     void drawChunks(const glm::mat4& viewProjection, float exposure) ;
     void bakeChunks(const glm::ivec3& currChunkPos);
@@ -62,16 +58,8 @@ struct ChunkManager
     void dropChunkMeshes();
     Chunk* getChunk(const glm::ivec3& pos);
 
-    struct ChunkLoadRequest
-    {
-        glm::ivec3 position;
-        float priority;
-
-        bool operator<(const ChunkLoadRequest& other) const { return priority > other.priority; }
-    };
-
-    static std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChunkPos, int32_t maxDist);
-
     ThreadPool threadPool;
     std::unordered_map<glm::ivec3, Chunk> chunks;
+    const ProgramConfig& config;
+    WorldGenerationData worldGenData;
 };

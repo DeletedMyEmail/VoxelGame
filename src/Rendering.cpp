@@ -88,17 +88,20 @@ void clearFrame(const float skyExposure, const bool debugMode)
     }
 }
 
-void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos)
+void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config)
 {
     ImGui::Begin("Debug");
 
     ImGui::Text("Position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::Text("Seed: %d", config::WORLD_SEED);
+    ImGui::Text("Seed: %d", config.worldSeed);
+    ImGui::Text("Render Distance: %d", config.renderDistance);
+    ImGui::Text("Load Distance: %d", config.loadDistance);
+    ImGui::Text("Threads: %d", config.threadCount);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::Checkbox("Collisions enabled ", &settings.collisionsOn);
+    ImGui::Checkbox("Collisions", &settings.collisionsOn);
     ImGui::SliderFloat("Exposure", &settings.exposure, 0.0f, 1.0f);
     ImGui::SliderFloat("Camera Speed", &settings.camSpeed, 1.0f, 200.0f);
     ImGui::Combo("Block Type", (int*) &settings.selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());

@@ -8,10 +8,10 @@
 #include "GameWorld.h"
 #include "glm/common.hpp"
 
-ChunkManager::ChunkManager()
-    : threadPool(config::THREAD_COUNT)
+ChunkManager::ChunkManager(const ProgramConfig& config)
+    : threadPool(config.threadCount), config(config), worldGenData(config.worldSeed)
 {
-    chunks.reserve((2 * config::LOAD_DISTANCE) * (2 * config::LOAD_DISTANCE) * (WORLD_HEIGHT));
+    chunks.reserve((2 * config.loadDistance) * (2 * config.loadDistance) * (WorldGenerationData::WORLD_HEIGHT));
 }
 
 void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
@@ -25,9 +25,9 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
         const int32_t yDist = glm::abs(chunk.chunkPosition.y - currChunkPos.y);
         const int32_t zDist = glm::abs(chunk.chunkPosition.z - currChunkPos.z);
 
-        if (unloads < config::MAX_UNLOADS_PER_FRAME &&
+        if (unloads < config.maxUnloadsPerFrame &&
             !chunk.inRender &&
-            (xDist > config::LOAD_DISTANCE || yDist > config::LOAD_DISTANCE || zDist > config::LOAD_DISTANCE))
+            (xDist > config.loadDistance || yDist > config.loadDistance || zDist > config.loadDistance))
         {
             it = chunks.erase(it);
             unloads++;
@@ -37,11 +37,41 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
             ++it;
 
             chunk.inRender =
-                xDist < config::RENDER_DISTANCE &&
-                yDist < config::RENDER_DISTANCE &&
-                zDist < config::RENDER_DISTANCE;
+                xDist < config.renderDistance &&
+                yDist < config.renderDistance &&
+                zDist < config.renderDistance;
         }
     }
+}
+
+
+struct ChunkLoadRequest
+{
+    glm::ivec3 position;
+    float priority;
+
+    bool operator<(const ChunkLoadRequest& other) const { return priority > other.priority; }
+};
+
+std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChunkPos, const int32_t maxDist)
+{
+    uint32_t chunksAdded = 0;
+    std::priority_queue<ChunkLoadRequest> queue;
+    for (int32_t x = currChunkPos.x - maxDist; x <= currChunkPos.x + maxDist; x++)
+    {
+        for (int32_t y = 0; y < WorldGenerationData::WORLD_HEIGHT; y++)
+        {
+            for (int32_t z = currChunkPos.z - maxDist; z <= currChunkPos.z + maxDist; z++)
+            {
+                glm::ivec3 chunkPos = {x, y, z};
+                const float distance = glm::length(glm::vec3(chunkPos - currChunkPos));
+                queue.push({chunkPos, distance});
+                chunksAdded++;
+            }
+        }
+    }
+
+    return queue;
 }
 
 void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure)
@@ -58,7 +88,7 @@ void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float expos
 void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t chunksBaked = 0;
-    auto chunkQueue = getChunksSorted(currChunkPos, config::RENDER_DISTANCE);
+    auto chunkQueue = getChunksSorted(currChunkPos, config.renderDistance);
 
     while (!chunkQueue.empty())
     {
@@ -70,7 +100,7 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
             continue;
 
         Chunk& chunk = it->second;
-        if (chunk.isMeshBaked || chunksBaked >= config::MAX_BAKES_PER_FRAME)
+        if (chunk.isMeshBaked || chunksBaked >= config.maxBakesPerFrame)
             continue;
 
         chunksBaked++;
@@ -99,10 +129,10 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 
 void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db)
 {
-    auto chunkQueue = getChunksSorted(currChunkPos, config::LOAD_DISTANCE);
-    glm::ivec3 chunkPositionsOfLoaded[config::MAX_LOADS_PER_FRAME];
+    auto chunkQueue = getChunksSorted(currChunkPos, config.loadDistance);
+    glm::ivec3 chunkPositionsOfLoaded[config.maxLoadsPerFrame];
     uint32_t chunksLoaded = 0;
-    while (!chunkQueue.empty() && chunksLoaded < config::MAX_LOADS_PER_FRAME)
+    while (!chunkQueue.empty() && chunksLoaded < config.maxLoadsPerFrame)
     {
         auto [position, priority] = chunkQueue.top();
         chunkQueue.pop();
@@ -112,9 +142,9 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& 
 
         chunkPositionsOfLoaded[chunksLoaded++] = position;
         Chunk* chunk = &chunks.emplace(position, Chunk()).first->second;
-        threadPool.queueJob([chunk, position]()
+        threadPool.queueJob([chunk, position, this]()
         {
-            *chunk = Chunk(position);
+            *chunk = Chunk(position, this->worldGenData);
         });
     }
 
@@ -147,28 +177,6 @@ Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
     return nullptr;
 }
 
-
-std::priority_queue<ChunkManager::ChunkLoadRequest> ChunkManager::getChunksSorted(const glm::ivec3& currChunkPos, const int32_t maxDist)
-{
-    uint32_t chunksAdded = 0;
-    std::priority_queue<ChunkLoadRequest> queue;
-    for (int32_t x = currChunkPos.x - maxDist; x <= currChunkPos.x + maxDist; x++)
-    {
-        for (int32_t y = 0; y < WORLD_HEIGHT; y++)
-        {
-            for (int32_t z = currChunkPos.z - maxDist; z <= currChunkPos.z + maxDist; z++)
-            {
-                glm::ivec3 chunkPos = {x, y, z};
-                const float distance = glm::length(glm::vec3(chunkPos - currChunkPos));
-                queue.push({chunkPos, distance});
-                chunksAdded++;
-            }
-        }
-    }
-
-    return queue;
-}
-
 // CHUNK ---------------------------------------
 
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
@@ -190,7 +198,7 @@ void Chunk::spawnTree(const glm::ivec3& pos)
             setBlockUnsafe({pos.x + x, pos.y + TREE_HEIGHT - 1, pos.z + z}, BLOCK_TYPE::LEAVES);
 }
 
-Chunk::Chunk(const glm::ivec3& chunkPosition)
+Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGenData)
     : blocks{}, chunkPosition(chunkPosition), isMeshBaked(false), isMeshDataReady(false)
 {
     meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
@@ -198,7 +206,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
 
     const auto absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
     const int32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
-    bool forestChunk = isForest({absChunkPos.x, absChunkPos.z});
+    bool forestChunk = worldGenData.isForest({absChunkPos.x, absChunkPos.z});
     const int32_t SURFACE_HEIGHT = 3;
 
 
@@ -207,21 +215,21 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
         for (int32_t z = 0; z < CHUNK_SIZE; z++)
         {
             glm::ivec3 absPos = absChunkPos + glm::ivec3{x, 0, z};
-            const int32_t terrainHeight = getHeightAt({absPos.x, absPos.z});
+            const int32_t terrainHeight = worldGenData.getHeightAt({absPos.x, absPos.z});
             BLOCK_TYPE surfaceBlock = BLOCK_TYPE::GRASS;
-            if (terrainHeight < SEA_LEVEL + 3)
+            if (terrainHeight < WorldGenerationData::SEA_LEVEL + 3)
                 surfaceBlock = BLOCK_TYPE::SAND;
-            else if (terrainHeight < SEA_LEVEL + 5)
+            else if (terrainHeight < WorldGenerationData::SEA_LEVEL + 5)
                 surfaceBlock = BLOCK_TYPE::STONE;
 
             if (forestChunk &&
                 x > 0 && z > 0 &&
                 x < CHUNK_SIZE - 1 && z < CHUNK_SIZE - 1 &&
-                SEA_LEVEL < terrainHeight &&
+                WorldGenerationData::SEA_LEVEL < terrainHeight &&
                 terrainHeight >= chunkHeight &&
                 terrainHeight + TREE_HEIGHT < chunkHeight + CHUNK_SIZE)
             {
-                const bool tree = hasTree({absPos.x, absPos.z});
+                const bool tree = worldGenData.hasTree({absPos.x, absPos.z});
                 if (tree)
                 {
                     int32_t trunkY = terrainHeight - chunkHeight;
@@ -240,7 +248,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition)
 
                 if (absY >= terrainHeight)
                 {
-                    if (absY <= SEA_LEVEL && terrainHeight <= SEA_LEVEL)
+                    if (absY <= WorldGenerationData::SEA_LEVEL && terrainHeight <= WorldGenerationData::SEA_LEVEL)
                         blocks[index] = BLOCK_TYPE::WATER;
                     else
                         blocks[index] = BLOCK_TYPE::AIR;

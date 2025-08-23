@@ -9,17 +9,17 @@ struct MenuSettings
     bool collisionsOn;
 };
 
-namespace config
+struct ProgramConfig
 {
-    const int32_t RENDER_DISTANCE = 10;
-    const int32_t LOAD_DISTANCE = RENDER_DISTANCE * 1.5;
+    std::string saveGamePath = "world.db";
+    uint32_t renderDistance = 10;
+    uint32_t loadDistance = renderDistance * 1.5;
+    uint32_t maxLoadsPerFrame = 32;
+    uint32_t maxUnloadsPerFrame = maxLoadsPerFrame;
+    uint32_t threadCount = std::thread::hardware_concurrency();
+    uint32_t maxBakesPerFrame = threadCount - 1;
+    uint32_t worldSeed = 42;
+    float reachDistance = 16.0f;
+};
 
-    const int32_t MAX_LOADS_PER_FRAME = 32;
-    const int32_t MAX_UNLOADS_PER_FRAME = MAX_LOADS_PER_FRAME;
-    const int32_t THREAD_COUNT = std::thread::hardware_concurrency();
-    const int32_t MAX_BAKES_PER_FRAME = THREAD_COUNT - 1;
-
-    const int32_t WORLD_SEED = 42;
-
-    const float REACH_DISTANCE = 16.0f;
-}
+bool loadConfig(const char* path, ProgramConfig& config);
