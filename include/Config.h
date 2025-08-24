@@ -18,7 +18,7 @@ struct ProgramConfig
     uint32_t maxUnloadsPerFrame = maxLoadsPerFrame;
     uint32_t threadCount = std::thread::hardware_concurrency();
     uint32_t maxBakesPerFrame = threadCount - 1;
-    uint32_t worldSeed = 42;
+    uint32_t worldSeed = std::chrono::steady_clock::now().time_since_epoch().count();
     float reachDistance = 16.0f;
 };
 
