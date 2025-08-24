@@ -7,7 +7,9 @@ This voxel game is my graphics programming playground. The main focus is on perf
 
 ## Build Process
 Install cmake and run ```bash build.sh``` in your terminal. 
-This will create a build directory and compile the project.
+This will create a build directory and compile the project. The program takes a path to a config file as an optional argument. 
+If no config file is provided, the program will use default values and create a new database in the same directory for the save file.
+For an example config file, see `resources/example.config`.
 
 ## Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
@@ -29,7 +31,6 @@ This will create a build directory and compile the project.
     - [x] chunk loading
     - [x] chunk unloading
     - [x] mesh generation
-  - [x] less mem fragmentation in the chunk manager
   - [x] 32^3 chunks
   - [x] translucent blocks 
   - [ ] binary meshing
@@ -50,6 +51,7 @@ This will create a build directory and compile the project.
   - [x] placing and breaking blocks
   - [ ] particle system
   - [x] save game & config file
+  - [ ] entities
 
 [demo.mp4](https://github.com/user-attachments/assets/9e8c9132-b0e0-42e2-b421-7ddd6451fb57)
 
