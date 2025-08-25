@@ -74,15 +74,17 @@ std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChun
     return queue;
 }
 
-void ChunkManager::drawChunks(const glm::mat4& viewProjection, const float exposure)
+void ChunkManager::drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, const float exposure)
 {
     for (auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
-            drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+            renderer.drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
 
+    glDisable(GL_CULL_FACE);
     for (auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
-            drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+            renderer.drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+    glEnable(GL_CULL_FACE);
 }
 
 void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
@@ -204,7 +206,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGe
     meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
     meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
 
-    const auto absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
+    const glm::ivec3 absChunkPos = chunkPosToWorldBlockPos(chunkPosition);
     const int32_t chunkHeight = chunkPosition.y * CHUNK_SIZE;
     bool forestChunk = worldGenData.isForest({absChunkPos.x, absChunkPos.z});
     const int32_t SURFACE_HEIGHT = 3;
@@ -217,6 +219,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGe
             glm::ivec3 absPos = absChunkPos + glm::ivec3{x, 0, z};
             const int32_t terrainHeight = worldGenData.getHeightAt({absPos.x, absPos.z});
             BLOCK_TYPE surfaceBlock = BLOCK_TYPE::GRASS;
+
             if (terrainHeight < WorldGenerationData::SEA_LEVEL + 3)
                 surfaceBlock = BLOCK_TYPE::SAND;
             else if (terrainHeight < WorldGenerationData::SEA_LEVEL + 5)
@@ -272,7 +275,7 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
             for (uint32_t x = 0; x < CHUNK_SIZE; x++)
             {
                 glm::uvec3 blockPos = {x, y, z};
-                const auto& block = getBlockUnsafe(blockPos);
+                const BLOCK_TYPE block = getBlockUnsafe(blockPos);
 
                 assert(block != BLOCK_TYPE::INVALID);
                 if (block == BLOCK_TYPE::AIR)

@@ -1,6 +1,68 @@
 #include "Physics.h"
+#include "Chunk.h"
 #include "glm/common.hpp"
-#include "glm/detail/func_geometric.inl"
+
+VertexArray createEntityWireframe(const glm::vec3& size);
+
+Entity::Entity(const glm::vec3& pos, const glm::vec3& size, const float health, const float speed)
+    : model(createEntityWireframe(size)), physics{{pos, size}, glm::vec3(0)}, health(health), speed(speed)
+{
+}
+
+void updateEntities(std::vector<Entity> entities, float dtime, const glm::ivec3& pos)
+{
+    // unload
+
+    // load
+
+    // movement
+
+    // gravity
+
+}
+
+void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
+{
+    const int MAX_ITERATIONS = 4;
+    for (int i = 0; i < MAX_ITERATIONS && glm::length(obj.velocity) > 0.001f; ++i)
+    {
+        auto [pos, size] = getBroadphaseBox(obj);
+
+        CollisionData nearestCollision{glm::vec3(0), std::numeric_limits<float>::max()};
+
+        for (int32_t x = glm::floor(pos.x); x < glm::ceil(pos.x + size.x); ++x)
+        {
+            for (int32_t y = glm::floor(pos.y); y < glm::ceil(pos.y + size.y); ++y)
+            {
+                for (int32_t z = glm::floor(pos.z); z < glm::ceil(pos.z + size.z); ++z)
+                {
+                    glm::ivec3 worldPos{x, y, z};
+                    Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
+                    if (!chunk)
+                        continue;
+                    glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
+                    BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
+                    if (block == BLOCK_TYPE::INVALID || !isSolid(block))
+                        continue;
+
+                    BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
+                    CollisionData c = getCollision(obj, blockBox);
+
+                    if (c.entryTime < nearestCollision.entryTime)
+                        nearestCollision = c;
+                }
+            }
+        }
+
+        if (nearestCollision.entryTime > 1.0f)
+        {
+            obj.box.pos += obj.velocity;
+            break;
+        }
+
+        resolveCollision(obj, nearestCollision);
+    }
+}
 
 BoundingBox getBroadphaseBox(const PhysicsObject& obj)
 {
@@ -131,3 +193,54 @@ void resolveCollision(PhysicsObject& a, const CollisionData& collisionData)
         a.velocity -= collisionData.normal * dot;
     }
 }
+VertexArray createEntityWireframe(const glm::vec3& size)
+{
+    const float vertices[] =
+    {
+        0.0f, 0.0f, 0.0f,      1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, 0.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, 0.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, 0.0f, size.z,  1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, 0.0f, size.z,  1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, size.z,    1.0f, 1.0f, 1.0f, 1.0f,
+
+        0.0f, 0.0f, size.z,    1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, 0.0f,      1.0f, 1.0f, 1.0f, 1.0f,
+
+        0.0f, size.y, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, size.y, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, size.y, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, size.y, size.z,1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, size.y, size.z,1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, size.y, size.z,  1.0f, 1.0f, 1.0f, 1.0f,
+
+        0.0f, size.y, size.z,  1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, size.y, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+
+        0.0f, 0.0f, 0.0f,      1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, size.y, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, 0.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, size.y, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,
+
+        size.x, 0.0f, size.z,  1.0f, 1.0f, 1.0f, 1.0f,
+        size.x, size.y, size.z,1.0f, 1.0f, 1.0f, 1.0f,
+
+        0.0f, 0.0f, size.z,    1.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, size.y, size.z,  1.0f, 1.0f, 1.0f, 1.0f
+    };
+
+    GLuint vbo = createBuffer(vertices, sizeof(vertices));
+    VertexBufferLayout layout;
+    layout.pushFloat(3);
+    layout.pushFloat(4);
+    VertexArray vao;
+    vao.addBuffer(vbo, layout);
+    vao.vertexCount = sizeof(vertices) / (7 * sizeof(float));
+    return vao;
+}
+

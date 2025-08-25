@@ -18,7 +18,6 @@
 
 glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db, float reachDistance);
-void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel);
 
 int main(int argc, char* argv[])
 {
@@ -48,7 +47,7 @@ int main(int argc, char* argv[])
 
     Window window;
     window.setCursorDisabled(cursorLocked);
-    renderConfig(window.getGLFWWindow());
+    Renderer renderer(window.getGLFWWindow());
 
     Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WorldGenerationData::WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config.renderDistance * Chunk::CHUNK_SIZE * 4);
 
@@ -91,13 +90,15 @@ int main(int argc, char* argv[])
                 placeBlock(chunkManager, cam, menuSettings.selectedBlock, db, config.reachDistance);
         });
 
+    Entity testEntity(glm::vec3(10.0f, cam.position.y - 5.0f, 10.0f), glm::vec3(2.0f, 10.0f, 2.0f));
+
     Metrics metrics;
     while (window.isRunning())
     {
         metrics.update();
 
         float skyExposure = 0.5f + 0.5f * menuSettings.exposure;
-        clearFrame(skyExposure, debugMode);
+        renderer.clearFrame(skyExposure, debugMode);
 
         const glm::vec3 dir = moveInput(window, cam.lookDir);
         const glm::vec3 vel = dir * metrics.deltaTime * menuSettings.camSpeed;
@@ -107,23 +108,33 @@ int main(int argc, char* argv[])
             if (!menuSettings.collisionsOn)
                 cam.move(vel);
             else if (vel != glm::vec3(0))
-                handleCollisions(chunkManager, cam, vel);
+            {
+
+                PhysicsObject playerPhysics{};
+                playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
+                playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
+                playerPhysics.velocity = vel;
+                handleCollision(chunkManager, playerPhysics);
+                cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
+
+            }
         }));
         cam.updateView();
         TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
         TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos, db));
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
-        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(cam.viewProjection, menuSettings.exposure));
+        TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(renderer, cam.viewProjection, menuSettings.exposure));
         TIME(metrics, "Block Highlighting",
              RaycastResult res = raycast(cam.position, cam.lookDir, config.reachDistance, chunkManager);
              if (res.hit)
-             drawHighlightBlock(worldPosToChunkBlockPos(res.pos), chunkPosToWorldBlockPos(res.chunk->chunkPosition), cam.viewProjection, menuSettings.exposure);
+                renderer.drawHighlightBlock(res.pos, cam.viewProjection, menuSettings.exposure);
         );
+        renderer.drawEntity(testEntity.model, testEntity.physics.box.pos, cam.viewProjection, menuSettings.exposure);
 
         if (debugMode)
         {
-            drawAxes(cam);
-            drawDebugMenu(metrics, menuSettings, cam.position, config);
+            renderer.drawAxes(cam);
+            renderer.drawDebugMenu(metrics, menuSettings, cam.position, config);
         }
 
         glfwSwapBuffers(window.getGLFWWindow());
@@ -158,7 +169,11 @@ glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
 
 void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db, float reachDistance)
 {
-    assert(block != BLOCK_TYPE::INVALID);
+    if (block == BLOCK_TYPE::INVALID)
+    {
+        LOG_WARN("Cannot place block of type INVALID");
+        return;
+    }
 
     RaycastResult res = raycast(cam.position, cam.lookDir, reachDistance, chunkManager);
     if (!res.hit)
@@ -244,54 +259,4 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLit
         Chunk* chunk = chunkManager.getChunk({chunkPos.x, chunkPos.y, chunkPos.z + 1});
         if (chunk) chunk->isMeshBaked = false;
     }
-}
-
-void handleCollisions(ChunkManager& chunkManager, Camera& cam, const glm::vec3& vel)
-{
-    PhysicsObject playerPhysics{};
-    playerPhysics.box.pos = cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
-    playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
-    playerPhysics.velocity = vel;
-
-    const int MAX_ITERATIONS = 4;
-    for (int i = 0; i < MAX_ITERATIONS && glm::length(playerPhysics.velocity) > 0.001f; ++i)
-    {
-        auto [pos, size] = getBroadphaseBox(playerPhysics);
-
-        CollisionData nearestCollision{glm::vec3(0), std::numeric_limits<float>::max()};
-
-        for (int32_t x = glm::floor(pos.x); x < glm::ceil(pos.x + size.x); ++x)
-        {
-            for (int32_t y = glm::floor(pos.y); y < glm::ceil(pos.y + size.y); ++y)
-            {
-                for (int32_t z = glm::floor(pos.z); z < glm::ceil(pos.z + size.z); ++z)
-                {
-                    glm::ivec3 worldPos{x, y, z};
-                    Chunk* chunk = chunkManager.getChunk(worldPosToChunkPos(worldPos));
-                    if (!chunk)
-                        continue;
-                    glm::ivec3 blockPos = worldPosToChunkBlockPos(worldPos);
-                    BLOCK_TYPE block = chunk->getBlockSafe(blockPos);
-                    if (block == BLOCK_TYPE::INVALID || !isSolid(block))
-                        continue;
-
-                    BoundingBox blockBox{worldPos, glm::vec3(1.0f)};
-                    CollisionData c = getCollision(playerPhysics, blockBox);
-
-                    if (c.entryTime < nearestCollision.entryTime)
-                        nearestCollision = c;
-                }
-            }
-        }
-
-        if (nearestCollision.entryTime > 1.0f)
-        {
-            playerPhysics.box.pos += playerPhysics.velocity;
-            break;
-        }
-
-        resolveCollision(playerPhysics, nearestCollision);
-    }
-
-    cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
 }

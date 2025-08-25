@@ -3,6 +3,7 @@
 #include "Block.h"
 #include "Config.h"
 #include "GameWorld.h"
+#include "Rendering.h"
 #include "VertexArray.h"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
@@ -52,7 +53,7 @@ struct ChunkManager
 {
     ChunkManager(const ProgramConfig& config);
     void unloadChunks(const glm::ivec3& currChunkPos);
-    void drawChunks(const glm::mat4& viewProjection, float exposure) ;
+    void drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, float exposure) ;
     void bakeChunks(const glm::ivec3& currChunkPos);
     void loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db);
     void dropChunkMeshes();

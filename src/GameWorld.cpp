@@ -32,6 +32,7 @@ SQLite::Database initDB(const std::string& dbPath)
 
 void saveBlockChanges(SQLite::Database& db, const glm::ivec3& chunkPos, const glm::ivec3& positionInChunk, BLOCK_TYPE blockType)
 {
+    assert(isChunkCoord(positionInChunk));
     const std::string stmt = std::format("INSERT OR REPLACE INTO BlockChange VALUES({}, {}, {}, {}, {}, {}, {})",
         chunkPos.x, chunkPos.y, chunkPos.z, positionInChunk.x, positionInChunk.y, positionInChunk.z, (int) blockType);
 

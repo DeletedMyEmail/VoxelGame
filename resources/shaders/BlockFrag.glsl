@@ -17,10 +17,11 @@ vec3 unchartedTonemapping(vec3 color);
 void main()
 {
     vec4 modelColor = getTextureColor(v_uv, u_textureSlot);
-    modelColor.rgb = pow(modelColor.rgb, vec3(2.2)); // gamma correction!
+    modelColor.rgb = pow(modelColor.rgb, vec3(2.2));
 
     // lighting
     vec3 lightColor = vec3(0.8);
+
     vec3 lightSource = vec3(-1.0, 2.0, -1.0);
     vec3 lighting = vec3(0.3); // add ambient
 
@@ -32,7 +33,7 @@ void main()
 
     // tonemapping
     color.rgb = unchartedTonemapping(color.rgb * u_exposure);
-    color.rgb = pow(color.rgb, vec3(1/2.2)); //gama correction!
+    color.rgb = pow(color.rgb, vec3(1/2.2));
 
     out_color = color;
 }

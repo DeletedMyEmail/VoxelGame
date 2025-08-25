@@ -7,17 +7,56 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "OpenGLHelper.h"
+#include "Physics.h"
 #include "Shader.h"
 #include "Texture.h"
 
 VertexArray createAxesVAO();
+VertexArray createHighlightVAO();
 
-void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, const float exposure)
+Renderer::Renderer(GLFWwindow* win)
+    :   axisVao(createAxesVAO()),
+        highlightVao(createHighlightVAO()),
+        textureAtlas("../resources/textures/TextureAtlas.png"),
+        basicShader(createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl")),
+        blockShader(createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl"))
 {
-    static Texture textureAtlas("../resources/textures/TextureAtlas.png");
-    textureAtlas.bind(0);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    static GLuint blockShader = createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+Renderer::~Renderer()
+{
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwTerminate();
+}
+
+void Renderer::drawEntity(const VertexArray& vao, const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure) const
+{
+    vao.bind();
+    bind(basicShader);
+
+    setUniformMat4(basicShader, "u_VP", viewProjection);
+    setUniform3f(basicShader, "u_GlobalPosition", pos);
+    GLCall(glDrawArrays(GL_LINES, 0, vao.vertexCount));
+}
+
+void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, const float exposure) const
+{
+    textureAtlas.bind(0);
     bind(blockShader);
 
     setUniformMat4(blockShader, "u_VP", viewProjection);
@@ -29,53 +68,36 @@ void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm
     GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount / 6));
 }
 
-void drawAxes(const Camera& cam)
+void Renderer::drawAxes(const Camera& cam) const
 {
-    static VertexArray axisVbo = createAxesVAO();
-    axisVbo.bind();
-
-    static auto basicShader = createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl");
+    axisVao.bind();
     bind(basicShader);
 
     setUniformMat4(basicShader, "u_VP", cam.viewProjection);
     setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
 
-    GLCall(glDrawArrays(GL_LINES, 0, axisVbo.vertexCount));
+    GLCall(glDrawArrays(GL_LINES, 0, axisVao.vertexCount));
 }
 
-void drawHighlightBlock(const glm::uvec3& positionInChunk, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, const float exposure)
+void Renderer::drawHighlightBlock(const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure) const
 {
     GLCall(glEnable(GL_DEPTH_TEST));
     GLCall(glDepthFunc(GL_LEQUAL));
 
-    static std::array<blockdata, 6> buffer;
-    const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, FACE(0));
-
-    for (uint32_t i = 0; i < buffer.size(); i++)
-        buffer[i] = packBlockData(positionInChunk, atlasOffset, FACE(i));
-
-    VertexArray highlightVao;
-    VertexBufferLayout highlightLayout;
-    highlightLayout.pushUInt(1, false, 1);
-    highlightVao.addBuffer(createBuffer(buffer.data(), sizeof(blockdata) * buffer.size()), highlightLayout);
     highlightVao.bind();
-
-    static Texture textureAtlas("../resources/textures/TextureAtlas.png");
     textureAtlas.bind(0);
-
-    static GLuint blockShader = createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl");
     bind(blockShader);
 
     setUniformMat4(blockShader, "u_VP", viewProjection);
     setUniform1i(blockShader, "u_textureSlot", 0);
-    setUniform3f(blockShader, "u_chunkOffset", glm::vec3(globalOffset));
-    setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
+    setUniform3f(blockShader, "u_chunkOffset", pos);
+    setUniform3f(blockShader, "u_exposure", glm::vec3(exposure));
 
-    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, buffer.size()));
+    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, highlightVao.vertexCount));
     GLCall(glDepthFunc(GL_LESS));
 }
 
-void clearFrame(const float skyExposure, const bool debugMode)
+void Renderer::clearFrame(const float skyExposure, const bool debugMode) const
 {
     glClearColor(0.5f * skyExposure, 0.8f * skyExposure, 0.9f * skyExposure, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -88,7 +110,7 @@ void clearFrame(const float skyExposure, const bool debugMode)
     }
 }
 
-void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config)
+void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config) const
 {
     ImGui::Begin("Debug");
 
@@ -123,31 +145,6 @@ void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::ve
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void renderCleanup()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-    glfwTerminate();
-}
-
-void renderConfig(GLFWwindow* window)
-{
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
-}
-
 VertexArray createAxesVAO()
 {
     const float axisVertices[] =
@@ -165,7 +162,7 @@ VertexArray createAxesVAO()
         0.0f, 0.0f, 0.5f,   0.0f, 0.0f, 1.0f, 1.0
     };
 
-    GLuint vbo = createBuffer(axisVertices, 6 * 7 * sizeof(float));
+    GLuint vbo = createBuffer(axisVertices, sizeof(axisVertices));
     VertexBufferLayout layout;
     layout.pushFloat(3);
     layout.pushFloat(4);
@@ -173,4 +170,22 @@ VertexArray createAxesVAO()
     vao.addBuffer(vbo, layout);
     vao.vertexCount = 6;
     return vao;
+}
+
+
+VertexArray createHighlightVAO()
+{
+    static std::array<blockdata, 6> buffer;
+    const glm::uvec2 atlasOffset = getAtlasOffset(BLOCK_TYPE::HIGHLIGHTED, (FACE) 0);
+
+    for (uint32_t i = 0; i < buffer.size(); i++)
+        buffer[i] = packBlockData(glm::uvec3(0), atlasOffset, (FACE) i);
+
+    VertexArray highlightVao;
+    VertexBufferLayout highlightLayout;
+    highlightLayout.pushUInt(1, false, 1);
+    highlightVao.addBuffer(createBuffer(buffer.data(), sizeof(blockdata) * buffer.size()), highlightLayout);
+    highlightVao.vertexCount = buffer.size();
+
+    return highlightVao;
 }

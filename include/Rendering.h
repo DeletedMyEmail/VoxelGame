@@ -4,11 +4,21 @@
 #include "Camera.h"
 #include "Config.h"
 #include "Metrics.h"
+#include "Texture.h"
 
-void renderConfig(GLFWwindow* window);
-void drawAxes(const Camera& cam);
-void drawHighlightBlock(const glm::uvec3& positionInChunk, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, float exposure);
-void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, float exposure);
-void clearFrame(float skyExposure, bool debugMode);
-void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config);
-void renderCleanup();
+struct Renderer
+{
+    Renderer(GLFWwindow* win);
+    ~Renderer();
+
+    void drawAxes(const Camera& cam) const;
+    void drawHighlightBlock(const glm::vec3& pos, const glm::mat4& viewProjection, float exposure) const;
+    void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, float exposure) const;
+    void clearFrame(float skyExposure, bool debugMode) const;
+    void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config) const;
+    void drawEntity(const VertexArray& vao, const glm::vec3& pos, const glm::mat4& viewProjection, float exposure) const;
+
+    VertexArray axisVao, highlightVao;
+    Texture textureAtlas;
+    uint32_t basicShader, blockShader;
+};
