@@ -203,7 +203,7 @@ static void resolveCollision(PhysicsObject& a, const CollisionData& collisionDat
 
 static VertexArray createEntityWireframe(const glm::vec3& size)
 {
-    const float vertices[] =
+    const std::array vertices =
     {
         0.0f, 0.0f, 0.0f,      1.0f, 1.0f, 1.0f, 1.0f,
         size.x, 0.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,
@@ -242,13 +242,13 @@ static VertexArray createEntityWireframe(const glm::vec3& size)
         0.0f, size.y, size.z,  1.0f, 1.0f, 1.0f, 1.0f
     };
 
-    GLuint vbo = createBuffer(vertices, sizeof(vertices));
+    const GLuint vbo = createBuffer(vertices.data(), sizeof(float) * vertices.size());
     VertexBufferLayout layout;
     layout.pushFloat(3);
     layout.pushFloat(4);
     VertexArray vao;
     vao.addBuffer(vbo, layout);
-    vao.vertexCount = sizeof(vertices) / (7 * sizeof(float));
+    vao.vertexCount = vertices.size();
     return vao;
 }
 

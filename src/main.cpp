@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     window.setCursorDisabled(cursorLocked);
     Renderer renderer(window.getGLFWWindow());
 
-    Camera cam(glm::vec3{0, Chunk::CHUNK_SIZE * WorldGenerationData::WORLD_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config.renderDistance * Chunk::CHUNK_SIZE * 4);
+    Camera cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 1, 0}, 90.0f, window.getWidth(), window.getHeight(), 0.1f, config.renderDistance * Chunk::CHUNK_SIZE * 4);
 
     ChunkManager chunkManager(config);
     glm::dvec2 prevCursorPos = window.getMousePosition();
@@ -91,7 +91,10 @@ int main(int argc, char* argv[])
         });
 
     std::vector<Entity> entities;
-    entities.emplace_back(glm::vec3(10.0f, cam.position.y - 5.0f, 10.0f), glm::vec3(2.0f, 10.0f, 2.0f));
+    entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 1.0f, 1.0f});
+    entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 2.0f, 1.0f});
+    entities.emplace_back(glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 3.0f, 1.0f});
+    entities.emplace_back(glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 4.0f, 1.0f});
 
     Metrics metrics;
     while (window.isRunning())
@@ -126,14 +129,14 @@ int main(int argc, char* argv[])
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
         TIME(metrics, "Chunk Drawing", chunkManager.drawChunks(renderer, cam.viewProjection, menuSettings.exposure));
         TIME(metrics, "Block Highlighting",
-             RaycastResult res = raycast(cam.position, cam.lookDir, config.reachDistance, chunkManager);
+             RaycastResult res = raycast(cam.position - cam.lookDir, cam.lookDir, config.reachDistance, chunkManager);
              if (res.hit)
                 renderer.drawHighlightBlock(res.pos, cam.viewProjection, menuSettings.exposure);
         );
 
         updateEntities(entities, metrics.deltaTime, chunkPos, chunkManager);
-        for (Entity& entity : entities)
-            renderer.drawEntity(entity.model, entity.physics.box.pos, cam.viewProjection, menuSettings.exposure);
+        for (auto& e : entities)
+            renderer.drawEntity(e.model, e.physics.box.pos, cam.viewProjection, menuSettings.exposure);
 
         if (debugMode)
         {
@@ -160,6 +163,7 @@ glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir)
         return glm::vec3(0.0f);
 
     const glm::vec3 forward = glm::normalize(glm::vec3(lookDir.x, 0.0f, lookDir.z));
+    assert(!std::isnan(forward.x) && !std::isnan(forward.y) && !std::isnan(forward.z));
     const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
 
     input += forward * forwardInput;
@@ -179,7 +183,7 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLit
         return;
     }
 
-    RaycastResult res = raycast(cam.position, cam.lookDir, reachDistance, chunkManager);
+    RaycastResult res = raycast(cam.position - cam.lookDir, cam.lookDir, reachDistance, chunkManager);
     if (!res.hit)
         return;
 

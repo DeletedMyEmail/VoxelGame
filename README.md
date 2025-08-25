@@ -52,6 +52,10 @@ For an example config file, see `resources/example.config`.
   - [ ] particle system
   - [x] save game & config file
   - [ ] entities
+    - [x] hitbox
+    - [x] gravity
+    - [ ] behavior
+    - [ ] model & animation
 
 [demo.mp4](https://github.com/user-attachments/assets/9e8c9132-b0e0-42e2-b421-7ddd6451fb57)
 

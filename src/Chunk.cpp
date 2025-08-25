@@ -143,7 +143,7 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& 
             continue;
 
         chunkPositionsOfLoaded[chunksLoaded++] = position;
-        Chunk* chunk = &chunks.emplace(position, Chunk()).first->second;
+        Chunk* chunk = &chunks.emplace(std::piecewise_construct, std::forward_as_tuple(position), std::forward_as_tuple()).first->second;
         threadPool.queueJob([chunk, position, this]()
         {
             *chunk = Chunk(position, this->worldGenData);
@@ -184,7 +184,7 @@ Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
 
 Chunk::Chunk()
-    : blocks{}, chunkPosition({0}), isMeshBaked(false), isMeshDataReady(false)
+    : blocks{}, chunkPosition({0}), isMeshBaked(false), isMeshDataReady(false), inRender(false)
 {
 }
 
@@ -368,7 +368,7 @@ void bake(VertexArray& vao, const std::vector<blockdata>& meshData)
 
     const GLuint instanceVbo = createBuffer(meshData.data(), meshData.size() * sizeof(blockdata));
 
-    vao.clear();
+    vao.reset();
     vao.addBuffer(instanceVbo, layout);
     vao.vertexCount = meshData.size() * 6;
 }

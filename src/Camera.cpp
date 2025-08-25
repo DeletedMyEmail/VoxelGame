@@ -7,16 +7,13 @@
 #include <sstream>
 #include "../libs/glm/gtx/dual_quaternion.hpp"
 
-glm::vec3 up{0,1.0f,0};
-
 Camera::Camera(const glm::vec3 pos, const float fov, const float width, const float height, const float near, const float far)
     :   projection(glm::perspective(glm::radians(fov), width/height, near, far)),
         position(pos),
         yaw(-90.0)
 {
     updateLookDirection();
-    view = glm::lookAt(position, position + lookDir, up);
-    viewProjection = projection * view;
+    updateView();
 }
 
 void Camera::move(const glm::vec3& translation)
@@ -26,6 +23,11 @@ void Camera::move(const glm::vec3& translation)
 
 void Camera::updateView()
 {
+    updateLookDirection();
+    const glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 right = glm::normalize(glm::cross(lookDir, worldUp));
+    const glm::vec3 up = glm::normalize(glm::cross(right, lookDir));
+
     view = glm::lookAt(position, position + lookDir, up);
     viewProjection = projection * view;
 }

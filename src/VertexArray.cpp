@@ -50,6 +50,38 @@ VertexArray::VertexArray()
     GLCall(glGenVertexArrays(1, &arrayID))
 }
 
+VertexArray::VertexArray(VertexArray&& other) noexcept
+    : buffers(std::move(other.buffers)),
+      arrayID(other.arrayID),
+      attribCounter(other.attribCounter),
+      vertexCount(other.vertexCount)
+{
+    other.arrayID = 0;
+    other.attribCounter = 0;
+    other.vertexCount = 0;
+    other.buffers.clear();
+}
+
+VertexArray& VertexArray::operator=(VertexArray&& other) noexcept
+{
+    if (this == &other)
+        return *this;
+
+    clear();
+
+    arrayID = other.arrayID;
+    buffers = std::move(other.buffers);
+    attribCounter = other.attribCounter;
+    vertexCount = other.vertexCount;
+
+    other.arrayID = 0;
+    other.attribCounter = 0;
+    other.vertexCount = 0;
+    other.buffers.clear();
+
+    return *this;
+}
+
 void VertexArray::addBuffer(const GLuint bufferId, const VertexBufferLayout& layout)
 {
     buffers.emplace_back(bufferId);
@@ -91,6 +123,12 @@ void VertexArray::unbind() const
     GLCall(glBindVertexArray(0))
 }
 
+void VertexArray::reset()
+{
+    clear();
+    GLCall(glGenVertexArrays(1, &arrayID))
+}
+
 void VertexArray::clear()
 {
     if (arrayID != 0)
@@ -100,5 +138,4 @@ void VertexArray::clear()
         GLCall(glDeleteBuffers(1, &buffer))
     buffers.clear();
     attribCounter = 0;
-    GLCall(glGenVertexArrays(1, &arrayID))
 }

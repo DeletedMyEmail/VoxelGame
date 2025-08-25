@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+
+#include "cstmlib/Log.h"
 #include "glad/glad.h"
 
 GLuint createBuffer(const GLvoid* data, GLsizei size, GLenum target = GL_ARRAY_BUFFER, GLenum usage = GL_STATIC_DRAW);
@@ -28,9 +30,16 @@ struct VertexArray
     VertexArray();
     ~VertexArray();
 
+    VertexArray(const VertexArray& other) = delete;
+    VertexArray& operator=(const VertexArray& other) = delete;
+
+    VertexArray(VertexArray&& other) noexcept;
+    VertexArray& operator=(VertexArray&& other) noexcept;
+
     void addBuffer(GLuint bufferId, const VertexBufferLayout& layout);
     void bind() const;
     void unbind() const;
+    void reset();
     void clear();
 
     std::vector<GLuint> buffers;
