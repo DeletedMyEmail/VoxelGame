@@ -32,13 +32,8 @@ struct Entity
 
 //TODO: ECS ?
 
-constexpr float GRAVITY = -9.81f;
-constexpr float TERMINAL_VELOCITY = -50.0f;
+constexpr float GRAVITY = -1.0f;
+constexpr float TERMINAL_VELOCITY = -10.0f;
 
-void updateEntities(std::vector<Entity> entities, float dtime, const glm::ivec3& pos);
-
+void updateEntities(std::vector<Entity>& entities, float dtime, const glm::ivec3& pos, ChunkManager& chunkManager);
 void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj);
-BoundingBox getBroadphaseBox(const PhysicsObject& obj);
-bool isColliding(const BoundingBox& a, const BoundingBox& b);
-CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
-void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);

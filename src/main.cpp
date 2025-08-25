@@ -90,7 +90,8 @@ int main(int argc, char* argv[])
                 placeBlock(chunkManager, cam, menuSettings.selectedBlock, db, config.reachDistance);
         });
 
-    Entity testEntity(glm::vec3(10.0f, cam.position.y - 5.0f, 10.0f), glm::vec3(2.0f, 10.0f, 2.0f));
+    std::vector<Entity> entities;
+    entities.emplace_back(glm::vec3(10.0f, cam.position.y - 5.0f, 10.0f), glm::vec3(2.0f, 10.0f, 2.0f));
 
     Metrics metrics;
     while (window.isRunning())
@@ -129,7 +130,10 @@ int main(int argc, char* argv[])
              if (res.hit)
                 renderer.drawHighlightBlock(res.pos, cam.viewProjection, menuSettings.exposure);
         );
-        renderer.drawEntity(testEntity.model, testEntity.physics.box.pos, cam.viewProjection, menuSettings.exposure);
+
+        updateEntities(entities, metrics.deltaTime, chunkPos, chunkManager);
+        for (Entity& entity : entities)
+            renderer.drawEntity(entity.model, entity.physics.box.pos, cam.viewProjection, menuSettings.exposure);
 
         if (debugMode)
         {

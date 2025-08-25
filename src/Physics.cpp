@@ -2,24 +2,31 @@
 #include "Chunk.h"
 #include "glm/common.hpp"
 
-VertexArray createEntityWireframe(const glm::vec3& size);
+static VertexArray createEntityWireframe(const glm::vec3& size);
 
 Entity::Entity(const glm::vec3& pos, const glm::vec3& size, const float health, const float speed)
     : model(createEntityWireframe(size)), physics{{pos, size}, glm::vec3(0)}, health(health), speed(speed)
 {
 }
 
-void updateEntities(std::vector<Entity> entities, float dtime, const glm::ivec3& pos)
+void updateEntities(std::vector<Entity>& entities, const float dtime, const glm::ivec3& pos, ChunkManager& chunkManager)
 {
-    // unload
+    for (auto& entity : entities)
+    {
+        auto& vel = entity.physics.velocity;
+        vel.y += GRAVITY * dtime;
+        vel.y = glm::max(vel.y, TERMINAL_VELOCITY);
 
-    // load
+        if (vel.y < TERMINAL_VELOCITY)
+            vel.y = TERMINAL_VELOCITY;
 
-    // movement
-
-    // gravity
-
+        handleCollision(chunkManager, entity.physics);
+    }
 }
+
+static BoundingBox getBroadphaseBox(const PhysicsObject& obj);
+static CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
+static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);
 
 void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
 {
@@ -64,7 +71,7 @@ void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
     }
 }
 
-BoundingBox getBroadphaseBox(const PhysicsObject& obj)
+static BoundingBox getBroadphaseBox(const PhysicsObject& obj)
 {
     BoundingBox broadphaseBox{};
     broadphaseBox.pos.x = obj.velocity.x >= 0 ? obj.box.pos.x : obj.box.pos.x + obj.velocity.x;
@@ -78,7 +85,7 @@ BoundingBox getBroadphaseBox(const PhysicsObject& obj)
     return broadphaseBox;
 }
 
-bool isColliding(const BoundingBox& a, const BoundingBox& b)
+static bool isColliding(const BoundingBox& a, const BoundingBox& b)
 {
     return (a.pos.x < b.pos.x + b.size.x && b.pos.x < a.pos.x + a.size.x) &&
            (a.pos.y < b.pos.y + b.size.y && b.pos.y < a.pos.y + a.size.y) &&
@@ -89,7 +96,7 @@ bool isColliding(const BoundingBox& a, const BoundingBox& b)
 // https://stackoverflow.com/questions/35297190/swept-aabb-collision-detection-and-response-problems
 // https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/
 
-CollisionData getCollision(PhysicsObject& a, BoundingBox& b)
+static CollisionData getCollision(PhysicsObject& a, BoundingBox& b)
 {
     assert((a.velocity.x != 0 || a.velocity.y != 0 || a.velocity.z != 0) && "Velocity should not be zero for this collision check to work");
 
@@ -183,7 +190,7 @@ CollisionData getCollision(PhysicsObject& a, BoundingBox& b)
     return collisionData;
 }
 
-void resolveCollision(PhysicsObject& a, const CollisionData& collisionData)
+static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData)
 {
     a.box.pos += a.velocity * collisionData.entryTime;
     const float remainingTime = 1.0f - collisionData.entryTime;
@@ -193,7 +200,8 @@ void resolveCollision(PhysicsObject& a, const CollisionData& collisionData)
         a.velocity -= collisionData.normal * dot;
     }
 }
-VertexArray createEntityWireframe(const glm::vec3& size)
+
+static VertexArray createEntityWireframe(const glm::vec3& size)
 {
     const float vertices[] =
     {
