@@ -13,7 +13,7 @@ struct ProgramConfig
 {
     std::string saveGamePath = "world.db";
     uint32_t renderDistance = 10;
-    uint32_t loadDistance = renderDistance * 1.5;
+    uint32_t loadDistance = 12;
     uint32_t maxLoadsPerFrame = 32;
     uint32_t maxUnloadsPerFrame = maxLoadsPerFrame;
     uint32_t threadCount = std::thread::hardware_concurrency();

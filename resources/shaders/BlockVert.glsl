@@ -90,16 +90,16 @@ void main()
 
     v_normal = s_normals[faceIndex];
 
-    uvec2 faceOffset;
+    uvec2 uvOffset;
     if (faceIndex == s_frontIndex || faceIndex == s_backIndex)
-    faceOffset = uvec2(vertexPos.x == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
+        uvOffset = uvec2(vertexPos.x == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
     else if (faceIndex == s_rightIndex || faceIndex == s_leftIndex)
-    faceOffset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
+        uvOffset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.y == 1.0f ? 0 : 1);
     else if (faceIndex == s_bottomIndex || faceIndex == s_topIndex)
-    faceOffset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.x == 1.0f ? 0 : 1);
+        uvOffset = uvec2(vertexPos.z == 1.0f ? 0 : 1, vertexPos.x == 1.0f ? 0 : 1);
 
     v_uv = vec2(
-        float(((in_packedData >> s_atlasXOffset) & s_atlasXMask) + faceOffset.x),
-        float(((in_packedData >> s_atlasYOffset) & s_atlasYMask) + faceOffset.y)
+        float(((in_packedData >> s_atlasXOffset) & s_atlasXMask) + uvOffset.x),
+        float(((in_packedData >> s_atlasYOffset) & s_atlasYMask) + uvOffset.y)
     );
 }

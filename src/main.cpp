@@ -104,11 +104,11 @@ int main(int argc, char* argv[])
         float skyExposure = 0.5f + 0.5f * menuSettings.exposure;
         renderer.clearFrame(skyExposure, debugMode);
 
-        const glm::vec3 dir = moveInput(window, cam.lookDir);
-        const glm::vec3 vel = dir * metrics.deltaTime * menuSettings.camSpeed;
-
         auto chunkPos = worldPosToChunkPos(cam.position);
-        TIME(metrics, "Collision Detection", ({
+        TIME(metrics, "Update Player", ({
+            const glm::vec3 dir = moveInput(window, cam.lookDir);
+            const glm::vec3 vel = dir * metrics.deltaTime * menuSettings.camSpeed;
+
             if (!menuSettings.collisionsOn)
                 cam.move(vel);
             else if (vel != glm::vec3(0))
@@ -122,8 +122,10 @@ int main(int argc, char* argv[])
                 cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
 
             }
+
+            cam.updateView();
         }));
-        cam.updateView();
+
         TIME(metrics, "Chunk Unloading", chunkManager.unloadChunks(chunkPos));
         TIME(metrics, "Chunk Loading", chunkManager.loadChunks(chunkPos, db));
         TIME(metrics, "Chunk Baking", chunkManager.bakeChunks(chunkPos));
@@ -134,9 +136,11 @@ int main(int argc, char* argv[])
                 renderer.drawHighlightBlock(res.pos, cam.viewProjection, menuSettings.exposure);
         );
 
-        updateEntities(entities, metrics.deltaTime, chunkPos, chunkManager);
-        for (auto& e : entities)
-            renderer.drawEntity(e.model, e.physics.box.pos, cam.viewProjection, menuSettings.exposure);
+        TIME(metrics, "Update Entities", updateEntities(entities, metrics.deltaTime, chunkPos, chunkManager););
+        TIME(metrics, "Draw Entities", ({
+            for (auto& e : entities)
+                renderer.drawEntity(e.model, e.physics.box.pos, cam.viewProjection, menuSettings.exposure);
+        }));
 
         if (debugMode)
         {

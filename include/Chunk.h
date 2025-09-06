@@ -9,6 +9,7 @@
 #include "glm/vec3.hpp"
 #include "ThreadPool.h"
 #include "glm/fwd.hpp"
+#include "SQLiteCpp/Database.h"
 
 struct Chunk
 {

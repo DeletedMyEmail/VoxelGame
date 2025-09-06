@@ -1,11 +1,12 @@
 #include "Chunk.h"
-#include <algorithm>
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/norm.hpp"
 #include "Block.h"
-#include "Camera.h"
 #include "OpenGLHelper.h"
 #include "Rendering.h"
 #include "Shader.h"
 #include "GameWorld.h"
+#include "cstmlib/Profiling.h"
 #include "glm/common.hpp"
 
 ChunkManager::ChunkManager(const ProgramConfig& config)
@@ -59,13 +60,13 @@ std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChun
     std::priority_queue<ChunkLoadRequest> queue;
     for (int32_t x = currChunkPos.x - maxDist; x <= currChunkPos.x + maxDist; x++)
     {
-        for (int32_t y = 0; y < WorldGenerationData::WORLD_HEIGHT; y++)
+        for (int32_t y = glm::max(0, currChunkPos.y - maxDist); y <= WorldGenerationData::WORLD_HEIGHT - 1 && y < currChunkPos.y + maxDist; y++)
         {
             for (int32_t z = currChunkPos.z - maxDist; z <= currChunkPos.z + maxDist; z++)
             {
                 glm::ivec3 chunkPos = {x, y, z};
-                const float distance = glm::length(glm::vec3(chunkPos - currChunkPos));
-                queue.push({chunkPos, distance});
+                const float distance = glm::length2(glm::vec3(chunkPos - currChunkPos));
+                queue.emplace(chunkPos, distance);
                 chunksAdded++;
             }
         }
@@ -76,14 +77,16 @@ std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChun
 
 void ChunkManager::drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, const float exposure)
 {
+    renderer.prepareChunkRendering(viewProjection, exposure);
+
     for (auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
-            renderer.drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+            renderer.drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition));
 
     glDisable(GL_CULL_FACE);
     for (auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
-            renderer.drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition), viewProjection, exposure);
+            renderer.drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition));
     glEnable(GL_CULL_FACE);
 }
 
@@ -127,6 +130,8 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
         if (chunk.isMeshDataReady && !chunk.isMeshBaked)
             chunk.bakeMesh();
     }
+
+    //LOG_INFO("{} chunks baked", chunksBaked);
 }
 
 void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db)
@@ -160,6 +165,8 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& 
         for (const auto& change : changes)
             chunk->setBlockUnsafe(change.positionInChunk, change.blockType);
     }
+
+    //LOG_INFO("{} chunks loaded", chunksLoaded);
 }
 
 void ChunkManager::dropChunkMeshes()
@@ -304,10 +311,12 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
 
                     if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
                     {
+
                         // check if a neighboring chunk has a covering block
                         glm::ivec3 blockPosInOtherChunk = neighbourBlockPos;
                         Chunk* neighborChunk = nullptr;
 
+                        // TODO:  remove branches
                         if (neighbourBlockPos.x == CHUNK_SIZE)
                         {
                             neighborChunk = rightChunk;
@@ -370,7 +379,7 @@ void bake(VertexArray& vao, const std::vector<blockdata>& meshData)
 
     vao.reset();
     vao.addBuffer(instanceVbo, layout);
-    vao.vertexCount = meshData.size() * 6;
+    vao.vertexCount = meshData.size();
 }
 
 void Chunk::bakeMesh()

@@ -54,7 +54,7 @@ void Renderer::drawEntity(const VertexArray& vao, const glm::vec3& pos, const gl
     GLCall(glDrawArrays(GL_LINES, 0, vao.vertexCount));
 }
 
-void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset, const glm::mat4& viewProjection, const float exposure) const
+void Renderer::prepareChunkRendering(const glm::mat4& viewProjection, const float exposure) const
 {
     textureAtlas.bind(0);
     bind(blockShader);
@@ -62,10 +62,14 @@ void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset,
     setUniformMat4(blockShader, "u_VP", viewProjection);
     setUniform1i(blockShader, "u_textureSlot", 0);
     setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
+}
+
+void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset) const
+{
     setUniform3f(blockShader, "u_chunkOffset", glm::vec3(globalOffset));
 
     vao.bind();
-    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount / 6));
+    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount));
 }
 
 void Renderer::drawAxes(const Camera& cam) const
