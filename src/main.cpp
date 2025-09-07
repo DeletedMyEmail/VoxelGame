@@ -224,11 +224,10 @@ void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLit
         }
         else
         {
-            glm::uvec3 blockPosInOtherChunk = neighbourBlockPos;
-            if (neighbourBlockPos.x == Chunk::CHUNK_SIZE) blockPosInOtherChunk.x = 0;
-            else if (neighbourBlockPos.x == -1) blockPosInOtherChunk.x = Chunk::CHUNK_SIZE - 1;
-            if (neighbourBlockPos.z == Chunk::CHUNK_SIZE) blockPosInOtherChunk.z = 0;
-            else if (neighbourBlockPos.z == -1) blockPosInOtherChunk.z = Chunk::CHUNK_SIZE - 1;
+            glm::uvec3 blockPosInOtherChunk;
+            blockPosInOtherChunk.x = (neighbourBlockPos.x % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
+            blockPosInOtherChunk.y = (neighbourBlockPos.y % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
+            blockPosInOtherChunk.z = (neighbourBlockPos.z % Chunk::CHUNK_SIZE + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
 
             Chunk* neighbourChunk = chunkManager.getChunk(chunkPos + offset);
             assert(neighbourChunk != nullptr);

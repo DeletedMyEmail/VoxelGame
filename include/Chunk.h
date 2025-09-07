@@ -15,7 +15,7 @@ struct Chunk
 {
     Chunk();
     Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGenData);
-    void generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk);
+    void generateMeshData(std::array<Chunk*, 6>& neighbourChunks);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;

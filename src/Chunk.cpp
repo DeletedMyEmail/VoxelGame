@@ -111,14 +111,17 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
         chunksBaked++;
         threadPool.queueJob([this, &chunk, position]()
         {
-            Chunk* leftChunk = getChunk({position.x - 1, position.y, position.z});
-            Chunk* rightChunk = getChunk({position.x + 1, position.y, position.z});
-            Chunk* frontChunk = getChunk({position.x, position.y, position.z + 1});
-            Chunk* backChunk = getChunk({position.x, position.y, position.z - 1});
-            Chunk* topChunk = getChunk({position.x, position.y + 1, position.z});
-            Chunk* bottomChunk = getChunk({position.x, position.y - 1, position.z});
+            std::array<Chunk*, 6> neighbourChunks{
+                // BACK, FRONT, LEFT, RIGHT, BOTTOM, TOP
+                getChunk(position + glm::ivec3{0, 0, -1}),
+                getChunk(position + glm::ivec3{0, 0, 1}),
+                getChunk(position + glm::ivec3{-1, 0, 0}),
+                getChunk(position + glm::ivec3{1, 0, 0}),
+                getChunk(position + glm::ivec3{0, -1, 0}),
+                getChunk(position + glm::ivec3{0, 1, 0})
+            };
 
-            chunk.generateMeshData(leftChunk, rightChunk, frontChunk, backChunk, topChunk, bottomChunk);
+            chunk.generateMeshData(neighbourChunks);
         });
     }
 
@@ -191,7 +194,7 @@ Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
 
 Chunk::Chunk()
-    : blocks{}, chunkPosition({0}), isMeshBaked(false), isMeshDataReady(false), inRender(false)
+    : blocks{}, chunkPosition(0), isMeshBaked(false), isMeshDataReady(false), inRender(false)
 {
 }
 
@@ -270,10 +273,19 @@ Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGe
     }
 }
 
-void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontChunk, Chunk* backChunk, Chunk* topChunk, Chunk* bottomChunk)
+void Chunk::generateMeshData(std::array<Chunk*, 6>& neighbourChunks)
 {
     meshDataOpaque.clear();
     meshDataTranslucent.clear();
+
+    constexpr glm::ivec3 neighborOffsets[] = {
+        {0, 0, -1}, // BACK
+        {0, 0, 1},  // FRONT
+        {-1, 0, 0}, // LEFT
+        {1, 0, 0},  // RIGHT
+        {0, -1, 0},  // BOTTOM
+        {0, 1, 0}  // TOP
+    };
 
     for (uint32_t z = 0; z < CHUNK_SIZE; z++)
     {
@@ -293,60 +305,20 @@ void Chunk::generateMeshData(Chunk* leftChunk, Chunk* rightChunk, Chunk* frontCh
                     if (face == BOTTOM && y == 0)
                         continue;
 
-                    glm::ivec3 neighbourBlockPos;
-                    switch (face)
-                    {
-                        case BACK: neighbourBlockPos = {x, y, z - 1}; break;
-                        case FRONT: neighbourBlockPos = {x, y, z + 1}; break;
-                        case LEFT: neighbourBlockPos = {x - 1, y, z}; break;
-                        case RIGHT: neighbourBlockPos = {x + 1, y, z}; break;
-                        case TOP: neighbourBlockPos = {x, y + 1, z}; break;
-                        case BOTTOM: neighbourBlockPos = {x, y - 1, z}; break;
-                        default: assert(false);
-                    }
+                    glm::ivec3 neighbourBlockPos = glm::ivec3(blockPos) + neighborOffsets[face];
 
                     BLOCK_TYPE neighbourBlock = getBlockSafe(neighbourBlockPos);
                     if (neighbourBlock != BLOCK_TYPE::INVALID && neighbourBlock != BLOCK_TYPE::AIR && !(!isTranslucent(block) && isTranslucent(neighbourBlock)))
                         continue;
 
-                    if (neighbourBlock == BLOCK_TYPE::INVALID) // neighbour in different chunk
+                    if (neighbourBlock == BLOCK_TYPE::INVALID)
                     {
+                        glm::uvec3 blockPosInOtherChunk;
+                        blockPosInOtherChunk.x = (neighbourBlockPos.x % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+                        blockPosInOtherChunk.y = (neighbourBlockPos.y % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+                        blockPosInOtherChunk.z = (neighbourBlockPos.z % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
 
-                        // check if a neighboring chunk has a covering block
-                        glm::ivec3 blockPosInOtherChunk = neighbourBlockPos;
-                        Chunk* neighborChunk = nullptr;
-
-                        // TODO:  remove branches
-                        if (neighbourBlockPos.x == CHUNK_SIZE)
-                        {
-                            neighborChunk = rightChunk;
-                            blockPosInOtherChunk.x = 0;
-                        }
-                        else if (neighbourBlockPos.x == -1)
-                        {
-                            neighborChunk = leftChunk;
-                            blockPosInOtherChunk.x = CHUNK_SIZE - 1;
-                        }
-                        else if (neighbourBlockPos.y == CHUNK_SIZE)
-                        {
-                            neighborChunk = topChunk;
-                            blockPosInOtherChunk.y = 0;
-                        }
-                        else if (neighbourBlockPos.y == -1)
-                        {
-                            neighborChunk = bottomChunk;
-                            blockPosInOtherChunk.y = CHUNK_SIZE - 1;
-                        }
-                        else if (neighbourBlockPos.z == CHUNK_SIZE)
-                        {
-                            neighborChunk = frontChunk;
-                            blockPosInOtherChunk.z = 0;
-                        }
-                        else if (neighbourBlockPos.z == -1)
-                        {
-                            neighborChunk = backChunk;
-                            blockPosInOtherChunk.z = CHUNK_SIZE - 1;
-                        }
+                        Chunk* neighborChunk = neighbourChunks[face];
 
                         if (neighborChunk)
                         {
