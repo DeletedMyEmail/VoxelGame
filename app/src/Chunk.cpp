@@ -3,13 +3,13 @@
 #include "glm/gtx/norm.hpp"
 #include "Block.h"
 #include "OpenGLHelper.h"
-#include "Rendering.h"
+#include "../include/Rendering.h"
 #include "Shader.h"
 #include "GameWorld.h"
 #include "cstmlib/Profiling.h"
 #include "glm/common.hpp"
 
-ChunkManager::ChunkManager(const ProgramConfig& config)
+ChunkManager::ChunkManager(const GameConfig& config)
     : threadPool(config.threadCount), config(config), worldGenData(config.worldSeed)
 {
     chunks.reserve((2 * config.loadDistance) * (2 * config.loadDistance) * (WorldGenerationData::WORLD_HEIGHT));

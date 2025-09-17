@@ -1,7 +1,7 @@
-#include "Config.h"
+#include "../include/Config.h"
 #include "libconfig.h++"
 
-bool loadConfig(const char* path, ProgramConfig& config)
+bool loadConfig(const char* path, GameConfig& config)
 {
     libconfig::Config cfg;
 
@@ -44,6 +44,7 @@ bool loadConfig(const char* path, ProgramConfig& config)
     catch (libconfig::SettingTypeException& e)
     {
         LOG_ERROR("Config error: invalid type - {}", e.what());
+        return false;
     }
     catch (libconfig::SettingRangeException& e)
     {

@@ -1,13 +1,13 @@
-#include "Rendering.h"
+#include "../include/Rendering.h"
 #include <algorithm>
 #include <numeric>
 #include "Block.h"
-#include "Config.h"
+#include "../include/Config.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "OpenGLHelper.h"
-#include "Physics.h"
+#include "../include/Physics.h"
 #include "Shader.h"
 #include "Texture.h"
 
@@ -114,7 +114,7 @@ void Renderer::clearFrame(const float skyExposure, const bool debugMode) const
     }
 }
 
-void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const ProgramConfig& config) const
+void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const GameConfig& config) const
 {
     ImGui::Begin("Debug");
 
@@ -138,7 +138,6 @@ void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, con
     ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
     float maxFrameTime = metrics.get1PercentLowFrameTime();
     ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
-    ImGui::Text("Current frame time: %.3f ms (%.1f FPS)", metrics.deltaTime * 1000.0f, 1.0f / metrics.deltaTime);
     ImGui::Spacing();
 
     for (const auto& [name, time] : metrics.timer)

@@ -1,4 +1,4 @@
-#include "Physics.h"
+#include "../include/Physics.h"
 #include "Chunk.h"
 #include "glm/common.hpp"
 

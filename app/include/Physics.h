@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Chunk.h"
-#include "VertexArray.h"
+#include "../../core/include/VertexArray.h"
 #include "glm/vec3.hpp"
 
 struct BoundingBox

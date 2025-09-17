@@ -9,7 +9,7 @@ struct MenuSettings
     bool collisionsOn;
 };
 
-struct ProgramConfig
+struct GameConfig
 {
     std::string saveGamePath = "world.db";
     uint32_t renderDistance = 10;
@@ -22,4 +22,6 @@ struct ProgramConfig
     float reachDistance = 16.0f;
 };
 
-bool loadConfig(const char* path, ProgramConfig& config);
+inline GameConfig gameConfig;
+
+bool loadConfig(const char* path, GameConfig& config);

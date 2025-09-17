@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include "Chunk.h"
 #include <cstmlib/Log.h>
-#include "Physics.h"
+#include "../include/Physics.h"
 #include "Window.h"
 #include "cstmlib/Profiling.h"
-#include "Physics.h"
+#include "../include/Physics.h"
 
 class TestClass : public testing::Test
 {

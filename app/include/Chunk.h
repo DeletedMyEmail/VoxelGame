@@ -52,7 +52,7 @@ struct std::hash<glm::ivec3>
 
 struct ChunkManager
 {
-    ChunkManager(const ProgramConfig& config);
+    ChunkManager(const GameConfig& config);
     void unloadChunks(const glm::ivec3& currChunkPos);
     void drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, float exposure) ;
     void bakeChunks(const glm::ivec3& currChunkPos);
@@ -62,6 +62,6 @@ struct ChunkManager
 
     ThreadPool threadPool;
     std::unordered_map<glm::ivec3, Chunk> chunks;
-    const ProgramConfig& config;
+    const GameConfig& config;
     WorldGenerationData worldGenData;
 };
