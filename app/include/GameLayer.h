@@ -8,11 +8,10 @@ class GameLayer : public core::Layer
 {
 public:
     GameLayer();
+    ~GameLayer() = default;
     void onUpdate(float dt) override;
     void onRender() override;
     void onEvent(core::Event& e) override;
-    void onAttach() override;
-    void onDetach() override;
 private:
     void keyPressCallback(core::Event& e);
     void cursorMoveCallback(core::Event& e);

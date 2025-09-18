@@ -7,16 +7,14 @@ namespace core
     enum class EventType
     {
         WindowClose,
-        WindowResize,
-        WindowFocus,
-        WindowLostFocus,
+        //WindowResize,
+        //WindowFocus,
+        //WindowLostFocus,
         CursorMoved,
         KeyPressed,
         KeyReleased,
-        KeyTyped,
         MouseButtonPressed,
         MouseButtonReleased,
-        MouseMoved,
         MouseScrolled,
     };
 

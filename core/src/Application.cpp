@@ -6,7 +6,7 @@
 static void glfwErrorCallback(int error_code, const char* description)
 {
     LOG_ERROR("GLFW Error ({}): {}", error_code, description);
-    //exit(1);
+    exit(1);
 }
 
 static core::Application* s_Instance = nullptr;
@@ -26,7 +26,35 @@ core::Application::Application(WindowSettings& settings)
     m_Window = Window(settings);
     m_Window.bind();
 
-    glfwMakeContextCurrent(m_Window.getHandle());
+#pragma region callbacks
+    glfwSetCursorPosCallback(m_Window.getHandle(), [](GLFWwindow* window, double xpos, double ypos)
+    {
+        Event e(EventType::CursorMoved, core::Application::get().getWindow());
+        e.cursorEvent.pos = {xpos, ypos};
+        core::Application::get().propagateEvent(e);
+    });
+    glfwSetMouseButtonCallback(m_Window.getHandle(), [](GLFWwindow* window, int button, int action, int mods)
+    {
+        const EventType type = action == GLFW_PRESS ? EventType::MouseButtonPressed : EventType::MouseButtonReleased;
+        Event e(type, core::Application::get().getWindow());
+        e.mouseEvent.button = button;
+        core::Application::get().propagateEvent(e);
+    });
+    glfwSetKeyCallback(m_Window.getHandle(), [](GLFWwindow* window, int key, int scancode, int action, int mods)
+    {
+        const EventType type = action == GLFW_PRESS ? EventType::KeyPressed : EventType::KeyReleased;
+        Event e(type, core::Application::get().getWindow());
+        e.keyEvent.key = key;
+        core::Application::get().propagateEvent(e);
+    });
+    glfwSetWindowCloseCallback(m_Window.getHandle(), [](GLFWwindow* window)
+    {
+        Event e(EventType::WindowClose, core::Application::get().getWindow());
+        core::Application::get().propagateEvent(e);
+    });
+#pragma endregion
+
+    // load opengl
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
     {
         LOG_ERROR("Could not load glad");
@@ -36,8 +64,8 @@ core::Application::Application(WindowSettings& settings)
 
 core::Application::~Application()
 {
-    for (Layer& l : m_Layers)
-        l.onDetach();
+    for (const auto& l : m_Layers)
+        l->onDetach();
 
     m_Window.destroy();
     glfwTerminate();
@@ -67,11 +95,11 @@ void core::Application::run()
 
         // event system...
 
-        for (Layer& l : m_Layers)
-            l.onUpdate(deltaTime);
+        for (const auto& l : m_Layers)
+            l->onUpdate(deltaTime);
 
-        for (Layer& l : m_Layers)
-            l.onRender();
+        for (const auto& l : m_Layers)
+            l->onRender();
 
         glfwSwapBuffers(m_Window.getHandle());
         glfwPollEvents();
@@ -81,6 +109,12 @@ void core::Application::run()
 void core::Application::stop()
 {
     m_Running = false;
+}
+
+void core::Application::propagateEvent(Event& e)
+{
+    for (const auto& l : m_Layers)
+        l->onEvent(e);
 }
 
 double core::Application::getTime() const

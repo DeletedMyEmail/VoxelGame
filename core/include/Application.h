@@ -14,13 +14,14 @@ namespace core
 
         static Application& get();
         template<typename T> requires std::is_base_of_v<Layer, T>
-        void pushLayer() { m_Layers.emplace_back(T()); }
+        void pushLayer() { m_Layers.emplace_back(new T()); m_Layers.back()->onAttach(); }
         void run();
         void stop();
+        void propagateEvent(Event& e);
         double getTime() const;
         Window& getWindow() { return m_Window; }
     private:
-        std::vector<Layer> m_Layers;
+        std::vector<std::unique_ptr<Layer>> m_Layers;
         Window m_Window;
         bool m_Running = false;
     };

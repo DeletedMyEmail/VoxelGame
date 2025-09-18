@@ -21,11 +21,11 @@ Renderer::Renderer(GLFWwindow* win)
         basicShader(createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl")),
         blockShader(createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl"))
 {
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GLCall(glEnable(GL_CULL_FACE));
+    GLCall(glCullFace(GL_FRONT));
+    GLCall(glEnable(GL_DEPTH_TEST));
+    GLCall(glEnable(GL_BLEND));
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

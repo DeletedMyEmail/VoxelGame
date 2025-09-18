@@ -28,15 +28,11 @@ GameLayer::GameLayer()
         m_Renderer(m_Window.getHandle()),
         m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 1, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
         m_ChunkManager(gameConfig),
+        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
         m_Database(initDB(gameConfig.saveGamePath)),
         m_PrevCursorPos(m_Window.getMousePosition())
 {
-    m_MenuSettings = {
-        BLOCK_TYPE::INVALID,
-        50.0f,
-        0.8f,
-        true
-    };
+    m_Window.disableCursor();
 
     m_Entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 1.0f, 1.0f});
     m_Entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 2.0f, 1.0f});
@@ -59,14 +55,13 @@ void GameLayer::onUpdate(const float dt)
          {
              PhysicsObject playerPhysics{};
              playerPhysics.box.pos = m_Cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
-             playerPhysics.box.size = glm::vec3(1.0f, 1.0f, 1.0f);
+             playerPhysics.box.size = glm::vec3(1.0f);
              playerPhysics.velocity = vel;
              handleCollision(m_ChunkManager, playerPhysics);
              m_Cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
          }
          m_Cam.updateView();
-     }));
-
+    }));
     TIME(m_Metrics, "Chunk Unloading", m_ChunkManager.unloadChunks(chunkPos));
     TIME(m_Metrics, "Chunk Loading", m_ChunkManager.loadChunks(chunkPos, m_Database));
     TIME(m_Metrics, "Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
@@ -76,14 +71,13 @@ void GameLayer::onUpdate(const float dt)
 void GameLayer::onRender()
 {
     const float skyExposure = 0.5f + 0.5f * m_MenuSettings.exposure;
-    const GameConfig& config = gameConfig;
 
     m_Renderer.clearFrame(skyExposure, m_DebugMode);
     TIME(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_MenuSettings.exposure));
     TIME(m_Metrics, "Block Highlighting",
-         RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, config.reachDistance, m_ChunkManager);
+         const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, gameConfig.reachDistance, m_ChunkManager);
          if (res.hit)
-         m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, m_MenuSettings.exposure);
+            m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, m_MenuSettings.exposure);
     );
 
     TIME(m_Metrics, "Draw Entities", ({
@@ -94,16 +88,8 @@ void GameLayer::onRender()
     if (m_DebugMode)
     {
         m_Renderer.drawAxes(m_Cam);
-        m_Renderer.drawDebugMenu(m_Metrics, m_MenuSettings, m_Cam.position, config);
+        m_Renderer.drawDebugMenu(m_Metrics, m_MenuSettings, m_Cam.position, gameConfig);
     }
-}
-
-void GameLayer::onAttach()
-{
-}
-
-void GameLayer::onDetach()
-{
 }
 
 void GameLayer::keyPressCallback(core::Event& e)
@@ -149,6 +135,8 @@ void GameLayer::onEvent(core::Event& e)
         case core::EventType::KeyPressed: keyPressCallback(e); break;
         case core::EventType::CursorMoved: cursorMoveCallback(e); break;
         case core::EventType::MouseButtonPressed: mousePressedCallback(e); break;
+        case core::EventType::MouseButtonReleased: mouseReleasedCallback(e); break;
+        case core::EventType::WindowClose: core::Application::get().stop(); break;
         default: break;
     }
 }
