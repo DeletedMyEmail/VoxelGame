@@ -10,12 +10,12 @@ namespace core
         //WindowResize,
         //WindowFocus,
         //WindowLostFocus,
-        CursorMoved,
         KeyPressed,
         KeyReleased,
+        CursorMoved,
         MouseButtonPressed,
         MouseButtonReleased,
-        MouseScrolled,
+        //MouseScrolled,
     };
 
     class Event

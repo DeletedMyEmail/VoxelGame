@@ -10,7 +10,6 @@ struct Camera
     void updateView();
     void move(const glm::vec3& translation);
     void rotate(glm::dvec2 relPos);
-
     operator std::string() const;
 
     glm::mat4 view, projection, viewProjection;

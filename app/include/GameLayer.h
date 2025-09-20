@@ -8,7 +8,7 @@ class GameLayer : public core::Layer
 {
 public:
     GameLayer();
-    ~GameLayer() = default;
+    ~GameLayer() override = default;
     void onUpdate(float dt) override;
     void onRender() override;
     void onEvent(core::Event& e) override;

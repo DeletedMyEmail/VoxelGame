@@ -41,7 +41,6 @@ Window& Window::operator=(Window&& other)
 
 void Window::destroy()
 {
-    LOG_INFO("Destroying window {}", (long) m_Handle);
     if (m_Handle)
     {
         glfwDestroyWindow(m_Handle);

@@ -24,9 +24,8 @@ static glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 #define m_Window core::Application::get().getWindow()
 
 GameLayer::GameLayer()
-    :
-        m_Renderer(m_Window.getHandle()),
-        m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 1, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
+    :   m_Renderer(m_Window.getHandle()),
+        m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 1, 0}, 75.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
         m_ChunkManager(gameConfig),
         m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
         m_Database(initDB(gameConfig.saveGamePath)),

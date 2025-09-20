@@ -24,9 +24,9 @@ void Camera::move(const glm::vec3& translation)
 void Camera::updateView()
 {
     updateLookDirection();
-    const glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
-    const glm::vec3 right = glm::normalize(glm::cross(lookDir, worldUp));
-    const glm::vec3 up = glm::normalize(glm::cross(right, lookDir));
+    const glm::vec3 worldUp{0.0f, 1.0f, 0.0f};
+    const glm::vec3 right(glm::normalize(glm::cross(lookDir, worldUp)));
+    const glm::vec3 up(glm::normalize(glm::cross(right, lookDir)));
 
     view = glm::lookAt(position, position + lookDir, up);
     viewProjection = projection * view;

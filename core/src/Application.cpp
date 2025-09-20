@@ -66,7 +66,7 @@ core::Application::~Application()
 {
     for (const auto& l : m_Layers)
         l->onDetach();
-
+    m_Layers.clear();
     m_Window.destroy();
     glfwTerminate();
 }
