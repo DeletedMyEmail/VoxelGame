@@ -9,14 +9,14 @@ class GameLayer : public core::Layer
 public:
     GameLayer();
     ~GameLayer() override = default;
-    void onUpdate(float dt) override;
+    void onUpdate(double dt) override;
     void onRender() override;
     void onEvent(core::Event& e) override;
 private:
-    void keyPressCallback(core::Event& e);
-    void cursorMoveCallback(core::Event& e);
+    void keyPressCallback(const core::Event& e);
+    void cursorMoveCallback(const core::Event& e);
     void mousePressedCallback(core::Event& e);
-    void mouseReleasedCallback(core::Event& e);
+    void mouseReleasedCallback(const core::Event& e);
 private:
     //Window& m_Window;
     Renderer m_Renderer;

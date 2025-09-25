@@ -7,7 +7,7 @@ namespace core
     {
     public:
         virtual ~Layer() = default;
-        virtual void onUpdate(float dt) {}
+        virtual void onUpdate(double dt) {}
         virtual void onRender() {};
         virtual void onEvent(Event& e) {}
         virtual void onAttach() {}

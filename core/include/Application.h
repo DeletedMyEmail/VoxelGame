@@ -17,7 +17,8 @@ namespace core
         void pushLayer() { m_Layers.emplace_back(new T()); m_Layers.back()->onAttach(); }
         void run();
         void stop();
-        void propagateEvent(Event& e);
+        void propagateEvent(Event& e) const;
+        // Returns time in seconds
         double getTime() const;
         Window& getWindow() { return m_Window; }
     private:

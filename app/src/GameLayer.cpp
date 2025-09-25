@@ -39,14 +39,14 @@ GameLayer::GameLayer()
     m_Entities.emplace_back(glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 4.0f, 1.0f});
 }
 
-void GameLayer::onUpdate(const float dt)
+void GameLayer::onUpdate(const double dt)
 {
     m_Metrics.update(dt);
 
     const auto chunkPos = worldPosToChunkPos(m_Cam.position);
     TIME(m_Metrics, "Update Player", ({
          const glm::vec3 dir = moveInput(m_Window, m_Cam.lookDir);
-         const glm::vec3 vel = dir * dt * m_MenuSettings.camSpeed;
+         const glm::vec3 vel = dir * (float) dt * m_MenuSettings.camSpeed;
 
          if (!m_MenuSettings.collisionsOn)
              m_Cam.move(vel);
@@ -91,7 +91,7 @@ void GameLayer::onRender()
     }
 }
 
-void GameLayer::keyPressCallback(core::Event& e)
+void GameLayer::keyPressCallback(const core::Event& e)
 {
     switch (e.keyEvent.key)
     {
@@ -103,7 +103,7 @@ void GameLayer::keyPressCallback(core::Event& e)
     }
 }
 
-void GameLayer::cursorMoveCallback(core::Event& e)
+void GameLayer::cursorMoveCallback(const core::Event& e)
 {
     ImGui::GetIO().MousePos = ImVec2(float(e.cursorEvent.pos.x), float(e.cursorEvent.pos.y));
     const glm::dvec2 offset = e.cursorEvent.pos - m_PrevCursorPos;
@@ -112,7 +112,7 @@ void GameLayer::cursorMoveCallback(core::Event& e)
     m_PrevCursorPos = e.cursorEvent.pos;
 }
 
-void GameLayer::mouseReleasedCallback(core::Event& e)
+void GameLayer::mouseReleasedCallback(const core::Event& e)
 {
     ImGui::GetIO().MouseDown[e.mouseEvent.button] = false;
 }

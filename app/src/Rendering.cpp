@@ -133,14 +133,14 @@ void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, con
     ImGui::Spacing();ImGui::Spacing();
 
     ImGui::Text("Frame data for last %.1f seconds:", metrics.frameTimeWindow);
-    const float avgFrameTime = metrics.getAvgFrameTime();
-    ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0f, 1.0f / avgFrameTime);
-    float maxFrameTime = metrics.get1PercentLowFrameTime();
-    ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0f, 1.0f / maxFrameTime);
+    const double avgFrameTime = metrics.getAvgFrameTime();
+    ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0, 1.0f / avgFrameTime);
+    const double maxFrameTime = metrics.get1PercentLowFrameTime();
+    ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0, 1.0f / maxFrameTime);
     ImGui::Spacing();
 
     for (const auto& [name, time] : metrics.timer)
-        ImGui::Text("%s: %.3f ms", name.c_str(), float(time) / 1000.0f);
+        ImGui::Text("%s: %.3f ms", name.c_str(), time * 1000.0);
 
     ImGui::End();
     ImGui::Render();

@@ -21,7 +21,6 @@ core::Application::Application(WindowSettings& settings)
         exit(1);
     }
     glfwSetErrorCallback(glfwErrorCallback);
-    //glfwSetTime(std::chrono::system_clock::now().time_since_epoch().count() / 1000.0);
 
     m_Window = Window(settings);
     m_Window.bind();
@@ -80,7 +79,7 @@ core::Application& core::Application::get()
 void core::Application::run()
 {
     m_Running = true;
-    float lastTime = getTime();
+    double lastTime = getTime();
     while (m_Running)
     {
         if (m_Window.shouldClose())
@@ -89,8 +88,8 @@ void core::Application::run()
             break;
         }
 
-        const float currentTime = getTime();
-        const float deltaTime = currentTime - lastTime;
+        const double currentTime = getTime();
+        const double deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
         // event system...
@@ -111,7 +110,7 @@ void core::Application::stop()
     m_Running = false;
 }
 
-void core::Application::propagateEvent(Event& e)
+void core::Application::propagateEvent(Event& e) const
 {
     for (const auto& l : m_Layers)
         l->onEvent(e);
@@ -119,5 +118,6 @@ void core::Application::propagateEvent(Event& e)
 
 double core::Application::getTime() const
 {
-    return glfwGetTime();
+    using namespace std::chrono;
+    return duration<double>(high_resolution_clock::now().time_since_epoch()).count();
 }

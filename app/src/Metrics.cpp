@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <numeric>
 
-void Metrics::update(double dt)
+void Metrics::update(const double dt)
 {
     frameTimes.push_back(dt);
     frameTimeAccumulator += dt;
@@ -15,11 +15,11 @@ void Metrics::update(double dt)
 
 double Metrics::getAvgFrameTime() const
 {
-    const double sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0f);
+    const double sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0);
     return sum / frameTimes.size();
 }
 
 double Metrics::get1PercentLowFrameTime() const
 {
-    return *std::ranges::max_element(frameTimes.begin(), frameTimes.end());
+    return *std::ranges::max_element(frameTimes);
 }
