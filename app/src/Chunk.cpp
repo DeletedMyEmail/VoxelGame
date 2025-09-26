@@ -193,7 +193,7 @@ Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
 static uint32_t getBlockIndex(const glm::ivec3& pos) { return pos.x + pos.y * Chunk::CHUNK_SIZE + pos.z * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE; }
 
 Chunk::Chunk()
-    : blocks{}, chunkPosition(0), isMeshBaked(false), isMeshDataReady(false), inRender(false)
+    : blocks{}, chunkPosition(0)
 {
 }
 
@@ -210,7 +210,7 @@ void Chunk::spawnTree(const glm::ivec3& pos)
 }
 
 Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGenData)
-    : blocks{}, chunkPosition(chunkPosition), isMeshBaked(false), isMeshDataReady(false)
+    : blocks{}, chunkPosition(chunkPosition)
 {
     meshDataOpaque.reserve(BLOCKS_PER_CHUNK / 2);
     meshDataTranslucent.reserve(BLOCKS_PER_CHUNK / 2);
@@ -272,7 +272,7 @@ Chunk::Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGe
     }
 }
 
-void Chunk::generateMeshData(std::array<Chunk*, 6>& neighbourChunks)
+void Chunk::generateMeshData(const std::array<Chunk*, 6>& neighbourChunks)
 {
     meshDataOpaque.clear();
     meshDataTranslucent.clear();

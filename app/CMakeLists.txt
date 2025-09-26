@@ -19,8 +19,11 @@ include(FetchContent)
 FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip)
 FetchContent_MakeAvailable(googletest)
 
+FILE(GLOB_RECURSE APP_SOURCE_NO_MAIN "src/*.cpp")
+list(REMOVE_ITEM APP_SOURCE_NO_MAIN "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+
 FILE(GLOB_RECURSE TEST_SOURCE "tests/*.cpp")
-add_executable(${PROJECT_NAME}_tests ${TEST_SOURCE})
+add_executable(${PROJECT_NAME}_tests ${TEST_SOURCE} ${APP_SOURCE_NO_MAIN})
 
 target_link_libraries(${PROJECT_NAME}_tests PRIVATE
         gtest
@@ -28,5 +31,7 @@ target_link_libraries(${PROJECT_NAME}_tests PRIVATE
         pthread
         VoxelGameCore
 )
+
+target_include_directories(${PROJECT_NAME}_tests PRIVATE include/)
 
 add_test(NAME RunTests COMMAND ${PROJECT_NAME}_tests)

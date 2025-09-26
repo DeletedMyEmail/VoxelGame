@@ -15,7 +15,7 @@ struct Chunk
 {
     Chunk();
     Chunk(const glm::ivec3& chunkPosition, const WorldGenerationData& worldGenData);
-    void generateMeshData(std::array<Chunk*, 6>& neighbourChunks);
+    void generateMeshData(const std::array<Chunk*, 6>& neighbourChunks);
     void bakeMesh();
     BLOCK_TYPE getBlockUnsafe(const glm::ivec3& pos) const;
     BLOCK_TYPE getBlockSafe(const glm::ivec3& pos) const;
@@ -30,7 +30,7 @@ struct Chunk
     std::vector<blockdata> meshDataOpaque, meshDataTranslucent;
     VertexArray vaoOpaque, vaoTranslucent;
     glm::ivec3 chunkPosition;
-    bool isMeshBaked, isMeshDataReady, inRender;
+    bool isMeshBaked = false, isMeshDataReady = false, inRender = false;
 };
 
 glm::ivec3 chunkPosToWorldBlockPos(const glm::ivec3& chunkPos);
