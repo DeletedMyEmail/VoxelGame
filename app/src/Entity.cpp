@@ -2,16 +2,6 @@
 #include "Chunk.h"
 #include "glm/common.hpp"
 
-void applyGravity(PhysicsObject& obj, const float dtime)
-{
-    obj.velocity.y += GRAVITY * dtime;
-    obj.velocity.y = glm::max(obj.velocity.y, TERMINAL_VELOCITY);
-}
-
-static BoundingBox getBroadphaseBox(const PhysicsObject& obj);
-static CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
-static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);
-
 void EntityManager::loadEntities()
 {
 }
@@ -20,14 +10,14 @@ void EntityManager::unloadEntities()
 {
 }
 
-void EntityManager::updateEntities(double dt, ChunkManager& chunkManager)
+void EntityManager::updateEntities(const double dt, ChunkManager& chunkManager)
 {
     const size_t n = count();
     for (size_t i = 0; i < n; ++i)
     {
         PhysicsObject& obj = m_PhysicsObjects.at(i);
-        applyGravity(obj, (float)dt);
-        handleCollision(chunkManager, obj);
+        applyGravity(obj, (float) dt);
+        move(chunkManager, obj);
     }
 }
 
@@ -63,8 +53,19 @@ size_t EntityManager::count() const
     return count;
 }
 
-void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
+void applyGravity(PhysicsObject& obj, const float dtime)
 {
+    obj.velocity.y += GRAVITY * dtime;
+    obj.velocity.y = glm::max(obj.velocity.y, -TERMINAL_VELOCITY);
+}
+
+static BoundingBox getBroadphaseBox(const PhysicsObject& obj);
+static CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
+static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);
+
+bool move(ChunkManager& chunkManager, PhysicsObject& obj)
+{
+    bool grounded = false;
     const int MAX_ITERATIONS = 4;
     for (int i = 0; i < MAX_ITERATIONS && glm::length(obj.velocity) > 0.001f; ++i)
     {
@@ -102,8 +103,15 @@ void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
             break;
         }
 
+        if (nearestCollision.normal.y > 0.5f)
+            grounded = true;
+
         resolveCollision(obj, nearestCollision);
+
+        obj.velocity *= DAMPING;
     }
+
+    return grounded;
 }
 
 static BoundingBox getBroadphaseBox(const PhysicsObject& obj)

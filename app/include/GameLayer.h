@@ -26,6 +26,7 @@ private:
     SQLite::Database m_Database;
     EntityManager m_EntityManager;
     PhysicsObject m_PlayerPhysics;
+    bool m_PlayerGrounded = false;
     Metrics m_Metrics;
     glm::dvec2 m_PrevCursorPos;
     bool m_DebugMode = true;

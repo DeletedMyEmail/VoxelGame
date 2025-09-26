@@ -27,10 +27,10 @@ GameLayer::GameLayer()
     :   m_Renderer(m_Window.getHandle()),
         m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 2, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
         m_ChunkManager(gameConfig),
-        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, false},
+        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
         m_Database(initDB(gameConfig.saveGamePath)),
-        m_PrevCursorPos(m_Window.getMousePosition()),
-        m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1.0f, 2.0f, 1.0f}}, glm::vec3(0.0f))
+        m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1,2,1}}, glm::vec3(0.0f)),
+        m_PrevCursorPos(m_Window.getMousePosition())
 {
     m_Window.disableCursor();
 
@@ -67,9 +67,14 @@ void GameLayer::onUpdate(const double dt)
     glm::vec3 in = moveInput(m_Window, m_Cam.lookDir);
     if (m_MenuSettings.playerPhysicsOn)
     {
+        if (m_PlayerGrounded)
+        {
+            in.y = 0.0f;
+            m_PlayerPhysics.velocity += in * (float) dt;
+        }
         applyGravity(m_PlayerPhysics, (float) dt);
-        handleCollision(m_ChunkManager, m_PlayerPhysics);
-        const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3{0.5f, 1.0f, 0.5f};
+        if (move(m_ChunkManager, m_PlayerPhysics)) m_PlayerGrounded = true;
+        const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3(0.5f, 1.5f, 0.5f);
         m_Cam.move(off);
     }
     else
@@ -100,6 +105,9 @@ void GameLayer::onRender()
         m_Renderer.drawAxes(m_Cam);
         m_Renderer.drawDebugMenu(m_Metrics, m_MenuSettings, m_Cam.position, gameConfig);
     }
+
+    //static auto entityModel = createEntityWireframe(m_PlayerPhysics.box.size);
+    //m_Renderer.drawEntity(entityModel, m_PlayerPhysics.box.pos, m_Cam.viewProjection, m_MenuSettings.exposure);
 }
 
 void GameLayer::keyPressCallback(const core::Event& e)
@@ -110,8 +118,7 @@ void GameLayer::keyPressCallback(const core::Event& e)
         case GLFW_KEY_F3: m_DebugMode = !m_DebugMode; break;
         case GLFW_KEY_F5: m_ChunkManager.dropChunkMeshes(); break;
         case GLFW_KEY_V: m_CursorLocked = !m_CursorLocked; m_Window.disableCursor(m_CursorLocked); break;
-        case GLFW_KEY_SPACE: if (m_MenuSettings.playerPhysicsOn) m_PlayerPhysics.velocity.y += 0.4; break;
-
+        case GLFW_KEY_SPACE: if (m_MenuSettings.playerPhysicsOn && m_PlayerGrounded) {m_PlayerPhysics.velocity.y += 0.2; m_PlayerGrounded = false;} break;
         default: break;
     }
 }
