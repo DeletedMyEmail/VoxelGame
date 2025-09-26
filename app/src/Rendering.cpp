@@ -2,12 +2,11 @@
 #include <algorithm>
 #include <numeric>
 #include "Block.h"
-#include "../include/Config.h"
+#include "Config.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "OpenGLHelper.h"
-#include "../include/Physics.h"
 #include "Shader.h"
 #include "Texture.h"
 
@@ -126,7 +125,7 @@ void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, con
     ImGui::Text("Threads: %d", config.threadCount);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::Checkbox("Collisions", &settings.collisionsOn);
+    ImGui::Checkbox("Player Physics", &settings.playerPhysicsOn);
     ImGui::SliderFloat("Exposure", &settings.exposure, 0.0f, 1.0f);
     ImGui::SliderFloat("Camera Speed", &settings.camSpeed, 1.0f, 200.0f);
     ImGui::Combo("Block Type", (int*) &settings.selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());
@@ -146,6 +145,7 @@ void Renderer::drawDebugMenu(const Metrics& metrics, MenuSettings& settings, con
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
 
 VertexArray createAxesVAO()
 {

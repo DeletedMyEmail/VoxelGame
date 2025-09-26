@@ -45,7 +45,6 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
     }
 }
 
-
 struct ChunkLoadRequest
 {
     glm::ivec3 position;
@@ -79,12 +78,12 @@ void ChunkManager::drawChunks(const Renderer& renderer, const glm::mat4& viewPro
 {
     renderer.prepareChunkRendering(viewProjection, exposure);
 
-    for (auto& [_,chunk] : chunks)
+    for (const auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
             renderer.drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition));
 
     glDisable(GL_CULL_FACE);
-    for (auto& [_,chunk] : chunks)
+    for (const auto& [_,chunk] : chunks)
         if (chunk.inRender && chunk.isMeshBaked)
             renderer.drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition));
     glEnable(GL_CULL_FACE);

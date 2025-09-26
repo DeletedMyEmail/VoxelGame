@@ -1,7 +1,7 @@
 #pragma once
 #include "Chunk.h"
 #include "Layer.h"
-#include "Physics.h"
+#include "Entity.h"
 #include "Rendering.h"
 
 class GameLayer : public core::Layer
@@ -24,7 +24,8 @@ private:
     ChunkManager m_ChunkManager;
     MenuSettings m_MenuSettings;
     SQLite::Database m_Database;
-    std::vector<Entity> m_Entities;
+    EntityManager m_EntityManager;
+    PhysicsObject m_PlayerPhysics;
     Metrics m_Metrics;
     glm::dvec2 m_PrevCursorPos;
     bool m_DebugMode = true;

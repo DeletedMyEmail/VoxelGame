@@ -20,7 +20,7 @@ struct Metrics
 #ifdef NOPROFILE
     #define TIME(metrics, name, func) func;
 #else
-    #define TIME(metrics, name, func) { \
+    #define PROFILE(metrics, name, func) { \
         double start = core::Application::get().getTime(); \
         func; \
         double end = core::Application::get().getTime(); \

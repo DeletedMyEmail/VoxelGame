@@ -1,32 +1,67 @@
-#include "../include/Physics.h"
+#include "../include/Entity.h"
 #include "Chunk.h"
 #include "glm/common.hpp"
 
-static VertexArray createEntityWireframe(const glm::vec3& size);
-
-Entity::Entity(const glm::vec3& pos, const glm::vec3& size, const float health, const float speed)
-    : model(createEntityWireframe(size)), physics{{pos, size}, glm::vec3(0)}, health(health), speed(speed)
+void applyGravity(PhysicsObject& obj, const float dtime)
 {
-}
-
-void updateEntities(std::vector<Entity>& entities, const float dtime, const glm::ivec3& pos, ChunkManager& chunkManager)
-{
-    for (auto& entity : entities)
-    {
-        auto& vel = entity.physics.velocity;
-        vel.y += GRAVITY * dtime;
-        vel.y = glm::max(vel.y, TERMINAL_VELOCITY);
-
-        if (vel.y < TERMINAL_VELOCITY)
-            vel.y = TERMINAL_VELOCITY;
-
-        handleCollision(chunkManager, entity.physics);
-    }
+    obj.velocity.y += GRAVITY * dtime;
+    obj.velocity.y = glm::max(obj.velocity.y, TERMINAL_VELOCITY);
 }
 
 static BoundingBox getBroadphaseBox(const PhysicsObject& obj);
 static CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
 static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);
+
+void EntityManager::loadEntities()
+{
+}
+
+void EntityManager::unloadEntities()
+{
+}
+
+void EntityManager::updateEntities(double dt, ChunkManager& chunkManager)
+{
+    const size_t n = count();
+    for (size_t i = 0; i < n; ++i)
+    {
+        PhysicsObject& obj = m_PhysicsObjects.at(i);
+        applyGravity(obj, (float)dt);
+        handleCollision(chunkManager, obj);
+    }
+}
+
+void EntityManager::drawEntities(const Renderer& renderer, const glm::mat4& viewProjection, const float exposure) const
+{
+    const size_t n = count();
+    for (size_t i = 0; i < n; ++i)
+        renderer.drawEntity(m_Models.at(i), m_PhysicsObjects.at(i).box.pos, viewProjection, exposure);
+}
+
+void EntityManager::addEntity(const BoundingBox& box, VertexArray&& model, float health, const EntityBehavior& behavior)
+{
+    m_PhysicsObjects.emplace_back(box, glm::vec3(0));
+    m_Models.emplace_back(std::move(model));
+    m_Healths.emplace_back(health);
+    m_BehaviorComponents.emplace_back(behavior);
+}
+
+void EntityManager::removeEntity(const size_t index)
+{
+    m_PhysicsObjects.erase(m_PhysicsObjects.begin() + index);
+    m_Models.erase(m_Models.begin() + index);
+    m_Healths.erase(m_Healths.begin() + index);
+    m_BehaviorComponents.erase(m_BehaviorComponents.begin() + index);
+}
+
+size_t EntityManager::count() const
+{
+    const size_t count = m_PhysicsObjects.size();
+    assert(count == m_Models.size());
+    assert(count == m_Healths.size());
+    assert(count == m_BehaviorComponents.size());
+    return count;
+}
 
 void handleCollision(ChunkManager& chunkManager, PhysicsObject& obj)
 {
@@ -201,7 +236,7 @@ static void resolveCollision(PhysicsObject& a, const CollisionData& collisionDat
     }
 }
 
-static VertexArray createEntityWireframe(const glm::vec3& size)
+VertexArray createEntityWireframe(const glm::vec3& size)
 {
     const std::array vertices =
     {

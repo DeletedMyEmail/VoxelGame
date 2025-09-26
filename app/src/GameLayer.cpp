@@ -8,14 +8,14 @@
 #include "Window.h"
 #include "OpenGLHelper.h"
 #include "Raycast.h"
-#include "../include/Physics.h"
-#include "../include/Rendering.h"
+#include "Entity.h"
+#include "Rendering.h"
 #include "GameWorld.h"
 #include "SQLiteCpp/Database.h"
 #include "stb/stb_image.h"
 #include <libconfig.h++>
 #include "Application.h"
-#include "../include/Config.h"
+#include "Config.h"
 
 static glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 static void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block, SQLite::Database& db, float reachDistance);
@@ -25,46 +25,61 @@ static glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 
 GameLayer::GameLayer()
     :   m_Renderer(m_Window.getHandle()),
-        m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 1, 0}, 75.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
+        m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 2, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
         m_ChunkManager(gameConfig),
-        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
+        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, false},
         m_Database(initDB(gameConfig.saveGamePath)),
-        m_PrevCursorPos(m_Window.getMousePosition())
+        m_PrevCursorPos(m_Window.getMousePosition()),
+        m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1.0f, 2.0f, 1.0f}}, glm::vec3(0.0f))
 {
     m_Window.disableCursor();
 
-    m_Entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 1.0f, 1.0f});
-    m_Entities.emplace_back(glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 2.0f, 1.0f});
-    m_Entities.emplace_back(glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 3.0f, 1.0f});
-    m_Entities.emplace_back(glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 4.0f, 1.0f});
+    const EntityBehavior noBehavior;
+    m_EntityManager.addEntity(  BoundingBox{glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 1.0f, 1.0f}},
+                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                                100.0f,
+                                noBehavior);
+    m_EntityManager.addEntity(  BoundingBox{glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 2.0f, 1.0f}},
+                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                                100.0f,
+                                noBehavior);
+    m_EntityManager.addEntity(  BoundingBox{glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 3.0f, 1.0f}},
+                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                                100.0f,
+                                noBehavior);
+    m_EntityManager.addEntity(  BoundingBox{glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 4.0f, 1.0f}},
+                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                                100.0f,
+                                noBehavior);
 }
 
 void GameLayer::onUpdate(const double dt)
 {
     m_Metrics.update(dt);
 
-    const auto chunkPos = worldPosToChunkPos(m_Cam.position);
-    TIME(m_Metrics, "Update Player", ({
-         const glm::vec3 dir = moveInput(m_Window, m_Cam.lookDir);
-         const glm::vec3 vel = dir * (float) dt * m_MenuSettings.camSpeed;
+    const auto chunkPos = worldPosToChunkPos(m_PlayerPhysics.box.pos);
 
-         if (!m_MenuSettings.collisionsOn)
-             m_Cam.move(vel);
-         else if (vel != glm::vec3(0))
-         {
-             PhysicsObject playerPhysics{};
-             playerPhysics.box.pos = m_Cam.position - glm::vec3{0.5f, 1.0f, 0.5f};
-             playerPhysics.box.size = glm::vec3(1.0f);
-             playerPhysics.velocity = vel;
-             handleCollision(m_ChunkManager, playerPhysics);
-             m_Cam.position = playerPhysics.box.pos + glm::vec3(0.5f, 1.0f, 0.5f);
-         }
-         m_Cam.updateView();
-    }));
-    TIME(m_Metrics, "Chunk Unloading", m_ChunkManager.unloadChunks(chunkPos));
-    TIME(m_Metrics, "Chunk Loading", m_ChunkManager.loadChunks(chunkPos, m_Database));
-    TIME(m_Metrics, "Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
-    TIME(m_Metrics, "Update Entities", updateEntities(m_Entities, dt, chunkPos, m_ChunkManager));
+    PROFILE(m_Metrics, "Update Entities", m_EntityManager.updateEntities(dt, m_ChunkManager));
+    PROFILE(m_Metrics, "Chunk Unloading", m_ChunkManager.unloadChunks(chunkPos));
+    PROFILE(m_Metrics, "Chunk Loading", m_ChunkManager.loadChunks(chunkPos, m_Database));
+    PROFILE(m_Metrics, "Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
+
+    glm::vec3 in = moveInput(m_Window, m_Cam.lookDir);
+    if (m_MenuSettings.playerPhysicsOn)
+    {
+        applyGravity(m_PlayerPhysics, (float) dt);
+        handleCollision(m_ChunkManager, m_PlayerPhysics);
+        const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3{0.5f, 1.0f, 0.5f};
+        m_Cam.move(off);
+    }
+    else
+    {
+        const glm::vec3 vel = in * (float) dt * m_MenuSettings.camSpeed;
+        m_PlayerPhysics.box.pos += vel;
+        m_PlayerPhysics.velocity = glm::vec3(0);
+        m_Cam.move(vel);
+    }
+    m_Cam.updateView();
 }
 
 void GameLayer::onRender()
@@ -72,17 +87,13 @@ void GameLayer::onRender()
     const float skyExposure = 0.5f + 0.5f * m_MenuSettings.exposure;
 
     m_Renderer.clearFrame(skyExposure, m_DebugMode);
-    TIME(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_MenuSettings.exposure));
-    TIME(m_Metrics, "Block Highlighting",
+    PROFILE(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_MenuSettings.exposure));
+    PROFILE(m_Metrics, "Block Highlighting",
          const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, gameConfig.reachDistance, m_ChunkManager);
          if (res.hit)
             m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, m_MenuSettings.exposure);
     );
-
-    TIME(m_Metrics, "Draw Entities", ({
-         for (auto& e : m_Entities)
-             m_Renderer.drawEntity(e.model, e.physics.box.pos, m_Cam.viewProjection, m_MenuSettings.exposure);
-     }));
+    PROFILE(m_Metrics, "Draw Entities", m_EntityManager.drawEntities(m_Renderer, m_Cam.viewProjection, m_MenuSettings.exposure));
 
     if (m_DebugMode)
     {
@@ -96,9 +107,11 @@ void GameLayer::keyPressCallback(const core::Event& e)
     switch (e.keyEvent.key)
     {
         case GLFW_KEY_ESCAPE: core::Application::get().stop(); break;
-        case GLFW_KEY_TAB: m_DebugMode = !m_DebugMode; break;
-        case GLFW_KEY_X: m_ChunkManager.dropChunkMeshes(); break;
+        case GLFW_KEY_F3: m_DebugMode = !m_DebugMode; break;
+        case GLFW_KEY_F5: m_ChunkManager.dropChunkMeshes(); break;
         case GLFW_KEY_V: m_CursorLocked = !m_CursorLocked; m_Window.disableCursor(m_CursorLocked); break;
+        case GLFW_KEY_SPACE: if (m_MenuSettings.playerPhysicsOn) m_PlayerPhysics.velocity.y += 0.4; break;
+
         default: break;
     }
 }

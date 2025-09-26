@@ -6,7 +6,7 @@ struct MenuSettings
 {
     BLOCK_TYPE selectedBlock;
     float camSpeed, exposure;
-    bool collisionsOn;
+    bool playerPhysicsOn;
 };
 
 struct GameConfig

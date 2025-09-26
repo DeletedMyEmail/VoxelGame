@@ -11,8 +11,8 @@ struct ThreadPool
     ~ThreadPool();
     void queueJob(const std::function<void()>& job);
     void stop();
-    [[nodiscard]] bool busy();
-    [[nodiscard]] uint32_t getThreadCount() const { return threads.size(); }
+    bool busy();
+    uint32_t getThreadCount() const { return threads.size(); }
 
     std::vector<std::jthread> threads;
     std::queue<std::function<void()>> jobs;

@@ -13,10 +13,10 @@ For an example config file, see `resources/example.config`.
 
 ## Controls
 - `WASD` / `SHIFT` / `SPACE` to move around
-- `TAB` to toggle debug mode
 - `ESC` to quit
 - `V` toggle mouse cursor
-- `X` refresh (drop all chunks)
+- `F3` to toggle debug mode
+- `F5` refresh (drop all chunks)
 
 ## Roadmap / Features
 - [ ] graphics & optimizations
