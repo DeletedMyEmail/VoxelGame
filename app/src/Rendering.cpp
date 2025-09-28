@@ -63,8 +63,10 @@ void Renderer::prepareChunkRendering(const glm::mat4& viewProjection, const floa
 
 void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset)
 {
-    m_BlockShader.setUniform3f("u_chunkOffset", glm::vec3(globalOffset));
+    if (vao.vertexCount == 0)
+        return;
 
+    m_BlockShader.setUniform3f("u_chunkOffset", glm::vec3(globalOffset));
     vao.bind();
     GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount));
 }
