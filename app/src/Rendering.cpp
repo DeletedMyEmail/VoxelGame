@@ -14,11 +14,11 @@ VertexArray createAxesVAO();
 VertexArray createHighlightVAO();
 
 Renderer::Renderer(GLFWwindow* win)
-    :   axisVao(createAxesVAO()),
-        highlightVao(createHighlightVAO()),
-        textureAtlas("../resources/textures/TextureAtlas.png"),
-        basicShader(createShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl")),
-        blockShader(createShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl"))
+    :   m_AxisVao(createAxesVAO()),
+        m_HighlightVao(createHighlightVAO()),
+        m_TextureAtlas("../resources/textures/TextureAtlas.png"),
+        m_BasicShader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl"),
+        m_BlockShader("../resources/shaders/BlockVert.glsl", "../resources/shaders/BlockFrag.glsl")
 {
     GLCall(glEnable(GL_CULL_FACE));
     GLCall(glCullFace(GL_FRONT));
@@ -42,60 +42,59 @@ Renderer::~Renderer()
     ImGui::DestroyContext();
 }
 
-void Renderer::drawEntity(const VertexArray& vao, const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure) const
+void Renderer::drawEntity(const VertexArray& vao, const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure)
 {
     vao.bind();
-    bind(basicShader);
+    m_BasicShader.bind();
 
-    setUniformMat4(basicShader, "u_VP", viewProjection);
-    setUniform3f(basicShader, "u_GlobalPosition", pos);
+    m_BasicShader.setUniformMat4("u_VP", viewProjection);
+    m_BasicShader.setUniform3f("u_GlobalPosition", pos);
     GLCall(glDrawArrays(GL_LINES, 0, vao.vertexCount));
 }
 
-void Renderer::prepareChunkRendering(const glm::mat4& viewProjection, const float exposure) const
+void Renderer::prepareChunkRendering(const glm::mat4& viewProjection, const float exposure)
 {
-    textureAtlas.bind(0);
-    bind(blockShader);
-
-    setUniformMat4(blockShader, "u_VP", viewProjection);
-    setUniform1i(blockShader, "u_textureSlot", 0);
-    setUniform3f(blockShader, "u_exposure", glm::vec3{exposure});
+    m_TextureAtlas.bind(0);
+    m_BlockShader.bind();
+    m_BlockShader.setUniformMat4("u_VP", viewProjection);
+    m_BlockShader.setUniform1i("u_textureSlot", 0);
+    m_BlockShader.setUniform3f("u_exposure", glm::vec3{exposure});
 }
 
-void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset) const
+void Renderer::drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset)
 {
-    setUniform3f(blockShader, "u_chunkOffset", glm::vec3(globalOffset));
+    m_BlockShader.setUniform3f("u_chunkOffset", glm::vec3(globalOffset));
 
     vao.bind();
     GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, vao.vertexCount));
 }
 
-void Renderer::drawAxes(const Camera& cam) const
+void Renderer::drawAxes(const Camera& cam)
 {
-    axisVao.bind();
-    bind(basicShader);
+    m_AxisVao.bind();
+    m_BasicShader.bind();
 
-    setUniformMat4(basicShader, "u_VP", cam.viewProjection);
-    setUniform3f(basicShader, "u_GlobalPosition", cam.position + cam.lookDir);
+    m_BasicShader.setUniformMat4("u_VP", cam.viewProjection);
+    m_BasicShader.setUniform3f("u_GlobalPosition", cam.position + cam.lookDir);
 
-    GLCall(glDrawArrays(GL_LINES, 0, axisVao.vertexCount));
+    GLCall(glDrawArrays(GL_LINES, 0, m_AxisVao.vertexCount));
 }
 
-void Renderer::drawHighlightBlock(const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure) const
+void Renderer::drawHighlightBlock(const glm::vec3& pos, const glm::mat4& viewProjection, const float exposure)
 {
     GLCall(glEnable(GL_DEPTH_TEST));
     GLCall(glDepthFunc(GL_LEQUAL));
 
-    highlightVao.bind();
-    textureAtlas.bind(0);
-    bind(blockShader);
+    m_HighlightVao.bind();
+    m_TextureAtlas.bind(0);
+    m_BlockShader.bind();
 
-    setUniformMat4(blockShader, "u_VP", viewProjection);
-    setUniform1i(blockShader, "u_textureSlot", 0);
-    setUniform3f(blockShader, "u_chunkOffset", pos);
-    setUniform3f(blockShader, "u_exposure", glm::vec3(exposure));
+    m_BlockShader.setUniformMat4("u_VP", viewProjection);
+    m_BlockShader.setUniform1i("u_textureSlot", 0);
+    m_BlockShader.setUniform3f("u_chunkOffset", pos);
+    m_BlockShader.setUniform3f("u_exposure", glm::vec3(exposure));
 
-    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, highlightVao.vertexCount));
+    GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, m_HighlightVao.vertexCount));
     GLCall(glDepthFunc(GL_LESS));
 }
 

@@ -91,7 +91,7 @@ void VertexArray::addBuffer(const GLuint bufferId, const VertexBufferLayout& lay
     const auto& attributes = layout.layoutElements;
     unsigned int offset = 0;
 
-    for (auto [count, type, normalized, instanceDivisor] : attributes)
+    for (auto& [count, type, normalized, instanceDivisor] : attributes)
     {
         GLCall(glEnableVertexAttribArray(attribCounter))
 

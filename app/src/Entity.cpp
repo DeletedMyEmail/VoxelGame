@@ -21,7 +21,7 @@ void EntityManager::updateEntities(const double dt, ChunkManager& chunkManager)
     }
 }
 
-void EntityManager::drawEntities(const Renderer& renderer, const glm::mat4& viewProjection, const float exposure) const
+void EntityManager::drawEntities(Renderer& renderer, const glm::mat4& viewProjection, const float exposure) const
 {
     const size_t n = count();
     for (size_t i = 0; i < n; ++i)

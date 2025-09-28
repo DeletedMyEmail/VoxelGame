@@ -9,9 +9,9 @@ int getUniformLocation(const GLuint shaderId, const std::string& name);
 static GLuint compile(const char* shaderSource, GLenum shaderType);
 static std::string parse(const char* shaderSource);
 
-GLuint createShader(const char* pVertexShaderSource, const char* pFragmentShaderSource, const char* pGeometryShaderSource)
+Shader::Shader(const char* pVertexShaderSource, const char* pFragmentShaderSource, const char* pGeometryShaderSource)
+    : m_ID(glCreateProgram())
 {
-    const GLuint shaderId = glCreateProgram();
     const std::string vertStr = parse(pVertexShaderSource);
     const GLuint vertShaderID = compile(vertStr.c_str(), GL_VERTEX_SHADER);
 
@@ -25,68 +25,76 @@ GLuint createShader(const char* pVertexShaderSource, const char* pFragmentShader
         geoShaderID = compile(geoStr.c_str(), GL_GEOMETRY_SHADER);
     }
 
-    GLCall(glAttachShader(shaderId, vertShaderID))
-    GLCall(glAttachShader(shaderId, fragShaderID))
+    GLCall(glAttachShader(m_ID, vertShaderID))
+    GLCall(glAttachShader(m_ID, fragShaderID))
     if (pGeometryShaderSource != nullptr)
-        GLCall(glAttachShader(shaderId, geoShaderID))
+        GLCall(glAttachShader(m_ID, geoShaderID))
 
-    GLCall(glLinkProgram(shaderId))
+    GLCall(glLinkProgram(m_ID))
 
     GLCall(glDeleteShader(vertShaderID))
     GLCall(glDeleteShader(fragShaderID))
     if (pGeometryShaderSource != nullptr)
         GLCall(glDeleteShader(geoShaderID))
-
-    unbindShader();
-    return shaderId;
 }
 
-void deleteShader(const GLuint shaderId)
+Shader::~Shader()
 {
-    GLCall(glDeleteProgram(shaderId));
+    GLCall(glDeleteProgram(m_ID));
 }
 
-void setUniform1f(const GLuint shaderId, const std::string &name, const float value)
+void Shader::setUniform1f(const std::string &name, const float value)
 {
-    GLCall(glUniform1f(getUniformLocation(shaderId, name), value))
+    GLCall(glUniform1f(getUniformLocation(name), value))
 }
 
-void setUniformMat4(const GLuint shaderId, const std::string& name, const glm::mat4& mat)
+void Shader::setUniformMat4(const std::string& name, const glm::mat4& mat)
 {
-    GLCall(glUniformMatrix4fv(getUniformLocation(shaderId, name), 1, GL_FALSE, glm::value_ptr(mat)));
+    GLCall(glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)));
 }
 
-void setUniform3f(const GLuint shaderId, const std::string& name, const glm::vec3& vec)
+void Shader::setUniform3f(const std::string& name, const glm::vec3& vec)
 {
-    GLCall(glUniform3f(getUniformLocation(shaderId, name), vec.x, vec.y, vec.z));
+    GLCall(glUniform3f(getUniformLocation(name), vec.x, vec.y, vec.z));
 }
 
-void setUniform1i(const GLuint shaderId, const std::string &name, const int value)
+void Shader::setUniform1i(const std::string &name, const int value)
 {
-    GLCall(glUniform1i(getUniformLocation(shaderId, name), value))
+    GLCall(glUniform1i(getUniformLocation(name), value))
 }
 
-void setUniform1u(const GLuint shaderId, const std::string &name, const unsigned int value)
+void Shader::setUniform1u(const std::string &name, const unsigned int value)
 {
-    GLCall(glUniform1ui(getUniformLocation(shaderId, name), value))
+    GLCall(glUniform1ui(getUniformLocation(name), value))
 }
 
-void setUniform2u(const GLuint shaderId, const std::string &name, const unsigned int x,const unsigned int y)
+void Shader::setUniform2u(const std::string &name, const unsigned int x,const unsigned int y)
 {
-    GLCall(glUniform2ui(getUniformLocation(shaderId, name), x, y))
+    GLCall(glUniform2ui(getUniformLocation(name), x, y))
 }
 
-int getUniformLocation(const GLuint shaderId, const std::string &name)
+GLint Shader::getUniformLocation(const std::string &name)
 {
-    const int location = glGetUniformLocation(shaderId, name.c_str());
+    if (m_UniformLocations.contains(name))
+        return m_UniformLocations[name];
+
+    const GLint location = glGetUniformLocation(m_ID, name.c_str());
     if (location == -1)
         LOG_WARN("Uniform not found: {}", name);
+    m_UniformLocations[name] = location;
+
     return location;
 }
 
-void bind(const GLuint shaderId) { GLCall(glUseProgram(shaderId)); }
+void Shader::bind() const
+{
+    GLCall(glUseProgram(m_ID));
+}
 
-void unbindShader() { GLCall(glUseProgram(0)); }
+void Shader::unbind() const
+{
+    GLCall(glUseProgram(0));
+}
 
 GLuint compile(const char* shaderSource, const GLenum shaderType)
 {

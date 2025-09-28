@@ -74,7 +74,7 @@ std::priority_queue<ChunkLoadRequest> getChunksSorted(const glm::ivec3& currChun
     return queue;
 }
 
-void ChunkManager::drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, const float exposure)
+void ChunkManager::drawChunks(Renderer& renderer, const glm::mat4& viewProjection, const float exposure)
 {
     renderer.prepareChunkRendering(viewProjection, exposure);
 

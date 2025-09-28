@@ -66,6 +66,11 @@ void profileBaking()
         chunk.generateMeshData(neighbours2);
     }), Chunk::BLOCKS_PER_CHUNK, 100, 100);
     LOG_INFO("Chunk Mesh Baking (with neighbours fetched live and populated map) ---------\n{}", std::string(res));
+
+    {
+        PROFILE_SCOPE();
+        chunk.bakeMesh(); // * 32 on main thread => bottleneck
+    }
 }
 
 int main(int argc, char **argv)
@@ -76,6 +81,7 @@ int main(int argc, char **argv)
     core::Application app(settings);
     profileChunkGen();
     profileBaking();
+    PROFILER_END();
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

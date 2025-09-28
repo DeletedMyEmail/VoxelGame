@@ -54,7 +54,7 @@ struct ChunkManager
 {
     ChunkManager(const GameConfig& config);
     void unloadChunks(const glm::ivec3& currChunkPos);
-    void drawChunks(const Renderer& renderer, const glm::mat4& viewProjection, float exposure) ;
+    void drawChunks(Renderer& renderer, const glm::mat4& viewProjection, float exposure);
     void bakeChunks(const glm::ivec3& currChunkPos);
     void loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db);
     void dropChunkMeshes();

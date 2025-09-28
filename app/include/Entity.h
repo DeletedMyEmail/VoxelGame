@@ -41,7 +41,7 @@ struct EntityManager
     void loadEntities(); // TODO: implement
     void unloadEntities(); // TODO: implement
     void updateEntities(double dt, ChunkManager& chunkManager);
-    void drawEntities(const Renderer& renderer, const glm::mat4& viewProjection, float exposure) const;
+    void drawEntities(Renderer& renderer, const glm::mat4& viewProjection, float exposure) const;
     void addEntity(const BoundingBox& box, VertexArray&& model, float health, const EntityBehavior& behavior);
     void removeEntity(size_t index);
     size_t count() const;
