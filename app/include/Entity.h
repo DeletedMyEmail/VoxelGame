@@ -24,7 +24,7 @@ struct CollisionData
     glm::vec3 normal;
     float entryTime;
 };
-bool move(ChunkManager& chunkManager, PhysicsObject& obj);
+bool applyVelocityAndHandleCollisions(ChunkManager& chunkManager, PhysicsObject& obj);
 void applyGravity(PhysicsObject& obj, float dtime);
 
 struct EntityBehavior

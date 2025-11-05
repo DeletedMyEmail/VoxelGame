@@ -1,8 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include "Layer.h"
 #include "Window.h"
+#include "cstmlib/Log.h"
 
 namespace core
 {
@@ -12,9 +14,14 @@ namespace core
         Application(WindowSettings& settings);
         ~Application();
 
+        template<typename T, typename ...Args> requires std::is_base_of_v<Layer, T>
+        void pushLayer(Args... args);
+        void suspendLayer(const std::string& name);
+        void resumeLayer(const std::string& name);
+        void removeLayer(const std::string& name);
+        Layer* getLayer(const std::string& name);
+
         static Application& get();
-        template<typename T> requires std::is_base_of_v<Layer, T>
-        void pushLayer() { m_Layers.emplace_back(new T()); m_Layers.back()->onAttach(); }
         void run();
         void stop();
         void propagateEvent(Event& e) const;
@@ -26,4 +33,12 @@ namespace core
         Window m_Window;
         bool m_Running = false;
     };
+
+    template <typename T, typename ... Args> requires std::is_base_of_v<Layer, T>
+    void Application::pushLayer(Args... args)
+    {
+        m_Layers.emplace_back(std::make_unique<T>(args...));
+        LOG_INFO("pushing layer: {}", m_Layers.back()->m_Name);
+        m_Layers.back()->onAttach();
+    }
 }

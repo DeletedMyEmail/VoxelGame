@@ -23,34 +23,48 @@ static glm::vec3 moveInput(const Window& window, const glm::vec3& lookDir);
 
 #define m_Window core::Application::get().getWindow()
 
-GameLayer::GameLayer()
-    :   m_Renderer(m_Window.getHandle()),
-        m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 2, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
-        m_ChunkManager(gameConfig),
-        m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
-        m_Database(initDB(gameConfig.saveGamePath)),
-        m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1,2,1}}, glm::vec3(0.0f)),
-        m_PrevCursorPos(m_Window.getMousePosition())
+GameLayer::GameLayer(const std::string& name)
+    : Layer(name),
+      m_Renderer(m_Window.getHandle()),
+      m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 2, 0}, 90.0f, m_Window.getSettings().width,
+            m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
+      m_ChunkManager(gameConfig),
+      m_MenuSettings{BLOCK_TYPE::INVALID, 50.0f, 0.8f, true},
+      m_Database(initDB(gameConfig.saveGamePath)),
+      m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1, 2, 1}}, glm::vec3(0.0f)),
+      m_PrevCursorPos(m_Window.getMousePosition())
 {
     m_Window.disableCursor();
 
     const EntityBehavior noBehavior;
-    m_EntityManager.addEntity(  BoundingBox{glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 1.0f, 1.0f}},
-                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
-                                100.0f,
-                                noBehavior);
-    m_EntityManager.addEntity(  BoundingBox{glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 2.0f, 1.0f}},
-                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
-                                100.0f,
-                                noBehavior);
-    m_EntityManager.addEntity(  BoundingBox{glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f}, glm::vec3{1.0f, 3.0f, 1.0f}},
-                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
-                                100.0f,
-                                noBehavior);
-    m_EntityManager.addEntity(  BoundingBox{glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f}, glm::vec3{1.0f, 4.0f, 1.0f}},
-                                createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
-                                100.0f,
-                                noBehavior);
+    m_EntityManager.addEntity(BoundingBox{
+                                  glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f},
+                                  glm::vec3{1.0f, 1.0f, 1.0f}
+                              },
+                              createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                              100.0f,
+                              noBehavior);
+    m_EntityManager.addEntity(BoundingBox{
+                                  glm::vec3{10.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f},
+                                  glm::vec3{1.0f, 2.0f, 1.0f}
+                              },
+                              createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                              100.0f,
+                              noBehavior);
+    m_EntityManager.addEntity(BoundingBox{
+                                  glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 10.0f},
+                                  glm::vec3{1.0f, 3.0f, 1.0f}
+                              },
+                              createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                              100.0f,
+                              noBehavior);
+    m_EntityManager.addEntity(BoundingBox{
+                                  glm::vec3{11.0f, WorldGenerationData::MAX_HEIGHT - 4, 11.0f},
+                                  glm::vec3{1.0f, 4.0f, 1.0f}
+                              },
+                              createEntityWireframe(glm::vec3{1.0f, 2.0f, 1.0f}),
+                              100.0f,
+                              noBehavior);
 }
 
 void GameLayer::onUpdate(const double dt)
@@ -73,7 +87,7 @@ void GameLayer::onUpdate(const double dt)
             m_PlayerPhysics.velocity += in * (float) dt;
         }
         applyGravity(m_PlayerPhysics, (float) dt);
-        if (move(m_ChunkManager, m_PlayerPhysics)) m_PlayerGrounded = true;
+        if (applyVelocityAndHandleCollisions(m_ChunkManager, m_PlayerPhysics)) m_PlayerGrounded = true;
         const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3(0.5f, 1.5f, 0.5f);
         m_Cam.move(off);
     }

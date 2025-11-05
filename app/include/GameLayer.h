@@ -4,10 +4,10 @@
 #include "Entity.h"
 #include "Rendering.h"
 
-class GameLayer : public core::Layer
+class GameLayer final : public core::Layer
 {
 public:
-    GameLayer();
+    GameLayer(const std::string& name = "GameLayer");
     ~GameLayer() override = default;
     void onUpdate(double dt) override;
     void onRender() override;

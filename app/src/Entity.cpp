@@ -16,8 +16,10 @@ void EntityManager::updateEntities(const double dt, ChunkManager& chunkManager)
     for (size_t i = 0; i < n; ++i)
     {
         PhysicsObject& obj = m_PhysicsObjects.at(i);
+        EntityBehavior& behavior = m_BehaviorComponents.at(i);
         applyGravity(obj, (float) dt);
-        move(chunkManager, obj);
+        //behavior.movementFunction(obj);
+        applyVelocityAndHandleCollisions(chunkManager, obj);
     }
 }
 
@@ -63,7 +65,7 @@ static BoundingBox getBroadphaseBox(const PhysicsObject& obj);
 static CollisionData getCollision(PhysicsObject& a, BoundingBox& b);
 static void resolveCollision(PhysicsObject& a, const CollisionData& collisionData);
 
-bool move(ChunkManager& chunkManager, PhysicsObject& obj)
+bool applyVelocityAndHandleCollisions(ChunkManager& chunkManager, PhysicsObject& obj)
 {
     bool grounded = false;
     const int MAX_ITERATIONS = 4;

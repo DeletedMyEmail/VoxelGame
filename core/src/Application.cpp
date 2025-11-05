@@ -1,5 +1,7 @@
 #include "Application.h"
-#include "../../app/include/Metrics.h"
+#include <ranges>
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include "cstmlib/Log.h"
 #include "GLFW/glfw3.h"
 
@@ -63,10 +65,15 @@ core::Application::Application(WindowSettings& settings)
 
 core::Application::~Application()
 {
-    for (const auto& l : m_Layers)
-        l->onDetach();
+    for (const auto & layer : std::ranges::reverse_view(m_Layers))
+        layer->onDetach();
     m_Layers.clear();
     m_Window.destroy();
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwTerminate();
 }
 
@@ -74,6 +81,57 @@ core::Application& core::Application::get()
 {
     assert(s_Instance);
     return *s_Instance;
+}
+
+void core::Application::suspendLayer(const std::string& name)
+{
+    for (const auto& l : m_Layers)
+    {
+        if (l->m_Name == name)
+        {
+            LOG_INFO("suspending layer: {}", name);
+            l->m_Enabled = false;
+            return;
+        }
+    }
+}
+
+void core::Application::resumeLayer(const std::string& name)
+{
+    for (const auto& l : m_Layers)
+    {
+        if (l->m_Name == name)
+        {
+            LOG_INFO("resuming layer: {}", name);
+            l->m_Enabled = true;
+            return;
+        }
+    }
+}
+
+void core::Application::removeLayer(const std::string& name)
+{
+    for (auto it = m_Layers.begin(); it != m_Layers.end(); ++it)
+    {
+        if ((*it)->m_Name == name)
+        {
+            LOG_INFO("Removing layer: {}", name);
+            (*it)->onDetach();
+            m_Layers.erase(it);
+            return;
+        }
+    }
+}
+
+core::Layer* core::Application::getLayer(const std::string& name)
+{
+    for (const auto& l : m_Layers)
+    {
+        if (l->m_Name == name && l->m_Enabled)
+            return l.get();
+    }
+
+    return nullptr;
 }
 
 void core::Application::run()
@@ -91,8 +149,6 @@ void core::Application::run()
         const double currentTime = getTime();
         const double deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-
-        // event system...
 
         for (const auto& l : m_Layers)
             l->onUpdate(deltaTime);

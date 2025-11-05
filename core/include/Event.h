@@ -1,7 +1,6 @@
 #pragma once
 #include "Window.h"
 
-
 namespace core
 {
     enum class EventType

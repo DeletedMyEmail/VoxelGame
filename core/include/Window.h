@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-#include <memory>
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include "glm/vec4.hpp"
@@ -11,7 +9,7 @@ struct WindowSettings
 {
     int width = 1280;
     int height = 720;
-    const char* title = "OpenGL Window";
+    const char* title = "App";
     bool fullscreen = false;
     bool vSync = false;
     bool disableCursor = false;

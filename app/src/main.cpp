@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "DebugLayer.h"
 #include "GameLayer.h"
 #include "cstmlib/Log.h"
 #include "cstmlib/Profiling.h"
@@ -19,7 +20,8 @@ int main(int argc, char* argv[])
     windowSettings.title = PROJECT_NAME;
     windowSettings.fullscreen = true;
     core::Application app(windowSettings);
-    app.pushLayer<GameLayer>();
+    app.pushLayer<GameLayer>("GameLayer");
+    app.pushLayer<DebugLayer>("Debug Layer");
     app.run();
 
     PROFILER_END();

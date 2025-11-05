@@ -25,15 +25,12 @@ For an example config file, see `resources/example.config`.
   - [x] imgui debug menu
   - [x] face culling
   - [ ] frustum culling
-    - [x] simple circular frustum culling 
-    - [ ] more complex version
   - [x] multithreading
     - [x] chunk loading
     - [x] chunk unloading
     - [x] mesh generation
   - [x] 32^3 chunks
   - [x] translucent blocks 
-  - [ ] binary meshing
 
 - [ ] game mechanics
   - [x] collisions
@@ -56,6 +53,11 @@ For an example config file, see `resources/example.config`.
     - [x] gravity
     - [ ] behavior
     - [ ] model & animation
+  - [ ] day/night cycle
+  - [ ] console/commands
+
+- [ ] tools
+  - [ ] profiler
 
 [demo.mp4](https://github.com/user-attachments/assets/9e8c9132-b0e0-42e2-b421-7ddd6451fb57)
 
