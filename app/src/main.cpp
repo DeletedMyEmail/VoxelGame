@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "ControlLayer.h"
 #include "DebugLayer.h"
 #include "GameLayer.h"
 #include "cstmlib/Log.h"
@@ -22,6 +23,7 @@ int main(int argc, char* argv[])
     core::Application app(windowSettings);
     app.pushLayer<GameLayer>("GameLayer");
     app.pushLayer<DebugLayer>("DebugLayer");
+    app.pushLayer<ControlLayer>("ControlLayer");
     app.run();
 
     PROFILER_END();

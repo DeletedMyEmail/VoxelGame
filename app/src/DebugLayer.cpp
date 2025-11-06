@@ -1,12 +1,10 @@
 #include "DebugLayer.h"
-
 #include <ranges>
-
 #include "Application.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "OpenGLHelper.h"
-#include "../cmake-build-release/_deps/implot-src/implot.h"
+#include "implot.h"
 
 VertexArray createAxesVAO();
 
@@ -34,14 +32,6 @@ bool DebugLayer::onEvent(core::Event& e)
 {
     switch (e.type)
     {
-        case core::EventType::KeyPressed:
-            if (e.keyEvent.key == GLFW_KEY_F3)
-            {
-                LOG_INFO("Suspending DebugLayer");
-                m_Enabled = false;
-                return true;
-            }
-            return false;
         case core::EventType::CursorMoved:
             ImGui::GetIO().MousePos = ImVec2(float(e.cursorEvent.pos.x), float(e.cursorEvent.pos.y));
             return false;

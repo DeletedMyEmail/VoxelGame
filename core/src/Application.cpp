@@ -94,6 +94,29 @@ core::Application& core::Application::get()
     return *s_Instance;
 }
 
+void core::Application::toggleLayer(const std::string& name) const
+{
+    for (const auto& l : m_Layers)
+    {
+        if (l->m_Name == name)
+        {
+            if (l->m_Enabled)
+            {
+                LOG_INFO("suspending layer {}", name);
+                l->onDetach();
+            }
+            else
+            {
+                LOG_INFO("resuming layer {}", name);
+                l->onAttach();
+            }
+
+            l->m_Enabled = !l->m_Enabled;
+            return;
+        }
+    }
+}
+
 void core::Application::suspendLayer(const std::string& name) const
 {
     for (const auto& l : m_Layers)
@@ -101,6 +124,7 @@ void core::Application::suspendLayer(const std::string& name) const
         if (l->m_Name == name)
         {
             LOG_INFO("suspending layer: {}", name);
+            l->onDetach();
             l->m_Enabled = false;
             return;
         }
@@ -114,6 +138,7 @@ void core::Application::resumeLayer(const std::string& name) const
         if (l->m_Name == name)
         {
             LOG_INFO("resuming layer: {}", name);
+            l->onAttach();
             l->m_Enabled = true;
             return;
         }
