@@ -1,8 +1,12 @@
 #include "DebugLayer.h"
+
+#include <ranges>
+
 #include "Application.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "OpenGLHelper.h"
+#include "../cmake-build-release/_deps/implot-src/implot.h"
 
 VertexArray createAxesVAO();
 
@@ -103,12 +107,32 @@ void DebugLayer::drawMenu() const
     ImGui::Spacing();ImGui::Spacing();
 
     const auto& metrics = m_GameLayer->m_Metrics;
-    ImGui::Text("Frame data for last %.1f seconds:", metrics.frameTimeWindow);
+    ImGui::Text("Frame data for last %.1f seconds:", metrics.interval);
     const double avgFrameTime = metrics.getAvgFrameTime();
     ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0, 1.0f / avgFrameTime);
     const double maxFrameTime = metrics.get1PercentLowFrameTime();
     ImGui::Text("1%% lows: %.3f ms (%.1f FPS)", maxFrameTime * 1000.0, 1.0f / maxFrameTime);
     ImGui::Spacing();
+
+    if (ImPlot::BeginPlot("Frame Times"))
+    {
+        ImPlot::SetupAxes("Sample", "Frame Time (ms)");
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, maxFrameTime * 2000, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, metrics.frameTimes.size(), ImGuiCond_Always);
+
+        // Convert frame times from seconds to milliseconds for plotting
+        std::vector<float> frameTimesMs;
+        frameTimesMs.reserve(metrics.frameTimes.size());
+        for (const auto& frameTime : metrics.frameTimes) {
+            frameTimesMs.push_back(static_cast<float>(frameTime * 1000.0));
+        }
+
+        if (!frameTimesMs.empty()) {
+            ImPlot::PlotLine("Frame Time", frameTimesMs.data(), frameTimesMs.size());
+        }
+
+        ImPlot::EndPlot();
+    }
 
     for (const auto& [name, time] : metrics.timer)
         ImGui::Text("%s: %.3f ms", name.c_str(), time * 1000.0);

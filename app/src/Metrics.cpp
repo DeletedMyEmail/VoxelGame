@@ -6,7 +6,7 @@ void Metrics::update(const double dt)
 {
     frameTimes.push_back(dt);
     frameTimeAccumulator += dt;
-    while (frameTimeAccumulator > frameTimeWindow)
+    while (frameTimeAccumulator > interval)
     {
         frameTimeAccumulator -= frameTimes.front();
         frameTimes.pop_front();

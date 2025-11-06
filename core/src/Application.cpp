@@ -4,6 +4,7 @@
 #include "imgui_impl_opengl3.h"
 #include "cstmlib/Log.h"
 #include "GLFW/glfw3.h"
+#include <implot.h>
 
 static void glfwErrorCallback(int error_code, const char* description)
 {
@@ -64,6 +65,7 @@ core::Application::Application(WindowSettings& settings)
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
     ImGui::StyleColorsDark();
@@ -81,6 +83,7 @@ core::Application::~Application()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    ImPlot::DestroyContext();
 
     glfwTerminate();
 }

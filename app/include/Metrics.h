@@ -11,7 +11,7 @@ struct Metrics
     double get1PercentLowFrameTime() const;
 
     double frameTimeAccumulator = 0;
-    double frameTimeWindow = 5.0f;
+    double interval = 5.0f;
 
     std::deque<double> frameTimes;
     std::unordered_map<std::string, double> timer;

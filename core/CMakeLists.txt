@@ -15,8 +15,11 @@ FetchContent_MakeAvailable(cstmlib)
 FetchContent_Declare(fastnoise GIT_REPOSITORY https://github.com/Auburn/FastNoiseLite.git GIT_TAG master)
 FetchContent_MakeAvailable(fastnoise)
 
-FetchContent_Declare(imgui GIT_REPOSITORY https://github.com/ocornut/imgui.git GIT_TAG v1.92.1)
+FetchContent_Declare(imgui GIT_REPOSITORY https://github.com/ocornut/imgui.git GIT_TAG v1.89.9)
 FetchContent_MakeAvailable(imgui)
+
+FetchContent_Declare(implot GIT_REPOSITORY https://github.com/epezent/implot.git GIT_TAG v0.16)
+FetchContent_MakeAvailable(implot)
 
 FetchContent_Declare(SQLiteCpp GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git GIT_TAG 3.3.3)
 FetchContent_MakeAvailable(SQLiteCpp)
@@ -37,16 +40,19 @@ target_sources(${PROJECT_NAME} PRIVATE
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        ${implot_SOURCE_DIR}/implot.cpp
+        ${implot_SOURCE_DIR}/implot_items.cpp
         ${libconfig_SOURCE_DIR}/lib
 )
 
 # --- Includes ---
 target_include_directories(${PROJECT_NAME} PUBLIC
-        "include/"
-        "libs/"
+        include/
+        libs/
         ${fastnoise_SOURCE_DIR}/Cpp
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
+        ${implot_SOURCE_DIR}
 )
 
 # --- Linking ---
