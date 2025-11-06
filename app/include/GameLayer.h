@@ -17,7 +17,6 @@ private:
     bool keyPressCallback(const core::Event& e);
     bool cursorMoveCallback(const core::Event& e);
     bool mousePressedCallback(const core::Event& e);
-    bool mouseReleasedCallback(const core::Event& e);
 private:
     //Window& m_Window;
     Renderer m_Renderer;

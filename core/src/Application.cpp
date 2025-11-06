@@ -91,7 +91,7 @@ core::Application& core::Application::get()
     return *s_Instance;
 }
 
-void core::Application::suspendLayer(const std::string& name)
+void core::Application::suspendLayer(const std::string& name) const
 {
     for (const auto& l : m_Layers)
     {
@@ -104,7 +104,7 @@ void core::Application::suspendLayer(const std::string& name)
     }
 }
 
-void core::Application::resumeLayer(const std::string& name)
+void core::Application::resumeLayer(const std::string& name) const
 {
     for (const auto& l : m_Layers)
     {
@@ -159,10 +159,10 @@ void core::Application::run()
         lastTime = currentTime;
 
         for (const auto& l : m_Layers)
-            l->onUpdate(deltaTime);
+            if (l->m_Enabled) l->onUpdate(deltaTime);
 
         for (const auto& l : m_Layers)
-            l->onRender();
+            if (l->m_Enabled) l->onRender();
 
         glfwSwapBuffers(m_Window.getHandle());
         glfwPollEvents();
@@ -176,8 +176,9 @@ void core::Application::stop()
 
 void core::Application::propagateEvent(Event& e) const
 {
-    for (const auto& l : m_Layers)
-        l->onEvent(e);
+    for (const auto& l : std::ranges::reverse_view(m_Layers))
+        if (l->m_Enabled)
+            if (l->onEvent(e)) break;
 }
 
 double core::Application::getTime() const

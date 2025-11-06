@@ -16,8 +16,8 @@ namespace core
 
         template<typename T, typename ...Args> requires std::is_base_of_v<Layer, T>
         void pushLayer(Args... args);
-        void suspendLayer(const std::string& name);
-        void resumeLayer(const std::string& name);
+        void suspendLayer(const std::string& name) const;
+        void resumeLayer(const std::string& name) const;
         void removeLayer(const std::string& name);
         Layer* getLayer(const std::string& name);
 

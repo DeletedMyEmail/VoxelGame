@@ -26,6 +26,31 @@ void DebugLayer::onRender()
     drawAxes();
 }
 
+bool DebugLayer::onEvent(core::Event& e)
+{
+    switch (e.type)
+    {
+        case core::EventType::KeyPressed:
+            if (e.keyEvent.key == GLFW_KEY_F3)
+            {
+                LOG_INFO("Suspending DebugLayer");
+                m_Enabled = false;
+                return true;
+            }
+            return false;
+        case core::EventType::CursorMoved:
+            ImGui::GetIO().MousePos = ImVec2(float(e.cursorEvent.pos.x), float(e.cursorEvent.pos.y));
+            return false;
+        case core::EventType::MouseButtonPressed:
+            ImGui::GetIO().MouseDown[e.mouseEvent.button] = true;
+            return false;
+        case core::EventType::MouseButtonReleased:
+            ImGui::GetIO().MouseDown[e.mouseEvent.button] = false;
+            return false;
+        default: return false;
+    }
+}
+
 VertexArray createAxesVAO()
 {
     const float axisVertices[] =
@@ -53,7 +78,7 @@ VertexArray createAxesVAO()
     return vao;
 }
 
-void DebugLayer::drawMenu()
+void DebugLayer::drawMenu() const
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();

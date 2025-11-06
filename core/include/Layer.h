@@ -12,7 +12,7 @@ namespace core
         virtual ~Layer() = default;
         virtual void onUpdate(double dt) {}
         virtual void onRender() {}
-        virtual bool onEvent(Event& e) {}
+        virtual bool onEvent(Event& e) {return false;}
         virtual void onAttach() {}
         virtual void onDetach() {}
     public:

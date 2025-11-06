@@ -117,37 +117,31 @@ void GameLayer::onRender()
     //m_Renderer.drawEntity(entityModel, m_PlayerPhysics.box.pos, m_Cam.viewProjection, exposure);
 }
 
-void GameLayer::keyPressCallback(const core::Event& e)
+bool GameLayer::keyPressCallback(const core::Event& e)
 {
     switch (e.keyEvent.key)
     {
         case GLFW_KEY_ESCAPE: core::Application::get().stop(); break;
-        case GLFW_KEY_F3: { int x; } break;
+        case GLFW_KEY_F3: core::Application::get().resumeLayer("DebugLayer"); break;
         case GLFW_KEY_F5: m_ChunkManager.dropChunkMeshes(); break;
         case GLFW_KEY_V: m_CursorLocked = !m_CursorLocked; m_Window.disableCursor(m_CursorLocked); break;
         case GLFW_KEY_SPACE: if (playerPhysicsOn && m_PlayerGrounded) {m_PlayerPhysics.velocity.y += 0.2; m_PlayerGrounded = false;} break;
-        default: break;
+        default: return false;
     }
+    return true;
 }
 
 bool GameLayer::cursorMoveCallback(const core::Event& e)
 {
-    ImGui::GetIO().MousePos = ImVec2(float(e.cursorEvent.pos.x), float(e.cursorEvent.pos.y));
     const glm::dvec2 offset = e.cursorEvent.pos - m_PrevCursorPos;
     if (m_CursorLocked)
         m_Cam.rotate({offset.x, offset.y});
     m_PrevCursorPos = e.cursorEvent.pos;
-}
-
-bool GameLayer::mouseReleasedCallback(const core::Event& e)
-{
-    ImGui::GetIO().MouseDown[e.mouseEvent.button] = false;
-    return false;
+    return true;
 }
 
 bool GameLayer::mousePressedCallback(const core::Event& e)
 {
-    ImGui::GetIO().MouseDown[e.mouseEvent.button] = true;
     if (!m_CursorLocked)
         return false;
 
@@ -167,7 +161,7 @@ bool GameLayer::onEvent(core::Event& e)
         case core::EventType::KeyPressed: return keyPressCallback(e);
         case core::EventType::CursorMoved: return cursorMoveCallback(e);
         case core::EventType::MouseButtonPressed: return mousePressedCallback(e);
-        case core::EventType::MouseButtonReleased: return mouseReleasedCallback(e);
+        //case core::EventType::MouseButtonReleased: return mouseReleasedCallback(e);
         case core::EventType::WindowClose: core::Application::get().stop(); return true;
         default: return false;
     }

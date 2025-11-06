@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     windowSettings.fullscreen = true;
     core::Application app(windowSettings);
     app.pushLayer<GameLayer>("GameLayer");
-    app.pushLayer<DebugLayer>("Debug Layer");
+    app.pushLayer<DebugLayer>("DebugLayer");
     app.run();
 
     PROFILER_END();

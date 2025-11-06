@@ -9,8 +9,9 @@ public:
     ~DebugLayer() override = default;
     void onUpdate(double dt) override;
     void onRender() override;
+    bool onEvent(core::Event& e) override;
 private:
-    void drawMenu();
+    void drawMenu() const;
     void drawAxes();
 private:
     GameLayer* m_GameLayer = nullptr;
