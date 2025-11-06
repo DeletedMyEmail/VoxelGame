@@ -61,6 +61,14 @@ core::Application::Application(WindowSettings& settings)
         LOG_ERROR("Could not load glad");
         exit(1);
     }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(m_Window.getHandle(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
 core::Application::~Application()

@@ -1,13 +1,5 @@
 #pragma once
-
 #include "Block.h"
-
-struct MenuSettings
-{
-    BLOCK_TYPE selectedBlock;
-    float camSpeed, exposure;
-    bool playerPhysicsOn;
-};
 
 struct GameConfig
 {

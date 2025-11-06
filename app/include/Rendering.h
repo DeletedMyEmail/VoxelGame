@@ -11,19 +11,16 @@
 class Renderer
 {
 public:
-    Renderer(GLFWwindow* win);
+    Renderer();
     ~Renderer();
 
     void prepareChunkRendering(const glm::mat4& viewProjection, float exposure);
-    void drawAxes(const Camera& cam);
     void drawHighlightBlock(const glm::vec3& pos, const glm::mat4& viewProjection, float exposure);
     void drawChunk(const VertexArray& vao, const glm::ivec3& globalOffset);
-    void clearFrame(float skyExposure, bool debugMode) const;
-    void drawDebugMenu(const Metrics& metrics, MenuSettings& settings, const glm::vec3& pos, const GameConfig& config) const;
+    void clearFrame(float skyExposure) const;
     void drawEntity(const VertexArray& vao, const glm::vec3& pos, const glm::mat4& viewProjection, float exposure);
-
 private:
     Shader m_BasicShader, m_BlockShader;
-    VertexArray m_AxisVao, m_HighlightVao;
+    VertexArray m_HighlightVao;
     Texture m_TextureAtlas;
 };
