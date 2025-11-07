@@ -1,6 +1,5 @@
 #include "GameLayer.h"
 #define GLM_ENABLE_EXPERIMENTAL
-#include <iostream>
 #include <cstmlib/Profiling.h>
 #include "imgui.h"
 #include "Camera.h"
@@ -22,15 +21,16 @@ static void placeBlock(ChunkManager& chunkManager, Camera& cam, BLOCK_TYPE block
 
 #define m_Window core::Application::get().getWindow()
 
-GameLayer::GameLayer(const std::string& name)
-    : Layer(name),
+GameLayer::GameLayer(const std::string& name, const GameConfig& gameConfig)
+    :   Layer(name),
+        m_GameConfig(gameConfig),
         m_Cam(glm::vec3{0, WorldGenerationData::MAX_HEIGHT + 2, 0}, 90.0f, m_Window.getSettings().width, m_Window.getSettings().height, 0.1f, gameConfig.renderDistance * Chunk::CHUNK_SIZE * 4),
         m_ChunkManager(gameConfig),
         m_Database(initDB(gameConfig.saveGamePath)),
         m_PlayerPhysics(BoundingBox{m_Cam.position, glm::vec3{1, 2, 1}}, glm::vec3(0.0f)), m_PrevCursorPos(m_Window.getMousePosition()), selectedBlock(BLOCK_TYPE::INVALID),
-        camSpeed(50.0f),
-        exposure(0.8f),
-        playerPhysicsOn(true)
+        m_CamSpeed(50.0f),
+        m_Exposure(0.8f),
+        m_PlayerPhysicsOn(true)
 {
     m_Window.disableCursor();
 
@@ -77,7 +77,7 @@ void GameLayer::onUpdate(const double dt)
     PROFILE(m_Metrics, "Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
 
     glm::vec3 in = moveInput(m_Window, m_Cam.lookDir);
-    if (playerPhysicsOn)
+    if (m_PlayerPhysicsOn)
     {
         if (m_PlayerGrounded)
         {
@@ -91,7 +91,7 @@ void GameLayer::onUpdate(const double dt)
     }
     else
     {
-        const glm::vec3 vel = in * (float) dt * camSpeed;
+        const glm::vec3 vel = in * (float) dt * m_CamSpeed;
         m_PlayerPhysics.box.pos += vel;
         m_PlayerPhysics.velocity = glm::vec3(0);
         m_Cam.move(vel);
@@ -101,16 +101,16 @@ void GameLayer::onUpdate(const double dt)
 
 void GameLayer::onRender()
 {
-    const float skyExposure = 0.5f + 0.5f * exposure;
+    const float skyExposure = 0.5f + 0.5f * m_Exposure;
 
     m_Renderer.clearFrame(skyExposure);
-    PROFILE(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, exposure));
+    PROFILE(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_Exposure));
     PROFILE(m_Metrics, "Block Highlighting",
-         const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, gameConfig.reachDistance, m_ChunkManager);
+         const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, m_GameConfig.reachDistance, m_ChunkManager);
          if (res.hit)
-            m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, exposure);
+            m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, m_Exposure);
     );
-    PROFILE(m_Metrics, "Draw Entities", m_EntityManager.drawEntities(m_Renderer, m_Cam.viewProjection, exposure));
+    PROFILE(m_Metrics, "Draw Entities", m_EntityManager.drawEntities(m_Renderer, m_Cam.viewProjection, m_Exposure));
 
     //static auto entityModel = createEntityWireframe(m_PlayerPhysics.box.size);
     //m_Renderer.drawEntity(entityModel, m_PlayerPhysics.box.pos, m_Cam.viewProjection, exposure);
@@ -122,7 +122,7 @@ bool GameLayer::keyPressCallback(const core::Event& e)
     {
         case GLFW_KEY_F5: m_ChunkManager.dropChunkMeshes(); break;
         case GLFW_KEY_V: m_CursorLocked = !m_CursorLocked; m_Window.disableCursor(m_CursorLocked); break;
-        case GLFW_KEY_SPACE: if (playerPhysicsOn && m_PlayerGrounded) {m_PlayerPhysics.velocity.y += 0.2; m_PlayerGrounded = false;} break;
+        case GLFW_KEY_SPACE: if (m_PlayerPhysicsOn && m_PlayerGrounded) {m_PlayerPhysics.velocity.y += 0.2; m_PlayerGrounded = false;} break;
         default: return false;
     }
     return true;
@@ -144,7 +144,7 @@ bool GameLayer::mousePressedCallback(const core::Event& e)
 
     if (e.mouseEvent.button == GLFW_MOUSE_BUTTON_LEFT)
     {
-        placeBlock(m_ChunkManager, m_Cam, selectedBlock, m_Database, gameConfig.reachDistance);
+        placeBlock(m_ChunkManager, m_Cam, selectedBlock, m_Database, m_GameConfig.reachDistance);
         return true;
     }
 

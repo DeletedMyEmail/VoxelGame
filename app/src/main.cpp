@@ -15,6 +15,7 @@ int main(int argc, char* argv[])
     PROFILER_INIT(100);
 
     const auto CONFIG_PATH = "voxel.config";
+    GameConfig gameConfig;
     if (std::filesystem::exists(CONFIG_PATH))
     {
         if (!loadConfig(CONFIG_PATH, gameConfig))
@@ -27,7 +28,7 @@ int main(int argc, char* argv[])
     windowSettings.title = PROJECT_NAME;
     windowSettings.fullscreen = true;
     core::Application app(windowSettings);
-    app.pushLayer<core::Application::TOP, GameLayer>("GameLayer");
+    app.pushLayer<core::Application::TOP, GameLayer>("GameLayer", gameConfig);
     app.pushLayer<core::Application::TOP, DebugLayer>("DebugLayer");
     app.pushLayer<core::Application::TOP, ControlLayer>("ControlLayer");
     app.run();

@@ -14,7 +14,5 @@ struct GameConfig
     float reachDistance = 16.0f;
 };
 
-inline GameConfig gameConfig;
-
 bool loadConfig(const char* path, GameConfig& config);
 bool createConfigFile(const char* path, const GameConfig& config);

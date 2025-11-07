@@ -85,15 +85,16 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
     ImGui::Text("Position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
     ImGui::Spacing();ImGui::Spacing();
 
+    const GameConfig gameConfig = gameLayer->m_GameConfig;
     ImGui::Text("Seed: %d", gameConfig.worldSeed);
     ImGui::Text("Render Distance: %d", gameConfig.renderDistance);
     ImGui::Text("Load Distance: %d", gameConfig.loadDistance);
     ImGui::Text("Threads: %d", gameConfig.threadCount);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::Checkbox("Player Physics", &gameLayer->playerPhysicsOn);
-    ImGui::SliderFloat("Exposure", &gameLayer->exposure, 0.0f, 1.0f);
-    ImGui::SliderFloat("Camera Speed", &gameLayer->camSpeed, 1.0f, 200.0f);
+    ImGui::Checkbox("Player Physics", &gameLayer->m_PlayerPhysicsOn);
+    ImGui::SliderFloat("Exposure", &gameLayer->m_Exposure, 0.0f, 1.0f);
+    ImGui::SliderFloat("Camera Speed", &gameLayer->m_CamSpeed, 1.0f, 200.0f);
     ImGui::Combo("Block Type", (int*) &gameLayer->selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());
     ImGui::Spacing();ImGui::Spacing();
 

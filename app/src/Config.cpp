@@ -1,4 +1,4 @@
-#include "../include/Config.h"
+#include "Config.h"
 #include "libconfig.h++"
 
 bool loadConfig(const char* path, GameConfig& config)

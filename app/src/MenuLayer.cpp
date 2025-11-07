@@ -33,7 +33,7 @@ void MenuLayer::onRender()
     ImGui::InputText("##pathInput", buf, sizeof(buf));
     if (ImGui::Button("load"))
     {
-
+        GameConfig gameConfig;
         if (!loadConfig(buf, gameConfig))
         {
             LOG_ERROR("unable to load config file");
@@ -43,7 +43,7 @@ void MenuLayer::onRender()
         {
             core::Application::get().removeLayer("MenuLayer");
             core::Application::get().removeLayer("GameLayer");
-            core::Application::get().pushLayer<core::Application::BOTTOM, GameLayer>("GameLayer");
+            core::Application::get().pushLayer<core::Application::BOTTOM, GameLayer>("GameLayer", gameConfig);
         }
     }
 

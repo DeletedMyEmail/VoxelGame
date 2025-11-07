@@ -8,7 +8,7 @@ class GameLayer final : public core::Layer
 {
 friend class DebugLayer;
 public:
-    GameLayer(const std::string& name = "GameLayer");
+    GameLayer(const std::string& name, const GameConfig& config);
     ~GameLayer() override = default;
     void onUpdate(double dt) override;
     void onRender() override;
@@ -19,6 +19,7 @@ private:
     bool mousePressedCallback(const core::Event& e);
 private:
     //Window& m_Window;
+    GameConfig m_GameConfig;
     Renderer m_Renderer;
     Camera m_Cam;
     ChunkManager m_ChunkManager;
@@ -30,6 +31,6 @@ private:
     glm::dvec2 m_PrevCursorPos;
     bool m_CursorLocked = true;
     BLOCK_TYPE selectedBlock;
-    float camSpeed, exposure;
-    bool playerPhysicsOn;
+    float m_CamSpeed, m_Exposure;
+    bool m_PlayerPhysicsOn;
 };
