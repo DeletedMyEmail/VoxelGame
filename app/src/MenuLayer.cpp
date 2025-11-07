@@ -1,5 +1,7 @@
 #include "MenuLayer.h"
 #include "Application.h"
+#include "Config.h"
+#include "GameLayer.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
@@ -25,6 +27,26 @@ void MenuLayer::onRender()
 
     if (ImGui::Button("Quit"))
         core::Application::get().stop();
+
+    ImGui::Text("Load world");
+    static char buf[126] = "File Path";
+    ImGui::InputText("##pathInput", buf, sizeof(buf));
+    if (ImGui::Button("load"))
+    {
+
+        if (!loadConfig(buf, gameConfig))
+        {
+            LOG_ERROR("unable to load config file");
+            core::Application::get().stop();
+        }
+        else
+        {
+            core::Application::get().removeLayer("MenuLayer");
+            core::Application::get().removeLayer("GameLayer");
+            core::Application::get().pushLayer<core::Application::BOTTOM, GameLayer>("GameLayer");
+        }
+    }
+
 
     ImGui::End();
     ImGui::Render();

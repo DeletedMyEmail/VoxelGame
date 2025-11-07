@@ -21,9 +21,9 @@ int main(int argc, char* argv[])
     windowSettings.title = PROJECT_NAME;
     windowSettings.fullscreen = true;
     core::Application app(windowSettings);
-    app.pushLayer<GameLayer>("GameLayer");
-    app.pushLayer<DebugLayer>("DebugLayer");
-    app.pushLayer<ControlLayer>("ControlLayer");
+    app.pushLayer<core::Application::TOP, GameLayer>("GameLayer");
+    app.pushLayer<core::Application::TOP, DebugLayer>("DebugLayer");
+    app.pushLayer<core::Application::TOP, ControlLayer>("ControlLayer");
     app.run();
 
     PROFILER_END();

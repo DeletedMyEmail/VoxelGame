@@ -14,13 +14,14 @@ namespace core
         Application(WindowSettings& settings);
         ~Application();
 
-        template<typename T, typename ...Args> requires std::is_base_of_v<Layer, T>
+        enum PushDirection { BOTTOM, TOP };
+        template<PushDirection dir, typename T, typename ...Args> requires std::is_base_of_v<Layer, T>
         void pushLayer(Args... args);
         void toggleLayer(const std::string& name) const;
         void suspendLayer(const std::string& name) const;
         void resumeLayer(const std::string& name) const;
         void removeLayer(const std::string& name);
-        Layer* getLayer(const std::string& name);
+        Layer* getLayer(const std::string& name) const;
 
         static Application& get();
         void run();
@@ -35,11 +36,20 @@ namespace core
         bool m_Running = false;
     };
 
-    template <typename T, typename ... Args> requires std::is_base_of_v<Layer, T>
+    template <Application::PushDirection dir, typename T, typename ... Args> requires std::is_base_of_v<Layer, T>
     void Application::pushLayer(Args... args)
     {
-        m_Layers.emplace_back(std::make_unique<T>(args...));
-        LOG_INFO("pushing layer: {}", m_Layers.back()->m_Name);
-        m_Layers.back()->onAttach();
+        if constexpr (dir == BOTTOM)
+        {
+            m_Layers.emplace_back(std::make_unique<T>(args...));
+            LOG_INFO("pushing layer on top: {}", m_Layers.back()->m_Name);
+            m_Layers.back()->onAttach();
+        }
+        else
+        {
+            m_Layers.emplace(m_Layers.begin(), std::make_unique<T>(args...));
+            LOG_INFO("pushing layer at bottom: {}", m_Layers.front()->m_Name);
+            m_Layers.front()->onAttach();
+        }
     }
 }

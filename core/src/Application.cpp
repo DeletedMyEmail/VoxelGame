@@ -159,7 +159,7 @@ void core::Application::removeLayer(const std::string& name)
     }
 }
 
-core::Layer* core::Application::getLayer(const std::string& name)
+core::Layer* core::Application::getLayer(const std::string& name) const
 {
     for (const auto& l : m_Layers)
     {
@@ -186,10 +186,10 @@ void core::Application::run()
         const double deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        for (const auto& l : m_Layers)
+        for (const auto& l : std::ranges::reverse_view(m_Layers))
             if (l->m_Enabled) l->onUpdate(deltaTime);
 
-        for (const auto& l : m_Layers)
+        for (const auto& l : std::ranges::reverse_view(m_Layers))
             if (l->m_Enabled) l->onRender();
 
         glfwSwapBuffers(m_Window.getHandle());
@@ -204,7 +204,7 @@ void core::Application::stop()
 
 void core::Application::propagateEvent(Event& e) const
 {
-    for (const auto& l : std::ranges::reverse_view(m_Layers))
+    for (const auto& l : m_Layers)
         if (l->m_Enabled)
             if (l->onEvent(e)) break;
 }

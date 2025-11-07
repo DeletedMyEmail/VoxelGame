@@ -120,7 +120,6 @@ bool GameLayer::keyPressCallback(const core::Event& e)
 {
     switch (e.keyEvent.key)
     {
-        case GLFW_KEY_ESCAPE: core::Application::get().stop(); break;
         case GLFW_KEY_F5: m_ChunkManager.dropChunkMeshes(); break;
         case GLFW_KEY_V: m_CursorLocked = !m_CursorLocked; m_Window.disableCursor(m_CursorLocked); break;
         case GLFW_KEY_SPACE: if (playerPhysicsOn && m_PlayerGrounded) {m_PlayerPhysics.velocity.y += 0.2; m_PlayerGrounded = false;} break;

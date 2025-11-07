@@ -23,7 +23,7 @@ bool ControlLayer::onEvent(core::Event& e)
         {
             core::Application::get().suspendLayer("DebugLayer");
             core::Application::get().suspendLayer("GameLayer");
-            core::Application::get().pushLayer<MenuLayer>("MenuLayer");
+            core::Application::get().pushLayer<core::Application::TOP, MenuLayer>("MenuLayer");
         }
         return true;
     }
