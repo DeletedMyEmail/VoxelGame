@@ -42,13 +42,13 @@ namespace core
         if constexpr (dir == BOTTOM)
         {
             m_Layers.emplace_back(std::make_unique<T>(args...));
-            LOG_INFO("pushing layer on top: {}", m_Layers.back()->m_Name);
+            LOG_INFO("pushing layer on bottom: {}", m_Layers.back()->m_Name);
             m_Layers.back()->onAttach();
         }
         else
         {
             m_Layers.emplace(m_Layers.begin(), std::make_unique<T>(args...));
-            LOG_INFO("pushing layer at bottom: {}", m_Layers.front()->m_Name);
+            LOG_INFO("pushing layer at top: {}", m_Layers.front()->m_Name);
             m_Layers.front()->onAttach();
         }
     }

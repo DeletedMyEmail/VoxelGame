@@ -17,3 +17,4 @@ struct GameConfig
 inline GameConfig gameConfig;
 
 bool loadConfig(const char* path, GameConfig& config);
+bool createConfigFile(const char* path, const GameConfig& config);

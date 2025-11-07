@@ -14,7 +14,13 @@ int main(int argc, char* argv[])
 #endif
     PROFILER_INIT(100);
 
-    if (argc >= 2 && !loadConfig(argv[1], gameConfig))
+    const auto CONFIG_PATH = "voxel.config";
+    if (std::filesystem::exists(CONFIG_PATH))
+    {
+        if (!loadConfig(CONFIG_PATH, gameConfig))
+            return 1;
+    }
+    else if (!createConfigFile(CONFIG_PATH, gameConfig))
         return 1;
 
     WindowSettings windowSettings;

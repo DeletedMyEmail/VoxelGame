@@ -3,19 +3,19 @@
 ![thumbnail.png](resources/images/thumbnail.png)
 
 ## About
-This voxel game is my graphics programming playground. The main focus is on performance optimizations and learning opengl.
+This voxel game is my graphics programming playground. 
+The main focus is on performance optimizations and learning opengl.
 
-## Build Process
-Install cmake and run ```bash build.sh``` in your terminal. 
-This will create a build directory and compile the project. The program takes a path to a config file as an optional argument. 
-If no config file is provided, the program will use default values and create a new database in the same directory for the save file.
-For an example config file, see `resources/example.config`.
+## Getting started
+Install cmake and run ```bash build.sh``` in your terminal. This will create a build directory and compile the project.
+On the first start the game will generate a default config file (voxel.config) and a save game (world.db) in the working directory.
+If you want to load a different file, press ESC and use the menu load option.
 
 ## Controls
-- `WASD` / `SHIFT` / `SPACE` to move around
-- `ESC` to quit
+- `WASD` / `SHIFT` / `SPACE` move
+- `ESC` open menu
 - `V` toggle mouse cursor
-- `F3` to toggle debug mode
+- `F3` toggle debug mode
 - `F5` refresh (drop all chunks)
 
 ## Roadmap / Features

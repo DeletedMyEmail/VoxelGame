@@ -61,5 +61,37 @@ bool loadConfig(const char* path, GameConfig& config)
     if (config.threadCount > std::thread::hardware_concurrency())
         LOG_WARN("Config warning: threadCount is less than the number of CPU cores. It's capped to {}.", std::thread::hardware_concurrency());
 
+    LOG_INFO("Config loaded from {}", path);
+    return true;
+}
+
+bool createConfigFile(const char* path, const GameConfig& config)
+{
+    const libconfig::Config cfg;
+
+    using libconfig::Setting;
+    Setting& root = cfg.getRoot();
+
+    root.add("saveGamePath", Setting::TypeString) = config.saveGamePath.c_str();
+    root.add("renderDistance", Setting::TypeInt) = (int32_t) config.renderDistance;
+    root.add("loadDistance", Setting::TypeInt) = (int32_t) config.loadDistance;
+    root.add("maxLoadsPerFrame", Setting::TypeInt) = (int32_t) config.maxLoadsPerFrame;
+    root.add("maxUnloadsPerFrame", Setting::TypeInt) = (int32_t) config.maxUnloadsPerFrame;
+    root.add("threadCount", Setting::TypeInt) = (int32_t) config.threadCount;
+    root.add("maxBakesPerFrame", Setting::TypeInt) = (int32_t) config.maxBakesPerFrame;
+    root.add("worldSeed", Setting::TypeInt) = (int32_t) config.worldSeed;
+    root.add("reachDistance", Setting::TypeFloat) = config.reachDistance;
+
+    try
+    {
+        cfg.writeFile(path);
+        LOG_INFO("Created default config file at {}", path);
+    }
+    catch (const libconfig::FileIOException& e)
+    {
+        LOG_ERROR("I/O error while writing config file {}", path);
+        return false;
+    }
+
     return true;
 }

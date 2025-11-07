@@ -11,10 +11,9 @@ public:
     void onRender() override;
     bool onEvent(core::Event& e) override;
 private:
-    void drawMenu() const;
-    void drawAxes();
+    void drawMenu(GameLayer* gameLayer) const;
+    void drawAxes(GameLayer* gameLayer);
 private:
-    GameLayer* m_GameLayer = nullptr;
     VertexArray m_AxisVao;
     Shader m_Shader;
 };

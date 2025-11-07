@@ -13,8 +13,6 @@ DebugLayer::DebugLayer(const std::string& name)
         m_AxisVao(createAxesVAO()),
         m_Shader("../resources/shaders/BasicVert.glsl", "../resources/shaders/BasicFrag.glsl")
 {
-    m_GameLayer = (GameLayer*)core::Application::get().getLayer("GameLayer");
-    assert(m_GameLayer);
 }
 
 void DebugLayer::onUpdate(const double dt)
@@ -24,8 +22,11 @@ void DebugLayer::onUpdate(const double dt)
 
 void DebugLayer::onRender()
 {
-    drawMenu();
-    drawAxes();
+    const auto gameLayer = (GameLayer*)core::Application::get().getLayer("GameLayer");
+    assert(gameLayer);
+    
+    drawMenu(gameLayer);
+    drawAxes(gameLayer);
 }
 
 bool DebugLayer::onEvent(core::Event& e)
@@ -72,7 +73,7 @@ VertexArray createAxesVAO()
     return vao;
 }
 
-void DebugLayer::drawMenu() const
+void DebugLayer::drawMenu(GameLayer* gameLayer) const
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -80,7 +81,7 @@ void DebugLayer::drawMenu() const
 
     ImGui::Begin("Debug");
 
-    const auto& pos = m_GameLayer->m_PlayerPhysics.box.pos;
+    const auto& pos = gameLayer->m_PlayerPhysics.box.pos;
     ImGui::Text("Position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
     ImGui::Spacing();ImGui::Spacing();
 
@@ -90,13 +91,13 @@ void DebugLayer::drawMenu() const
     ImGui::Text("Threads: %d", gameConfig.threadCount);
     ImGui::Spacing();ImGui::Spacing();
 
-    ImGui::Checkbox("Player Physics", &m_GameLayer->playerPhysicsOn);
-    ImGui::SliderFloat("Exposure", &m_GameLayer->exposure, 0.0f, 1.0f);
-    ImGui::SliderFloat("Camera Speed", &m_GameLayer->camSpeed, 1.0f, 200.0f);
-    ImGui::Combo("Block Type", (int*) &m_GameLayer->selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());
+    ImGui::Checkbox("Player Physics", &gameLayer->playerPhysicsOn);
+    ImGui::SliderFloat("Exposure", &gameLayer->exposure, 0.0f, 1.0f);
+    ImGui::SliderFloat("Camera Speed", &gameLayer->camSpeed, 1.0f, 200.0f);
+    ImGui::Combo("Block Type", (int*) &gameLayer->selectedBlock, BLOCK_NAMES.data(), BLOCK_NAMES.size());
     ImGui::Spacing();ImGui::Spacing();
 
-    const auto& metrics = m_GameLayer->m_Metrics;
+    const auto& metrics = gameLayer->m_Metrics;
     ImGui::Text("Frame data for last %.1f seconds:", metrics.interval);
     const double avgFrameTime = metrics.getAvgFrameTime();
     ImGui::Text("Avg frame time: %.3f ms (%.1f FPS)", avgFrameTime * 1000.0, 1.0f / avgFrameTime);
@@ -132,13 +133,13 @@ void DebugLayer::drawMenu() const
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void DebugLayer::drawAxes()
+void DebugLayer::drawAxes(GameLayer* gameLayer)
 {
     m_AxisVao.bind();
     m_Shader.bind();
 
-    m_Shader.setUniformMat4("u_VP", m_GameLayer->m_Cam.viewProjection);
-    m_Shader.setUniform3f("u_GlobalPosition", m_GameLayer->m_Cam.position + m_GameLayer->m_Cam.lookDir);
+    m_Shader.setUniformMat4("u_VP", gameLayer->m_Cam.viewProjection);
+    m_Shader.setUniform3f("u_GlobalPosition", gameLayer->m_Cam.position + gameLayer->m_Cam.lookDir);
 
     GLCall(glDrawArrays(GL_LINES, 0, m_AxisVao.vertexCount));
 }
