@@ -22,22 +22,23 @@ bool loadConfig(const char* path, GameConfig& config)
 
     try
     {
+        // well well
         if (cfg.exists("saveGamePath"))
             config.saveGamePath = (const char*) cfg.lookup("saveGamePath");
         if (cfg.exists("renderDistance"))
-            config.renderDistance = cfg.lookup("renderDistance");
+            config.renderDistance = (uint32_t) (int32_t) cfg.lookup("renderDistance");
         if (cfg.exists("loadDistance"))
-            config.loadDistance = cfg.lookup("loadDistance");
+            config.loadDistance = (uint32_t) (int32_t) cfg.lookup("loadDistance");
         if (cfg.exists("threadCount"))
-            config.threadCount = cfg.lookup("threadCount");
+            config.threadCount = (uint32_t) (int32_t) cfg.lookup("threadCount");
         if (cfg.exists("maxLoadsPerFrame"))
-            config.maxLoadsPerFrame = cfg.lookup("maxLoadsPerFrame");
+            config.maxLoadsPerFrame = (uint32_t) (int32_t) cfg.lookup("maxLoadsPerFrame");
         if (cfg.exists("maxUnloadsPerFrame"))
-            config.maxUnloadsPerFrame = cfg.lookup("maxUnloadsPerFrame");
+            config.maxUnloadsPerFrame = (uint32_t) (int32_t) cfg.lookup("maxUnloadsPerFrame");
         if (cfg.exists("maxBakesPerFrame"))
-            config.maxBakesPerFrame = cfg.lookup("maxBakesPerFrame");
+            config.maxBakesPerFrame = (uint32_t) (int32_t) cfg.lookup("maxBakesPerFrame");
         if (cfg.exists("worldSeed"))
-            config.worldSeed = cfg.lookup("worldSeed");
+            config.worldSeed = (uint32_t) (int32_t) cfg.lookup("worldSeed");
         if (cfg.exists("reachDistance"))
             config.reachDistance = cfg.lookup("reachDistance");
     }
