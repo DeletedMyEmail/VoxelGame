@@ -1,6 +1,6 @@
 # Hi, I'm a readme file
 
-![thumbnail.png](resources/images/thumbnail.png)
+<img width="3408" height="1416" alt="demo" src="https://github.com/user-attachments/assets/218072c2-d3b9-4b3a-b0c9-b14bcab21c69" />
 
 ## About
 This voxel game is my graphics programming playground. 
