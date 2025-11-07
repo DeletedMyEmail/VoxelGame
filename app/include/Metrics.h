@@ -1,29 +1,36 @@
 #pragma once
-#include <chrono>
-#include <deque>
+#include "RingBuffer.h"
 #include <string>
 #include <unordered_map>
+#include "Application.h"
+#include "imgui.h"
 
-struct Metrics
+const size_t SAMPLE_COUNT = 500;
+
+struct MetricData
 {
-    void update(double dt);
-    double getAvgFrameTime() const;
-    double get1PercentLowFrameTime() const;
+    MetricData() : values()
+    {
+        color.x = static_cast<float>(rand() % 256) / 255.0f;
+        color.y = static_cast<float>(rand() % 256) / 255.0f;
+        color.z = static_cast<float>(rand() % 256) / 255.0f;
+        color.w = 1.0f;
+    }
 
-    double frameTimeAccumulator = 0;
-    double interval = 5.0f;
-
-    std::deque<double> frameTimes;
-    std::unordered_map<std::string, double> timer;
+    RingBuffer<double, SAMPLE_COUNT> values;
+    ImVec4 color;
 };
 
 #ifdef NOPROFILE
-    #define TIME(metrics, name, func) func;
+    #define CAPTURE(name, func) func;
 #else
-    #define PROFILE(metrics, name, func) { \
+    inline std::unordered_map<std::string, MetricData> metrics;
+
+    #define CAPTURE(name, func) { \
         double start = core::Application::get().getTime(); \
         func; \
         double end = core::Application::get().getTime(); \
-        metrics.timer[name] = end - start; \
+        double ms = (end - start) * 1000.0; \
+        metrics[name].values.push(ms); \
     }
 #endif

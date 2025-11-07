@@ -27,7 +27,6 @@ private:
     EntityManager m_EntityManager;
     PhysicsObject m_PlayerPhysics;
     bool m_PlayerGrounded = false;
-    Metrics m_Metrics;
     glm::dvec2 m_PrevCursorPos;
     bool m_CursorLocked = true;
     BLOCK_TYPE selectedBlock;

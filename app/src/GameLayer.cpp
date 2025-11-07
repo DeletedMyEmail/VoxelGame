@@ -67,53 +67,55 @@ GameLayer::GameLayer(const std::string& name, const GameConfig& gameConfig)
 
 void GameLayer::onUpdate(const double dt)
 {
-    m_Metrics.update(dt);
+    CAPTURE("Game Update",
+        const auto chunkPos = worldPosToChunkPos(m_PlayerPhysics.box.pos);
 
-    const auto chunkPos = worldPosToChunkPos(m_PlayerPhysics.box.pos);
+        CAPTURE("Update Entities", m_EntityManager.updateEntities(dt, m_ChunkManager));
+        CAPTURE("Chunk Unloading", m_ChunkManager.unloadChunks(chunkPos));
+        CAPTURE("Chunk Loading", m_ChunkManager.loadChunks(chunkPos, m_Database));
+        CAPTURE("Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
 
-    PROFILE(m_Metrics, "Update Entities", m_EntityManager.updateEntities(dt, m_ChunkManager));
-    PROFILE(m_Metrics, "Chunk Unloading", m_ChunkManager.unloadChunks(chunkPos));
-    PROFILE(m_Metrics, "Chunk Loading", m_ChunkManager.loadChunks(chunkPos, m_Database));
-    PROFILE(m_Metrics, "Chunk Baking", m_ChunkManager.bakeChunks(chunkPos));
-
-    glm::vec3 in = moveInput(m_Window, m_Cam.lookDir);
-    if (m_PlayerPhysicsOn)
-    {
-        if (m_PlayerGrounded)
+        glm::vec3 in = moveInput(m_Window, m_Cam.lookDir);
+        if (m_PlayerPhysicsOn)
         {
-            in.y = 0.0f;
-            m_PlayerPhysics.velocity += in * (float) dt;
+            if (m_PlayerGrounded)
+            {
+                in.y = 0.0f;
+                m_PlayerPhysics.velocity += in * (float) dt;
+            }
+            applyGravity(m_PlayerPhysics, (float) dt);
+            if (applyVelocityAndHandleCollisions(m_ChunkManager, m_PlayerPhysics)) m_PlayerGrounded = true;
+            const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3(0.5f, 1.5f, 0.5f);
+            m_Cam.move(off);
         }
-        applyGravity(m_PlayerPhysics, (float) dt);
-        if (applyVelocityAndHandleCollisions(m_ChunkManager, m_PlayerPhysics)) m_PlayerGrounded = true;
-        const glm::vec3 off = m_PlayerPhysics.box.pos - m_Cam.position + glm::vec3(0.5f, 1.5f, 0.5f);
-        m_Cam.move(off);
-    }
-    else
-    {
-        const glm::vec3 vel = in * (float) dt * m_CamSpeed;
-        m_PlayerPhysics.box.pos += vel;
-        m_PlayerPhysics.velocity = glm::vec3(0);
-        m_Cam.move(vel);
-    }
-    m_Cam.updateView();
+        else
+        {
+            const glm::vec3 vel = in * (float) dt * m_CamSpeed;
+            m_PlayerPhysics.box.pos += vel;
+            m_PlayerPhysics.velocity = glm::vec3(0);
+            m_Cam.move(vel);
+        }
+        m_Cam.updateView();
+    );
 }
 
 void GameLayer::onRender()
 {
-    const float skyExposure = 0.5f + 0.5f * m_Exposure;
+    CAPTURE("Game Render",
+        const float skyExposure = 0.5f + 0.5f * m_Exposure;
 
-    m_Renderer.clearFrame(skyExposure);
-    PROFILE(m_Metrics, "Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_Exposure));
-    PROFILE(m_Metrics, "Block Highlighting",
-         const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, m_GameConfig.reachDistance, m_ChunkManager);
-         if (res.hit)
+        m_Renderer.clearFrame(skyExposure);
+        CAPTURE("Chunk Drawing", m_ChunkManager.drawChunks(m_Renderer, m_Cam.viewProjection, m_Exposure));
+
+        const RaycastResult res = raycast(m_Cam.position - m_Cam.lookDir, m_Cam.lookDir, m_GameConfig.reachDistance, m_ChunkManager);
+        if (res.hit)
             m_Renderer.drawHighlightBlock(res.pos, m_Cam.viewProjection, m_Exposure);
-    );
-    PROFILE(m_Metrics, "Draw Entities", m_EntityManager.drawEntities(m_Renderer, m_Cam.viewProjection, m_Exposure));
 
-    //static auto entityModel = createEntityWireframe(m_PlayerPhysics.box.size);
-    //m_Renderer.drawEntity(entityModel, m_PlayerPhysics.box.pos, m_Cam.viewProjection, exposure);
+        CAPTURE("Draw Entities", m_EntityManager.drawEntities(m_Renderer, m_Cam.viewProjection, m_Exposure));
+
+        //static auto entityModel = createEntityWireframe(m_PlayerPhysics.box.size);
+        //m_Renderer.drawEntity(entityModel, m_PlayerPhysics.box.pos, m_Cam.viewProjection, exposure);
+    );
 }
 
 bool GameLayer::keyPressCallback(const core::Event& e)

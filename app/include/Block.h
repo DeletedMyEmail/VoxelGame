@@ -33,7 +33,7 @@ enum class BLOCK_TYPE
     WATER
 };
 
-inline std::array<const char*, 13> BLOCK_NAMES = {
+constexpr std::array<const char*, 13> BLOCK_NAMES = {
     "Invalid",
     "Test",
     "Highlighted",
