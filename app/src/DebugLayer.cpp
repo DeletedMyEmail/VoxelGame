@@ -100,33 +100,38 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
 
 #ifndef NOPROFILE
 
-    ImPlot::BeginPlot("Profiling metrics");
-    ImPlot::SetupAxes("Sample", "Frame Time (ms)");
-
-    double maxFrameTimeMs = 0;
-    for (auto& data : metrics | std::views::values)
+    if (!ImPlot::BeginPlot("Profiling metrics"))
     {
-        for (auto& val : data.values)
-            maxFrameTimeMs = std::max(maxFrameTimeMs, val);
+        LOG_ERROR("Failed to begin plot");
     }
-
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, maxFrameTimeMs, ImGuiCond_Always);
-    ImPlot::SetupAxisLimits(ImAxis_X1, 0, SAMPLE_COUNT, ImGuiCond_Always);
-
-    for (auto& [name, data] : metrics)
+    else
     {
-        std::array<float, SAMPLE_COUNT> frameTimesMs;
-        size_t i = 0;
-        for (const auto& val : data.values)
-            frameTimesMs[i++] = val;
+        ImPlot::SetupAxes("Sample", "Frame Time (ms)");
 
-        ImPlot::PushStyleColor(ImPlotCol_Line, data.color);
-        ImPlot::PlotLine(name.c_str(), frameTimesMs.data(), i);
-        ImPlot::PopStyleColor();
+        double maxFrameTimeMs = 0;
+        for (auto& data : metrics | std::views::values)
+        {
+            for (auto& val : data.values)
+                maxFrameTimeMs = std::max(maxFrameTimeMs, val);
+        }
+
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, maxFrameTimeMs, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, SAMPLE_COUNT, ImGuiCond_Always);
+
+        for (auto& [name, data] : metrics)
+        {
+            std::array<double, SAMPLE_COUNT> frameTimesMs{};
+            size_t i = 0;
+            for (const auto& val : data.values)
+                frameTimesMs[i++] = val;
+
+            ImPlot::PushStyleColor(ImPlotCol_Line, data.color);
+            ImPlot::PlotLine(name.c_str(), frameTimesMs.data(), i);
+            ImPlot::PopStyleColor();
+        }
+
+        ImPlot::EndPlot();
     }
-
-    ImPlot::EndPlot();
-
 #endif
 
     ImGui::End();
