@@ -92,6 +92,7 @@ void ChunkManager::drawChunks(Renderer& renderer, const glm::mat4& viewProjectio
 void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t chunksBaked = 0;
+    glm::ivec3 chunkPositions[config.maxLoadsPerFrame];
     auto chunkQueue = getChunksSorted(currChunkPos, config.renderDistance);
 
     while (!chunkQueue.empty())
@@ -107,6 +108,7 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
         if (chunk.isMeshBaked || chunksBaked >= config.maxBakesPerFrame)
             continue;
 
+        chunkPositions[chunksBaked] = position;
         chunksBaked++;
         threadPool.queueJob([this, &chunk, position]()
         {
@@ -127,10 +129,11 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
     while (threadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 
-    for (auto& [_, chunk] : chunks)
+    // TODO: wieso durch alle chunks?
+    for (uint32_t i = 0; i < chunksBaked; i++)
     {
-        if (chunk.isMeshDataReady && !chunk.isMeshBaked)
-            chunk.bakeMesh();
+        Chunk& chunk = chunks.at(chunkPositions[i]);
+        chunk.bakeMesh();
     }
 
     //LOG_INFO("{} chunks baked", chunksBaked);
@@ -174,10 +177,7 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& 
 void ChunkManager::dropChunkMeshes()
 {
     for (auto& [_, chunk] : chunks)
-    {
         chunk.isMeshBaked = false;
-        chunk.isMeshDataReady = false;
-    }
 }
 
 Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
@@ -336,9 +336,6 @@ void Chunk::generateMeshData(const std::array<Chunk*, 6>& neighbourChunks)
             }
         }
     }
-
-    isMeshDataReady = true;
-    isMeshBaked = false;
 }
 
 void bake(VertexArray& vao, const std::vector<blockdata>& meshData)
@@ -377,7 +374,6 @@ void Chunk::setBlockUnsafe(const glm::ivec3& pos, const BLOCK_TYPE block)
 {
     blocks[getBlockIndex(pos)] = block;
     isMeshBaked = false;
-    isMeshDataReady = false;
 }
 
 void Chunk::setBlockSafe(const glm::ivec3& pos, const BLOCK_TYPE block)
