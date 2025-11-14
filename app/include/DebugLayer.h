@@ -12,8 +12,9 @@ public:
     bool onEvent(core::Event& e) override;
 private:
     void drawMenu(GameLayer* gameLayer) const;
-    void drawAxes(GameLayer* gameLayer);
+    void drawAxes(const GameLayer* gameLayer);
 private:
     VertexArray m_AxisVao;
     Shader m_Shader;
+    std::deque<double> m_FrameTimes;
 };

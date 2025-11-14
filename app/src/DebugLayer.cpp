@@ -1,4 +1,6 @@
 #include "DebugLayer.h"
+
+#include <numeric>
 #include <ranges>
 #include "Application.h"
 #include "imgui_impl_glfw.h"
@@ -17,7 +19,9 @@ DebugLayer::DebugLayer(const std::string& name)
 
 void DebugLayer::onUpdate(const double dt)
 {
-
+    if (m_FrameTimes.size() > SAMPLE_COUNT)
+        m_FrameTimes.pop_front();
+    m_FrameTimes.push_back(dt * 1000.0);
 }
 
 void DebugLayer::onRender()
@@ -108,14 +112,14 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
     {
         ImPlot::SetupAxes("Sample", "Frame Time (ms)");
 
-        double maxFrameTimeMs = 0;
+        double maxPlotY = 0;
         for (auto& data : metrics | std::views::values)
         {
             for (auto& val : data.values)
-                maxFrameTimeMs = std::max(maxFrameTimeMs, val);
+                maxPlotY = std::max(maxPlotY, val);
         }
 
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, maxFrameTimeMs, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, maxPlotY, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_X1, 0, SAMPLE_COUNT, ImGuiCond_Always);
 
         for (auto& [name, data] : metrics)
@@ -131,6 +135,8 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
         }
 
         ImPlot::EndPlot();
+        const double avgFrameTimeMs = std::accumulate(m_FrameTimes.begin(), m_FrameTimes.end(), 0.0) / m_FrameTimes.size();
+        ImGui::Text("Avg frame time: %.2f ms", avgFrameTimeMs);
     }
 #endif
 
@@ -139,7 +145,7 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void DebugLayer::drawAxes(GameLayer* gameLayer)
+void DebugLayer::drawAxes(const GameLayer* gameLayer)
 {
     m_AxisVao.bind();
     m_Shader.bind();
