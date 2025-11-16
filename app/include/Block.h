@@ -5,7 +5,7 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
-enum FACE
+enum FACE : uint8_t
 {
     BACK = 0,
     FRONT = 1,
@@ -16,7 +16,7 @@ enum FACE
     INVALID = 6
 };
 
-enum class BLOCK_TYPE
+enum class BLOCK_TYPE : uint8_t
 {
     INVALID = 0,
     TEST,

@@ -19,6 +19,13 @@ include(FetchContent)
 FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip)
 FetchContent_MakeAvailable(googletest)
 
+FetchContent_Declare(
+        sparse-map
+        GIT_REPOSITORY https://github.com/Tessil/sparse-map.git
+        GIT_TAG master
+)
+FetchContent_MakeAvailable(sparse-map)
+
 FILE(GLOB_RECURSE APP_SOURCE_NO_MAIN "src/*.cpp")
 list(REMOVE_ITEM APP_SOURCE_NO_MAIN "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
@@ -30,6 +37,7 @@ target_link_libraries(${PROJECT_NAME}_tests PRIVATE
         gtest_main
         pthread
         VoxelGameCore
+        tsl::sparse_map
 )
 
 target_include_directories(${PROJECT_NAME}_tests PRIVATE include/)

@@ -136,7 +136,7 @@ void DebugLayer::drawMenu(GameLayer* gameLayer) const
 
         ImPlot::EndPlot();
         const double avgFrameTimeMs = std::accumulate(m_FrameTimes.begin(), m_FrameTimes.end(), 0.0) / m_FrameTimes.size();
-        ImGui::Text("Avg frame time: %.2f ms", avgFrameTimeMs);
+        ImGui::Text("Avg frame time: %.2f ms / %.1f fps", avgFrameTimeMs, 1000.0 / avgFrameTimeMs);
     }
 #endif
 
