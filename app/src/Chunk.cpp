@@ -1,24 +1,23 @@
 #include "Chunk.h"
 #define GLM_ENABLE_EXPERIMENTAL
+#include <ranges>
 #include "glm/gtx/norm.hpp"
 #include "Block.h"
 #include "OpenGLHelper.h"
-#include "../include/Rendering.h"
-#include "Shader.h"
 #include "GameWorld.h"
 #include "cstmlib/Profiling.h"
 #include "glm/common.hpp"
 
 ChunkManager::ChunkManager(const GameConfig& config)
-    : threadPool(config.threadCount), config(config), worldGenData(config.worldSeed)
+    : m_ThreadPool(config.threadCount), m_Config(config), m_WorldGenData(config.worldSeed)
 {
-    chunks.reserve((2 * config.loadDistance) * (2 * config.loadDistance) * (WorldGenerationData::WORLD_HEIGHT));
+    m_Chunks.reserve((2 * config.loadDistance) * (2 * config.loadDistance) * (WorldGenerationData::WORLD_HEIGHT));
 }
 
 void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t unloads = 0;
-    for (auto it = chunks.begin(); it != chunks.end();)
+    for (auto it = m_Chunks.begin(); it != m_Chunks.end();)
     {
         Chunk& chunk = it->second;
 
@@ -26,11 +25,11 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
         const int32_t yDist = glm::abs(chunk.chunkPosition.y - currChunkPos.y);
         const int32_t zDist = glm::abs(chunk.chunkPosition.z - currChunkPos.z);
 
-        if (unloads < config.maxUnloadsPerFrame &&
+        if (unloads < m_Config.maxUnloadsPerFrame &&
             !chunk.inRender &&
-            (xDist > config.loadDistance || yDist > config.loadDistance || zDist > config.loadDistance))
+            (xDist > m_Config.loadDistance || yDist > m_Config.loadDistance || zDist > m_Config.loadDistance))
         {
-            it = chunks.erase(it);
+            it = m_Chunks.erase(it);
             unloads++;
         }
         else
@@ -38,9 +37,9 @@ void ChunkManager::unloadChunks(const glm::ivec3& currChunkPos)
             ++it;
 
             chunk.inRender =
-                xDist < config.renderDistance &&
-                yDist < config.renderDistance &&
-                zDist < config.renderDistance;
+                xDist < m_Config.renderDistance &&
+                yDist < m_Config.renderDistance &&
+                zDist < m_Config.renderDistance;
         }
     }
 }
@@ -78,12 +77,12 @@ void ChunkManager::drawChunks(Renderer& renderer, const glm::mat4& viewProjectio
 {
     renderer.prepareChunkRendering(viewProjection, exposure);
 
-    for (const auto& [_,chunk] : chunks)
+    for (const auto& [_,chunk] : m_Chunks)
         if (chunk.inRender && chunk.isMeshBaked)
             renderer.drawChunk(chunk.vaoOpaque, chunkPosToWorldBlockPos(chunk.chunkPosition));
 
     glDisable(GL_CULL_FACE);
-    for (const auto& [_,chunk] : chunks)
+    for (const auto& [_,chunk] : m_Chunks)
         if (chunk.inRender && chunk.isMeshBaked)
             renderer.drawChunk(chunk.vaoTranslucent, chunkPosToWorldBlockPos(chunk.chunkPosition));
     glEnable(GL_CULL_FACE);
@@ -92,25 +91,25 @@ void ChunkManager::drawChunks(Renderer& renderer, const glm::mat4& viewProjectio
 void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 {
     uint32_t chunksBaked = 0;
-    glm::ivec3 chunkPositions[config.maxLoadsPerFrame];
-    auto chunkQueue = getChunksSorted(currChunkPos, config.renderDistance);
+    glm::ivec3 chunkPositions[m_Config.maxLoadsPerFrame];
+    auto chunkQueue = getChunksSorted(currChunkPos, m_Config.renderDistance);
 
     while (!chunkQueue.empty())
     {
         auto [position, priority] = chunkQueue.top();
         chunkQueue.pop();
 
-        auto it = chunks.find(position);
-        if (it == chunks.end())
+        auto it = m_Chunks.find(position);
+        if (it == m_Chunks.end())
             continue;
 
         Chunk& chunk = it->second;
-        if (chunk.isMeshBaked || chunksBaked >= config.maxBakesPerFrame)
+        if (chunk.isMeshBaked || chunksBaked >= m_Config.maxBakesPerFrame)
             continue;
 
         chunkPositions[chunksBaked] = position;
         chunksBaked++;
-        threadPool.queueJob([this, &chunk, position]()
+        m_ThreadPool.queueJob([this, &chunk, position]()
         {
             std::array<Chunk*, 6> neighbourChunks{
                 // BACK, FRONT, LEFT, RIGHT, BOTTOM, TOP
@@ -126,13 +125,13 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
         });
     }
 
-    while (threadPool.busy())
+    while (m_ThreadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 
     // TODO: wieso durch alle chunks?
     for (uint32_t i = 0; i < chunksBaked; i++)
     {
-        Chunk& chunk = chunks.at(chunkPositions[i]);
+        Chunk& chunk = (*m_Chunks.find(chunkPositions[i])).second;
         chunk.bakeMesh();
     }
 
@@ -141,34 +140,40 @@ void ChunkManager::bakeChunks(const glm::ivec3& currChunkPos)
 
 void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db)
 {
-    auto chunkQueue = getChunksSorted(currChunkPos, config.loadDistance);
-    glm::ivec3 chunkPositionsOfLoaded[config.maxLoadsPerFrame];
+    auto chunkQueue = getChunksSorted(currChunkPos, m_Config.loadDistance);
+    glm::ivec3 chunkPositionsOfLoaded[m_Config.maxLoadsPerFrame];
     uint32_t chunksLoaded = 0;
-    while (!chunkQueue.empty() && chunksLoaded < config.maxLoadsPerFrame)
+    while (!chunkQueue.empty() && chunksLoaded < m_Config.maxLoadsPerFrame)
     {
         auto [position, priority] = chunkQueue.top();
         chunkQueue.pop();
 
-        if (chunks.contains(position))
+        if (m_Chunks.find(position) != m_Chunks.end())
             continue;
 
         chunkPositionsOfLoaded[chunksLoaded++] = position;
-        Chunk* chunk = &chunks.emplace(std::piecewise_construct, std::forward_as_tuple(position), std::forward_as_tuple()).first->second;
-        threadPool.queueJob([chunk, position, this]()
+        m_Chunks.emplace(std::piecewise_construct, std::forward_as_tuple(position), std::forward_as_tuple());
+    }
+
+    for (uint32_t i = 0; i < chunksLoaded; i++)
+    {
+        const glm::ivec3& position = chunkPositionsOfLoaded[i];
+        Chunk* chunk = &m_Chunks.at(position);
+        m_ThreadPool.queueJob([this, position, chunk]()
         {
-            *chunk = Chunk(position, this->worldGenData);
+            *chunk = Chunk(position, m_WorldGenData);
         });
     }
 
-    while (threadPool.busy())
+    while (m_ThreadPool.busy())
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 
     for (uint32_t i = 0; i < chunksLoaded; i++)
     {
         auto changes = getBlockChangesForChunk(db, chunkPositionsOfLoaded[i]);
         Chunk* chunk = getChunk(chunkPositionsOfLoaded[i]);
-        for (const auto& change : changes)
-            chunk->setBlockUnsafe(change.positionInChunk, change.blockType);
+        for (const auto& [positionInChunk, blockType] : changes)
+            chunk->setBlockUnsafe(positionInChunk, blockType);
     }
 
     //LOG_INFO("{} chunks loaded", chunksLoaded);
@@ -176,14 +181,14 @@ void ChunkManager::loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& 
 
 void ChunkManager::dropChunkMeshes()
 {
-    for (auto& [_, chunk] : chunks)
+    for(auto& chunk : m_Chunks | std::views::values)
         chunk.isMeshBaked = false;
 }
 
 Chunk* ChunkManager::getChunk(const glm::ivec3& pos)
 {
-    const auto it = chunks.find(pos);
-    if (it != chunks.end())
+    const auto it = m_Chunks.find(pos);
+    if (it != m_Chunks.end())
         return &it->second;
     return nullptr;
 }

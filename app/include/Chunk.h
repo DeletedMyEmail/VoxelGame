@@ -1,5 +1,5 @@
 #pragma once
-
+#include <gtl/phmap.hpp>
 #include "Block.h"
 #include "Config.h"
 #include "GameWorld.h"
@@ -59,9 +59,8 @@ struct ChunkManager
     void loadChunks(const glm::ivec3& currChunkPos, SQLite::Database& db);
     void dropChunkMeshes();
     Chunk* getChunk(const glm::ivec3& pos);
-
-    ThreadPool threadPool;
-    std::unordered_map<glm::ivec3, Chunk> chunks;
-    const GameConfig& config;
-    WorldGenerationData worldGenData;
+    ThreadPool m_ThreadPool;
+    gtl::parallel_flat_hash_map<glm::ivec3, Chunk> m_Chunks;
+    const GameConfig& m_Config;
+    WorldGenerationData m_WorldGenData;
 };
